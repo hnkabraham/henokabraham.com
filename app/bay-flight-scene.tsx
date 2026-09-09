@@ -45,6 +45,7 @@ import { createTreeMesh, loadTreeCanopies } from '@/lib/bay-trees';
 import {
   CLIMB_BOUNDS,
   CLIMB_IMAGERY_READY,
+  COUNTY_IMAGERY_READY,
   MERCATOR_ORIGIN,
   NORTH_BOUNDS,
   RUNWAY_BOUNDS,
@@ -1226,6 +1227,21 @@ export default function BayFlightScene(props: Props) {
           loadLazyTexture('/scenery/naip-climb.webp', imagery, (texture) => {
             surface.layers[2].texture.value = texture;
             fadingLayers.add(2);
+          });
+        // The county's 0.32 m runway box replaces the 0.63 m NAIP one in the
+        // same slot once it arrives; the two are tone-matched at build time.
+        if (capable && COUNTY_IMAGERY_READY)
+          loadLazyTexture('/scenery/county-runway.webp', imagery, (texture) => {
+            const slot = surface.layers[surface.layers.length - 1];
+            const naip = slot.texture.value;
+            slot.texture.value = texture;
+            if (process.env.NODE_ENV !== 'production')
+              Object.assign(
+                (window as unknown as { __bayDebug: Record<string, unknown> })
+                  .__bayDebug,
+                { countyRunway: { naip, county: texture, slot } },
+              );
+            else naip?.dispose();
           });
         // Freeway traffic under the climb-out, from OpenStreetMap carriageways.
         void fetch('/scenery/bay-roads.json', { signal: abort.signal })

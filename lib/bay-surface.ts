@@ -28,6 +28,13 @@ export const CLIMB_BOUNDS = [
 ] as const;
 /** False only if `scripts/prepare-naip-layers.py climb` has not produced the file. */
 export const CLIMB_IMAGERY_READY = true;
+/**
+ * Desktop-only 0.32 m upgrade of the runway box from San Mateo County's 2022
+ * orthoimagery (8192², colour-matched to NAIP, `scripts/prepare-county-layers.py`),
+ * swapped into the runway slot after the first frame. Licence terms with the
+ * county are still to be confirmed; see ASSETS.md.
+ */
+export const COUNTY_IMAGERY_READY = true;
 /** Web Mercator coordinates are stored relative to this corner for float precision. */
 export const MERCATOR_ORIGIN = [SFO_BOUNDS[0], SFO_BOUNDS[1]] as const;
 

@@ -52,7 +52,7 @@ const { HeatHazeEffect, createWingtipVortices, thrustSetting, vortexSetting, NOZ
   await moduleURL('bay-thrust', { postprocessing: import.meta.resolve('postprocessing') })
 );
 const { createTraffic } = await import(await moduleURL('bay-traffic', { './bay-city': cityURL }));
-const { CLIMB_BOUNDS, CLIMB_IMAGERY_READY } = await import(surfaceURL);
+const { CLIMB_BOUNDS, CLIMB_IMAGERY_READY, COUNTY_IMAGERY_READY } = await import(surfaceURL);
 const { sampleBayFlight } = await import(flightURL);
 const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
@@ -501,6 +501,8 @@ console.log(
   }
   if (CLIMB_IMAGERY_READY)
     assert.ok((await fs.stat(new URL('../public/scenery/naip-climb.webp', import.meta.url))).size > 1e6, 'Climb imagery shipped');
+  if (COUNTY_IMAGERY_READY)
+    assert.ok((await fs.stat(new URL('../public/scenery/county-runway.webp', import.meta.url))).size > 1e6, 'County runway imagery shipped');
   const roads = JSON.parse(await fs.readFile(new URL('../public/scenery/bay-roads.json', import.meta.url)));
   assert.ok(roads.ways.length > 300 && roads.ways.every((way) => way.points.length >= 2 && way.lanes >= 1), 'Carriageways packed');
   const traffic = createTraffic(roads, { grid: elevations, size: 1025 });
