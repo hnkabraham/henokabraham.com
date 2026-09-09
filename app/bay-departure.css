@@ -26,9 +26,23 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(90deg, #edf4f966 0, #e9f1f929 34%, transparent 62%),
-    linear-gradient(0deg, #112f476e, transparent 25%);
+}
+/* Gradients cannot animate, so the two reading-area washes cross-fade. */
+.bay-scrim::before,
+.bay-scrim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.9s ease;
+}
+.bay-scrim::after {
+  opacity: 0;
+}
+.bay-journey:not([data-phase='preflight']) .bay-scrim::before {
+  opacity: 0;
+}
+.bay-journey:not([data-phase='preflight']) .bay-scrim::after {
+  opacity: 1;
 }
 .bay-flight-label {
   position: absolute;
@@ -104,11 +118,6 @@
 }
 .bay-journey:not([data-phase='preflight']) .bay-story h1 {
   font-size: clamp(2.5rem, 4vw, 4.5rem);
-}
-.bay-journey:not([data-phase='preflight']) .bay-scrim {
-  background:
-    linear-gradient(0deg, #e6f0f599, transparent 48%),
-    linear-gradient(180deg, #e0eef480, transparent 20%);
 }
 .bay-journey[data-phase='cruise'] .bay-story {
   top: 18%;
@@ -516,19 +525,19 @@
   }
 }
 /* Keep the reading area calm without bleaching the aircraft and scenery. */
-.bay-scrim {
+.bay-scrim::before {
   background:
     linear-gradient(90deg, #edf4f94d 0, #e9f1f91a 28%, transparent 52%),
     linear-gradient(0deg, #112f4740, transparent 20%);
 }
-.bay-journey:not([data-phase='preflight']) .bay-scrim {
+.bay-scrim::after {
   background:
     linear-gradient(90deg, #edf2f480 0, #edf2f43d 28%, transparent 52%),
     linear-gradient(180deg, #dceaf133, transparent 18%);
 }
 @media (max-width: 800px) {
-  .bay-scrim,
-  .bay-journey:not([data-phase='preflight']) .bay-scrim {
+  .bay-scrim::before,
+  .bay-scrim::after {
     background:
       linear-gradient(180deg, #e6eff380, #e6eff34d 30%, transparent 55%),
       linear-gradient(0deg, #b4cedc70, transparent 18%);

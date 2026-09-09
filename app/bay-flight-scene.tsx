@@ -13,8 +13,23 @@ import {
   createAirportBuildings,
   type AirportBuildings,
 } from '@/lib/sfo-buildings';
-import { addWingFlex } from '@/lib/airframe-flex';
-import { airportUV, addBaySurface, addPavementWear } from '@/lib/bay-surface';
+import { addWingFlex, addSkinDetail } from '@/lib/airframe-flex';
+import {
+  buildCityGeometry,
+  createCityMesh,
+  loadCityBuildings,
+} from '@/lib/bay-city';
+import {
+  MERCATOR_ORIGIN,
+  NORTH_BOUNDS,
+  RUNWAY_BOUNDS,
+  SFO_BOUNDS,
+  SOUTH_BOUNDS,
+  addBaySurface,
+  addPavementWear,
+  mercator,
+  type SurfaceLayer,
+} from '@/lib/bay-surface';
 import type { createBayAudio } from '@/lib/bay-audio';
 
 type Props = {
@@ -54,20 +69,20 @@ async function loadElevation(url: string, signal: AbortSignal) {
   return { grid, size };
 }
 
-/** Tileable low-amplitude skin waviness so paint reflections are not mirror-perfect. */
-function createSkinNormal(T: typeof import('three'), size = 128) {
+/** Tileable value-noise normal map: skin waviness on paint, wind ripples on water. */
+function createNoiseNormal(
+  T: typeof import('three'),
+  options: { size: number; octaves: [number, number][]; slope: number; seed: number },
+) {
+  const { size, slope } = options;
   const height = new Float32Array(size * size);
-  let seed = 7;
+  let seed = options.seed;
   const random = () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
   };
   const fade = (t: number) => t * t * (3 - 2 * t);
-  for (const [cells, amplitude] of [
-    [8, 1],
-    [16, 0.5],
-    [32, 0.25],
-  ]) {
+  for (const [cells, amplitude] of options.octaves) {
     const lattice = Float32Array.from({ length: cells * cells }, random);
     const at = (x: number, y: number) =>
       lattice[(y % cells) * cells + (x % cells)];
@@ -94,10 +109,10 @@ function createSkinNormal(T: typeof import('three'), size = 128) {
       const dy =
         height[((y + 1) % size) * size + x] -
         height[((y + size - 1) % size) * size + x];
-      const length = Math.hypot(dx * 3, dy * 3, 1);
+      const length = Math.hypot(dx * slope, dy * slope, 1);
       const i = (y * size + x) * 4;
-      data[i] = ((-dx * 3) / length) * 127.5 + 127.5;
-      data[i + 1] = ((-dy * 3) / length) * 127.5 + 127.5;
+      data[i] = ((-dx * slope) / length) * 127.5 + 127.5;
+      data[i + 1] = ((-dy * slope) / length) * 127.5 + 127.5;
       data[i + 2] = (1 / length) * 127.5 + 127.5;
       data[i + 3] = 255;
     }
@@ -156,7 +171,7 @@ export default function BayFlightScene(props: Props) {
       sky.material.uniforms.rayleigh.value = 1.35;
       sky.material.uniforms.mieCoefficient.value = 0.003;
       sky.material.uniforms.mieDirectionalG.value = 0.8;
-      const sunlight = new T.Vector3(-0.58, 0.58, 0.57).normalize();
+      const sunlight = new T.Vector3(-0.66, 0.44, 0.61).normalize();
       sky.material.uniforms.sunPosition.value.copy(sunlight);
       scene.add(sky);
       // Fallback lighting for the simple sky; the atmosphere replaces both.
@@ -171,11 +186,13 @@ export default function BayFlightScene(props: Props) {
         top: 65,
         bottom: -65,
         near: 1,
-        far: 1200,
+        // Deep enough to reach the ground through most of the climb; the
+        // shadow fades with altitude below instead of cutting off.
+        far: 8000,
       });
       sun.shadow.normalBias = 0.045;
       sun.shadow.radius = 2;
-      sun.shadow.bias = -0.00015;
+      sun.shadow.bias = -0.0000225;
       scene.add(sun, sun.target);
       const world = new T.Group();
       scene.add(world);
@@ -295,6 +312,13 @@ export default function BayFlightScene(props: Props) {
         mobile,
       );
       const atmosphereReady = rendering?.ready ?? Promise.resolve(false);
+      if (process.env.NODE_ENV !== 'production')
+        (window as unknown as { __bayDebug?: unknown }).__bayDebug = {
+          rendering,
+          renderer,
+          scene,
+          sun,
+        };
       // The HDR is only image-based light for the fallback sky.
       const daylight = atmosphereReady.then((enabled) =>
         enabled || disposed
@@ -335,6 +359,11 @@ export default function BayFlightScene(props: Props) {
             ? '/scenery/sfo-detail-mobile.webp'
             : '/scenery/sfo-detail.webp',
         ),
+        textureLoader.loadAsync(
+          mobile
+            ? '/scenery/naip-runway-mobile.webp'
+            : '/scenery/naip-runway.webp',
+        ),
         textureLoader.loadAsync('/scenery/runway-color.webp'),
         textureLoader.loadAsync('/scenery/runway-normal.webp'),
         textureLoader.loadAsync('/scenery/runway-roughness.webp'),
@@ -350,6 +379,7 @@ export default function BayFlightScene(props: Props) {
         mapResult,
         elevationResult,
         airportResult,
+        runwayAreaResult,
         asphaltResult,
         normalResult,
         roughnessResult,
@@ -357,6 +387,7 @@ export default function BayFlightScene(props: Props) {
       ] = resources;
       for (const result of [
         airportResult,
+        runwayAreaResult,
         asphaltResult,
         normalResult,
         roughnessResult,
@@ -401,15 +432,20 @@ export default function BayFlightScene(props: Props) {
             elevation[row * gridStep * gridSize + col * gridStep] / 4,
           );
         }
-      const airportCoordinates = new Float32Array(position.count * 2);
+      // Web Mercator per vertex, relative to a nearby origin, so any number of
+      // north-up imagery layers can be placed from one registration.
+      const mercatorCoordinates = new Float32Array(position.count * 2);
       for (let i = 0; i < position.count; i++) {
-        const sourceX = position.getX(i) / 10 + 5900;
-        const sourceY = position.getZ(i) / 10 + 7600;
-        airportCoordinates.set(airportUV(sourceX, sourceY), i * 2);
+        const [mx, my] = mercator(
+          position.getX(i) / 10 + 5900,
+          position.getZ(i) / 10 + 7600,
+        );
+        mercatorCoordinates[i * 2] = mx - MERCATOR_ORIGIN[0];
+        mercatorCoordinates[i * 2 + 1] = my - MERCATOR_ORIGIN[1];
       }
       terrainGeometry.setAttribute(
-        'airportUv',
-        new T.BufferAttribute(airportCoordinates, 2),
+        'mercator',
+        new T.BufferAttribute(mercatorCoordinates, 2),
       );
       terrainGeometry.computeVertexNormals();
       const terrainMaterial = new T.MeshStandardMaterial({
@@ -418,15 +454,38 @@ export default function BayFlightScene(props: Props) {
         metalness: 0,
         color: 0xe7edf0,
       });
-      const airportMap =
-        airportResult.status === 'fulfilled' ? airportResult.value : null;
-      if (airportMap) {
-        airportMap.colorSpace = T.SRGBColorSpace;
-        airportMap.anisotropy = Math.min(
+      const imagery = (texture: Texture) => {
+        texture.colorSpace = T.SRGBColorSpace;
+        texture.anisotropy = Math.min(
           16,
           renderer.capabilities.getMaxAnisotropy(),
         );
-      }
+        return texture;
+      };
+      // Coarse to fine. The corridor layers arrive after the first frame.
+      const layers: SurfaceLayer[] = [
+        { bounds: SOUTH_BOUNDS, texture: null, feather: 0.05 },
+        { bounds: NORTH_BOUNDS, texture: null, feather: 0.05 },
+        {
+          bounds: SFO_BOUNDS,
+          texture:
+            airportResult.status === 'fulfilled'
+              ? imagery(airportResult.value)
+              : null,
+        },
+        {
+          bounds: RUNWAY_BOUNDS,
+          texture:
+            runwayAreaResult.status === 'fulfilled'
+              ? imagery(runwayAreaResult.value)
+              : null,
+          feather: 0.06,
+        },
+      ];
+      const lazyLayers: [number, string][] = [
+        [0, mobile ? '/scenery/naip-south-mobile.webp' : '/scenery/naip-south.webp'],
+        [1, mobile ? '/scenery/naip-north-mobile.webp' : '/scenery/naip-north.webp'],
+      ];
       const pavementMaps = [asphaltResult, normalResult, roughnessResult].map(
         (result) => (result.status === 'fulfilled' ? result.value : null),
       );
@@ -439,13 +498,33 @@ export default function BayFlightScene(props: Props) {
           );
         }
       if (pavementMaps[0]) pavementMaps[0].colorSpace = T.SRGBColorSpace;
+      const waterNormal = ownTexture(
+        createNoiseNormal(T, {
+          size: 256,
+          octaves: [
+            [6, 1],
+            [12, 0.5],
+            [24, 0.25],
+            [48, 0.125],
+          ],
+          slope: 2.5,
+          seed: 3,
+        }),
+      );
       const surface = addBaySurface(
         terrainMaterial,
-        airportMap,
+        layers.filter((layer) => layer.texture || lazyLayers.some(([i]) => layers[i] === layer)),
         pavementMaps[0] && pavementMaps[1]
-          ? { map: pavementMaps[0], normalMap: pavementMaps[1] }
+          ? {
+              map: pavementMaps[0],
+              normalMap: pavementMaps[1],
+              waterNormalMap: waterNormal,
+            }
           : null,
       );
+      const fadingLayers = new Set<number>();
+      let city: ReturnType<typeof createCityMesh> | null = null;
+      let cityAge = 0;
       const terrain = new T.Mesh(terrainGeometry, terrainMaterial);
       terrain.position.set(
         (5900 - BAY_ORIGIN[0]) * 10,
@@ -539,7 +618,18 @@ export default function BayFlightScene(props: Props) {
       });
       addWingFlex(wingDepth, wingFlex);
       materials.add(wingDepth);
-      const skinNormal = ownTexture(createSkinNormal(T));
+      const skinNormal = ownTexture(
+        createNoiseNormal(T, {
+          size: 128,
+          octaves: [
+            [8, 1],
+            [16, 0.5],
+            [32, 0.25],
+          ],
+          slope: 3,
+          seed: 7,
+        }),
+      );
       skinNormal.repeat.set(36, 36);
       const finishes = new Map<Material, Material>();
       model.traverse((node) => {
@@ -576,6 +666,7 @@ export default function BayFlightScene(props: Props) {
               renderer.capabilities.getMaxAnisotropy(),
             );
           addWingFlex(finish, wingFlex);
+          if (paint) addSkinDetail(finish);
           finishes.set(original, finish);
           return finish;
         });
@@ -684,11 +775,24 @@ export default function BayFlightScene(props: Props) {
       function update(now: number, dt: number) {
         const reduced = latest.current.reducedMotion;
         const desired = reduced ? 1 : latest.current.progress.current;
-        currentP = reduced
-          ? 1
-          : currentP + (desired - currentP) * (1 - Math.exp(-dt * 10));
+        // Follow the scroll with a short lag, but never faster than the flight
+        // can be watched: a flick through the page still flies for a few
+        // seconds, so ground detail, runway lights and the sky refresh never
+        // strobe past the camera.
+        const eased = currentP + (desired - currentP) * (1 - Math.exp(-dt * 8));
+        const step = Math.min(Math.abs(eased - currentP), dt * 0.22);
+        currentP = reduced ? 1 : currentP + Math.sign(eased - currentP) * step;
         if (Math.abs(desired - currentP) < 0.000001) currentP = desired;
         surface.time.value = reduced ? 0 : now * 0.001;
+        for (const index of fadingLayers) {
+          const control = surface.layers[index];
+          control.ready.value = Math.min(1, control.ready.value + dt / 1.2);
+          if (control.ready.value >= 1) fadingLayers.delete(index);
+        }
+        if (city && city.rise.value < 1) {
+          cityAge += dt;
+          city.rise.value = reduced ? 1 : smooth(cityAge / 1.8);
+        }
         const shot = sampleBayFlight(currentP);
         wingFlex.value = 2.1 * smooth((currentP - 0.35) / 0.24);
         // A floating origin keeps runway shadows stable as the flight travels kilometers.
@@ -715,6 +819,8 @@ export default function BayFlightScene(props: Props) {
         );
         sun.position.copy(sunlight).multiplyScalar(550);
         sun.target.position.set(0, 0, 0);
+        // A 787's shadow softens into a faint blur by a couple of kilometres up.
+        sun.shadow.intensity = 1 - smooth((shot.position[1] - 900) / 1400);
         for (const group of gearGroups) {
           const folded = 1 - shot.gear;
           group.rotation.x = group.userData.nose
@@ -740,6 +846,44 @@ export default function BayFlightScene(props: Props) {
       ready = true;
       latest.current.onStatus('ready');
       renderer.domElement.classList.add('is-ready');
+      for (const [index, url] of lazyLayers)
+        void textureLoader.loadAsync(url).then(
+          (texture) => {
+            if (disposed) {
+              texture.dispose();
+              return;
+            }
+            surface.layers[index].texture.value = imagery(ownTexture(texture));
+            fadingLayers.add(index);
+          },
+          () => {},
+        );
+      // The city's massing arrives after the first frame and rises out of
+      // the imagery over a second or two. Geometry is built in short slices
+      // between frames so the flight never stalls.
+      void loadCityBuildings(
+        mobile
+          ? '/scenery/bay-buildings-mobile.bin.gz'
+          : '/scenery/bay-buildings.bin.gz',
+        abort.signal,
+      )
+        .then(async (buildings) => {
+          if (disposed) return;
+          const geometry = await buildCityGeometry(
+            buildings,
+            { grid: elevation, size: gridSize },
+            () => new Promise<void>((resolve) => setTimeout(resolve, 0)),
+          );
+          if (disposed) {
+            geometry.dispose();
+            return;
+          }
+          geometries.add(geometry);
+          city = createCityMesh(geometry, layers, surface);
+          materials.add(city.material);
+          world.add(city.mesh);
+        })
+        .catch(() => {});
       function animate(now: number) {
         if (disposed) return;
         frame = requestAnimationFrame(animate);

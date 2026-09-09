@@ -136,6 +136,8 @@ export function createBayRendering(
   const pmrem = new PMREMGenerator(renderer);
   let environment: WebGLRenderTarget | null = null;
   let environmentAge = Infinity;
+  let environmentFrozen = false;
+  const environmentPosition = new Vector3(Infinity, Infinity, Infinity);
   const sunColor = new Color();
   const sunPosition = new Vector3();
 
@@ -168,7 +170,7 @@ export function createBayRendering(
   });
   const scratch = new Vector3();
 
-  function updateLighting(dt: number) {
+  function updateLighting(localPosition: Vector3, dt: number) {
     if (!atmospherePass.enabled) return;
     sunPosition.setFromMatrixPosition(atmosphere.worldToECEFMatrix);
     getSunLightColor(
@@ -180,9 +182,18 @@ export function createBayRendering(
     sun.color.copy(sunColor);
     sun.intensity = 1;
     environmentAge += dt;
-    // Altitude changes the sky slowly; refresh the cubemap a few times a second.
-    if (environment && environmentAge < 0.4) return;
+    // Altitude changes the sky slowly: refresh the cubemap a few times a
+    // second, or as soon as a fast scroll has moved the aircraft far enough
+    // that the previous sky would visibly pop.
+    if (
+      environment &&
+      (environmentFrozen ||
+        (environmentAge < 0.4 &&
+          localPosition.distanceTo(environmentPosition) < 150))
+    )
+      return;
     environmentAge = 0;
+    environmentPosition.copy(localPosition);
     skyMaterial.worldToECEFMatrix.copy(atmosphere.worldToECEFMatrix);
     skyCamera.updateMatrixWorld(true);
     skyCamera.update(renderer, skyScene);
@@ -195,6 +206,16 @@ export function createBayRendering(
 
   return {
     ready,
+    /** Development-only switches for isolating passes in browser probes. */
+    debug: {
+      occlusion,
+      atmospherePass,
+      finish,
+      bloom,
+      freezeEnvironment(frozen: boolean) {
+        environmentFrozen = frozen;
+      },
+    },
     resize(width: number, height: number) {
       composer.setSize(width, height);
     },
@@ -204,7 +225,7 @@ export function createBayRendering(
         localPosition,
         scratch,
       );
-      updateLighting(dt);
+      updateLighting(localPosition, dt);
       composer.render(dt);
     },
     dispose() {
