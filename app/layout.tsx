@@ -8,11 +8,11 @@ const geistMono = Geist_Mono({
 });
 export const metadata: Metadata = {
   icons: { icon: '/favicon.svg' },
-  title: 'Henok Abraham — Built from curiosity',
+  title: 'Henok Abraham — Personal Airspace',
   description:
-    'The personal workshop of Henok Abraham. iOS apps, flight tracking, connected hardware, and software built from curiosity.',
+    'Welcome to the personal airspace of Henok Abraham. An aviation-inspired journey through iOS apps, flight tracking, connected hardware, and curious experiments.',
   openGraph: {
-    title: 'Henok Abraham — Built from curiosity',
+    title: 'Henok Abraham — Personal Airspace',
     description:
       'iOS apps, flight tracking, connected hardware, and things worth building.',
     type: 'website',
@@ -22,7 +22,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
       </body>
