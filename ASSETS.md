@@ -24,11 +24,11 @@ Elevation uses [Mapzen/Terrarium](https://github.com/tilezen/joerd/blob/master/d
 ## Daylight
 
 - [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky), Greg Zaal and Jarod Guest, [CC0](https://polyhaven.com/license).
-- Local: `public/scenery/daylight.hdr`, 1024 × 512, 1,435,119 bytes. Used for image-based illumination and reflections. The visible atmosphere uses Three.js’s Sky shader.
+- Local: `public/scenery/daylight.hdr`, 1024 × 512, 1,435,119 bytes. Used for image-based illumination and reflections. The visible atmosphere uses Takram's scattering renderer, with Three.js's Sky shader as a compatibility fallback.
 
 ## Clouds and fallback
 
-- `public/images/cloud-sprite.png`, 1024px transparent generated cumulus, used sparingly around the flight path.
+- `public/images/cloud-sprite.png`, 1024px transparent generated cumulus. Retained source asset; no longer rendered in the clear-sky flight.
 - Generation prompt: Photoreal isolated white cumulus cloud cluster, landscape 3:2, transparent RGBA background, luminous upper-right sunlight, cool pale-blue shadows, feathered semitransparent wisps, generous transparent margins. No sky, floor, horizon, aircraft, text, or logos.
 - `public/images/cruise-sky.jpg`, generated static fallback for loading and unavailable WebGL.
 - Generation prompt: Photoreal 16:9 aviation sky at cruising altitude, porcelain blue sky, luminous white cumulus below a mid-low horizon, larger cloud banks lower right, warm upper-right sunlight, open left text space. No aircraft, buildings, text, logos, or window frames.
@@ -56,3 +56,9 @@ Optional jet/wind ambience is synthesized locally with Web Audio. No third-party
 - [Asphalt 02](https://polyhaven.com/a/asphalt_02), Rob Tuytel, [CC0](https://polyhaven.com/license).
 - Local 1K maps: `public/scenery/runway-color.webp`, `runway-normal.webp`, `runway-roughness.webp`. Original surface covers 3 × 3 m. OpenGL normal map; color is sRGB, normal/roughness are linear data.
 - The original valid 787 texture embedded in the GLB is retained. This update does not replace the aircraft atlas.
+
+## Open-source atmosphere and rendering update
+
+`public/scenery/atmosphere/{transmittance,scattering,irradiance}.exr` are unchanged reference lookup textures from Takram's MIT-licensed three-geospatial project, revision `eac103980f20c0956f2d3215833e73514be08462`. Together they contain 4,124,561 bytes. They are rendered by `@takram/three-atmosphere` 0.19.1, with Bruneton's BSD-licensed scattering functions. They describe atmospheric light transport, not geographic imagery. The former cloud sprites are retained as source assets but no longer rendered in the clear-sky sequence.
+
+See [RENDERING.md](RENDERING.md) for exact source links, renderer choices, compatibility and limitations. Full software notices are retained in [public/credits/rendering-licenses.txt](public/credits/rendering-licenses.txt) and linked from the site's scene credits.

@@ -1,0 +1,143 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import { transpileModule, ModuleKind } from 'typescript';
+import * as T from 'three';
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
+import { Geodetic } from '@takram/three-geospatial';
+import { AerialPerspectiveEffect } from '@takram/three-atmosphere';
+import {
+  EffectPass,
+  BloomEffect,
+  ToneMappingEffect,
+  ToneMappingMode,
+} from 'postprocessing';
+
+const compile = async (name) => {
+  const js = transpileModule(
+    await fs.readFile(new URL(`../lib/${name}.ts`, import.meta.url), 'utf8'),
+    { compilerOptions: { module: ModuleKind.ESNext } },
+  ).outputText.replace(
+    /from '([^']+)'/g,
+    (_, id) => `from '${import.meta.resolve(id)}'`,
+  );
+  return import(
+    `data:text/javascript;base64,${Buffer.from(js).toString('base64')}`
+  );
+};
+const { BAY_TO_ECEF, updateAtmosphereOrigin } = await compile('bay-atmosphere');
+const { sampleBayFlight } = await compile('bay-flight');
+assert.ok(
+  Math.abs(BAY_TO_ECEF.determinant() - 1) < 1e-12,
+  'ECEF frame must preserve handedness and meter scale',
+);
+const origin = new Geodetic().setFromECEF(
+  new T.Vector3().setFromMatrixPosition(BAY_TO_ECEF),
+);
+assert.ok(
+  Math.abs(T.MathUtils.radToDeg(origin.latitude) - 37.61391813888889) < 1e-8,
+);
+assert.ok(
+  Math.abs(T.MathUtils.radToDeg(origin.longitude) + 122.35805769444444) < 1e-8,
+);
+
+const matrix = new T.Matrix4(),
+  scratch = new T.Vector3(),
+  local = new T.Vector3();
+let maxCurveDifference = 0;
+for (let i = 0; i <= 1000; i++) {
+  const shot = sampleBayFlight(i / 1000);
+  local.set(...shot.position).add(new T.Vector3(0, 12.33, 0));
+  updateAtmosphereOrigin(matrix, local, scratch);
+  const reference = new T.Vector3().setFromMatrixPosition(matrix);
+  const height = new Geodetic().setFromECEF(reference).height;
+  assert.ok(
+    height > 12 && height < 4200,
+    'Atmosphere reference must remain above the ellipsoid',
+  );
+  maxCurveDifference = Math.max(maxCurveDifference, Math.abs(height - local.y));
+  const relativeCamera = new T.Vector3(90, 45, 130).applyMatrix4(matrix);
+  assert.ok(
+    Math.abs(relativeCamera.distanceTo(reference) - Math.hypot(90, 45, 130)) <
+      1e-8,
+  );
+}
+assert.ok(
+  maxCurveDifference < 55,
+  'Flat local scenery should stay within its expected curvature approximation',
+);
+
+let totalBytes = 0;
+for (const [name, width, height] of [
+  ['transmittance', 256, 64],
+  ['scattering', 256, 128 * 32],
+  ['irradiance', 64, 16],
+]) {
+  const bytes = await fs.readFile(
+    new URL(`../public/scenery/atmosphere/${name}.exr`, import.meta.url),
+  );
+  totalBytes += bytes.byteLength;
+  const exr = new EXRLoader().parse(
+    bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+  );
+  assert.equal(exr.width, width);
+  assert.equal(exr.height, height);
+  assert.equal(exr.type, T.HalfFloatType);
+  let nonzero = 0;
+  for (let i = 0; i < exr.data.length; i++) {
+    const value = T.DataUtils.fromHalfFloat(exr.data[i]);
+    assert.ok(Number.isFinite(value), `${name}: finite half-float samples`);
+    if (i % 4 !== 3 && value > 0) nonzero++;
+    if (name === 'transmittance') assert.ok(value >= 0 && value <= 1.001);
+  }
+  assert.ok(
+    nonzero > (width * height) / 3,
+    `${name}: populated lookup texture`,
+  );
+}
+
+// Exercise the actual installed library's shader assembler and camera update.
+// This is a CPU integration check; it does not claim a browser/GPU visual test.
+const camera = new T.PerspectiveCamera(35, 1.6, 1, 250000);
+camera.position.set(90, 45, 130);
+camera.lookAt(0, 0, 0);
+camera.updateMatrixWorld();
+const effect = new AerialPerspectiveEffect(camera, {
+  sky: true,
+  moon: false,
+  correctGeometricError: false,
+});
+effect.worldToECEFMatrix.copy(matrix);
+effect.sunDirection
+  .set(-0.58, 0.58, 0.57)
+  .normalize()
+  .transformDirection(BAY_TO_ECEF);
+const atmospherePass = new EffectPass(camera, effect);
+atmospherePass.recompile();
+effect.update({}, {}, 1 / 60);
+assert.ok(atmospherePass.needsDepthTexture);
+assert.ok(
+  atmospherePass.fullscreenMaterial.fragmentShader.includes('sampler3D'),
+);
+assert.ok([...effect.defines.keys()].includes('SKY'));
+assert.ok(
+  !effect.defines.has('SUN_LIGHT') && !effect.defines.has('SKY_LIGHT'),
+  'Existing PBR lighting must not be applied twice',
+);
+for (const key of ['worldToECEFMatrix', 'altitudeCorrection']) {
+  const value = effect.uniforms.get(key).value;
+  assert.ok((value.elements ?? value.toArray()).every(Number.isFinite));
+}
+const finish = new EffectPass(
+  camera,
+  new BloomEffect({ mipmapBlur: true }),
+  new ToneMappingEffect({ mode: ToneMappingMode.AGX }),
+);
+finish.recompile();
+assert.ok(
+  finish.fullscreenMaterial.fragmentShader.includes('toneMappingExposure'),
+);
+atmospherePass.dispose();
+finish.dispose();
+console.log(
+  `Passed: 1,001 floating-origin transforms; ${totalBytes.toLocaleString()} bytes of valid atmosphere LUTs; atmospheric depth, sky and HDR shader assembly.`,
+);

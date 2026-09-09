@@ -1,0 +1,36 @@
+# Rendering decisions
+
+The flight uses Three.js with Takram's atmosphere, N8AO and pmndrs postprocessing. These improve the existing aircraft and Bay scenery while keeping native scrolling, mobile layouts, local assets and the current deployment. The wider city is still satellite imagery on elevation geometry, with footprint-based buildings around SFO. Rendering changes do not turn those assets into photogrammetry.
+
+## Open-source projects assessed
+
+| Project                                                                                  | Contribution                                                                               | Decision                                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Takram three-geospatial](https://github.com/takram-design-engineering/three-geospatial) | Bruneton atmospheric scattering, an altitude-dependent sky and aerial perspective; MIT     | Use the vanilla Three.js atmosphere package. Transform the floating aircraft origin into a WGS84 frame anchored at SFO. Ship the reference lookup textures locally.                                                                                                                                                                                    |
+| [N8AO](https://github.com/N8python/n8ao)                                                 | Depth-based contact shading around engine nacelles, landing gear, wing roots and buildings | Use a 2.8-meter radius, moderate intensity, full resolution on desktop and half resolution on mobile. Disable sample accumulation because the airframe is animated.                                                                                                                                                                                    |
+| [pmndrs postprocessing](https://github.com/pmndrs/postprocessing)                        | Floating-point HDR render targets, bloom, tone mapping and shader composition; Zlib        | Use a linear HDR pipeline with one final AgX conversion and subtle additive bloom. Align Three.js to 0.185.1, within postprocessing 6.39.4's supported peer range.                                                                                                                                                                                     |
+| [CesiumJS](https://github.com/CesiumGS/cesium)                                           | Globe, terrain and streamed 3D Tiles; Apache 2.0                                           | Reconsider for a globe-scale site. A switch alone would not improve the current source imagery. Cesium's [Google photorealistic tiles workflow](https://cesium.com/learn/cesiumjs-learn/cesiumjs-photorealistic-3d-tiles/) requires a Cesium ion account and token, plus applicable data-service terms. No such account or tile service is added here. |
+| [NASA-AMMOS 3D Tiles Renderer](https://github.com/NASA-AMMOS/3DTilesRendererJS)          | Streamed 3D Tiles integrated directly into Three.js; Apache 2.0                            | A viable later route to real city geometry without replacing the aircraft scene. It still needs a suitable, licensed tileset; a renderer is not a scenery dataset.                                                                                                                                                                                     |
+
+Takram also offers volumetric clouds. The requested clear sky benefits more from scattering and a readable horizon; a cloud raymarcher would add GPU cost. The earlier billboard cloud sprites are no longer rendered.
+
+## Pipeline and compatibility
+
+1. Render PBR aircraft, real terrain, asphalt and building geometry to a half-float target.
+2. Apply N8AO from the actual scene depth, preserving wing displacement. N8AO 2.0.1's internal beauty target is explicitly changed from unsigned byte to half float so highlights are not clipped before composition.
+3. Apply atmospheric transmittance and inscattering. Post-process sun/sky lighting remains disabled because the materials already receive PBR light. Atmospheric sky replaces the Three.js fallback sky only after all lookup textures load successfully. Exponential fog is removed at the same time to prevent applying haze twice.
+4. Add restrained HDR bloom, then AgX tone mapping and dithering. Tone mapping and gamma conversion are applied once.
+
+Phone settings use lower AO resolution and fewer bloom levels; multisampling and a bounded pixel budget keep high-DPI render targets under control. Reduced-motion behavior and offscreen/hidden-tab suspension are preserved. Missing atmospheric textures retain the simpler sky; missing floating-point framebuffer support uses the direct renderer. Every composer target, lookup texture and N8AO fullscreen wrapper is disposed on unmount.
+
+## Validation
+
+`scripts/check-bay-rendering.mjs` decodes all three actual EXR lookup textures, verifies dimensions and finite half-float samples, checks 1,001 floating-origin transforms and SFO coordinates, and exercises the installed atmosphere/postprocessing shader assembler. The existing flight checks validate camera framing and route continuity; scenery checks validate geometry and material/depth shader integration. TypeScript and the production build verify the installed dependency combination. These checks do not constitute browser visual or device-performance QA.
+
+The tangent-plane scenery introduces under 55 meters of ellipsoid-height difference at the farthest point of this cinematic route. It is not a navigational simulation.
+
+## Bundled atmosphere data
+
+The three EXRs are copied unchanged from the asset revision referenced by `@takram/three-atmosphere` 0.19.1: [`eac103980f20c0956f2d3215833e73514be08462`](https://github.com/takram-design-engineering/three-geospatial/tree/eac103980f20c0956f2d3215833e73514be08462/packages/atmosphere/assets). Total compressed size: 4,124,561 bytes. Scattering is a 256 × 128 × 32 lookup volume stored as a 256 × 4096 EXR; transmittance is 256 × 64, irradiance 64 × 16.
+
+Takram's package declares MIT; its Bruneton shader includes a BSD-3-Clause notice. N8AO's distributed LICENSE and README state CC0 1.0, while its npm metadata says ISC; the distributed license is reproduced unchanged. Full notices for these projects and Three.js/postprocessing are included in `public/credits/rendering-licenses.txt` and linked from the scene credits.

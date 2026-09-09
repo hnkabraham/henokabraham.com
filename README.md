@@ -17,6 +17,7 @@ npm run dev
 npx tsc --noEmit --incremental false
 node scripts/check-bay-flight.mjs
 node scripts/check-bay-scenery.mjs
+node scripts/check-bay-rendering.mjs
 npm run build
 ```
 
@@ -29,3 +30,5 @@ Sources, licenses, asset sizes and scenery approximations are documented in [ASS
 Retain the existing Sites project ID in `.openai/hosting.json` when publishing updates. This checkout does not manage VPS or custom-domain DNS configuration.
 
 The realism pass adds public-domain NAIP detail around SFO, real OpenStreetMap terminal/hangar footprints batched into roof/wall surfaces, photographed asphalt color/normal/roughness maps, land/water-aware shading, clearcoat aircraft paint, lower telephoto departure shots, matching wing/shadow flex, and mechanically folding gear. `lib/bay-surface.ts`, `lib/sfo-buildings.ts`, and `lib/airframe-flex.ts` contain those additions. The scenery checks validate source registration, all generated building geometry, and shader patch integration; camera checks validate framing across portrait and wide viewports. Browser visual QA is separate.
+
+The open-source rendering pass adds Takram's physically computed atmosphere, N8AO contact shadows and a half-float HDR composition pipeline with subtle bloom and AgX. `lib/bay-rendering.ts` owns the passes and resource lifecycle; `lib/bay-atmosphere.ts` anchors the atmosphere to the floating SFO scene. [RENDERING.md](RENDERING.md) records the Three.js/Cesium/3D Tiles comparison, mobile settings, fallback behavior and validation limits.

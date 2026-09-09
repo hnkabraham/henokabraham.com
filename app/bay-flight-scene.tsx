@@ -37,11 +37,18 @@ export default function BayFlightScene(props: Props) {
     let cleanup: (() => void) | undefined;
     const abort = new AbortController();
     async function setup() {
-      const [T, { GLTFLoader }, { HDRLoader }, { Sky }] = await Promise.all([
+      const [
+        T,
+        { GLTFLoader },
+        { HDRLoader },
+        { Sky },
+        { createBayRendering },
+      ] = await Promise.all([
         import('three'),
         import('three/addons/loaders/GLTFLoader.js'),
         import('three/addons/loaders/HDRLoader.js'),
         import('three/addons/objects/Sky.js'),
+        import('@/lib/bay-rendering'),
       ]);
       if (disposed || !container) return;
       const mobile = container.clientWidth < 800;
@@ -87,6 +94,7 @@ export default function BayFlightScene(props: Props) {
       scene.add(sun, sun.target);
       const world = new T.Group();
       scene.add(world);
+      let rendering: ReturnType<typeof createBayRendering> = undefined;
       const aircraft = new T.Group();
       scene.add(aircraft);
       const orientedAirframe = new T.Group();
@@ -145,7 +153,16 @@ export default function BayFlightScene(props: Props) {
       const resize = () => {
         width = Math.max(1, container.clientWidth);
         height = Math.max(1, container.clientHeight);
+        // Bound HDR buffers on Retina/4K screens without changing composition.
+        renderer.setPixelRatio(
+          Math.min(
+            devicePixelRatio,
+            mobile ? 1.4 : 1.7,
+            Math.sqrt((mobile ? 1_250_000 : 4_000_000) / (width * height)),
+          ),
+        );
         renderer.setSize(width, height);
+        rendering?.resize(width, height);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         previousP = -1;
@@ -174,6 +191,7 @@ export default function BayFlightScene(props: Props) {
           contextLost,
         );
         disposeObject(scene);
+        rendering?.dispose();
         geometries.forEach((g) => g.dispose());
         materials.forEach((m) => m.dispose());
         textures.forEach((t) => t.dispose());
@@ -182,6 +200,13 @@ export default function BayFlightScene(props: Props) {
         renderer.dispose();
         renderer.domElement.remove();
       };
+
+      rendering = createBayRendering(renderer, scene, camera, sunlight, mobile);
+      const atmosphereReady = rendering?.ready.then((enabled) => {
+        if (disposed || !enabled) return;
+        sky.visible = false;
+        scene.fog = null;
+      });
 
       // Actual terrain, registered to the satellite texture, in meter-scale space.
       const terrainGeometry = new T.PlaneGeometry(
@@ -548,30 +573,9 @@ export default function BayFlightScene(props: Props) {
       gear(-23, 0, true);
       gear(2.5, -4.9, false);
       gear(2.5, 4.9, false);
-      // Thin haze and sparse, distant clouds leave the actual Bay visible.
-      const cloudMap = ownTexture(
-        textureLoader.load('/images/cloud-sprite.png'),
-      );
-      cloudMap.colorSpace = T.SRGBColorSpace;
-      for (let i = 0; i < 9; i++) {
-        const sprite = new T.Sprite(
-          new T.SpriteMaterial({
-            map: cloudMap,
-            color: 0xffffff,
-            opacity: 0.55,
-            transparent: true,
-            depthWrite: false,
-            fog: true,
-          }),
-        );
-        sprite.position.set(
-          -14500 + (i % 3) * 11500,
-          1900 + (i % 4) * 260,
-          -7000 - Math.floor(i / 3) * 10500,
-        );
-        sprite.scale.set(3200, 1700, 1);
-        world.add(sprite);
-      }
+      // A clear sky makes the Bay and curved atmospheric horizon readable.
+      await atmosphereReady;
+      if (disposed) return;
       ready = true;
       latest.current.onStatus('ready');
       renderer.domElement.classList.add('is-ready');
@@ -631,7 +635,8 @@ export default function BayFlightScene(props: Props) {
         }
         for (const fan of fans)
           fan.rotation.x = reduced ? 0 : now * 0.006 + currentP * 200;
-        renderer.render(scene, camera);
+        if (rendering) rendering.render(planePosition, dt);
+        else renderer.render(scene, camera);
       }
       frame = requestAnimationFrame(animate);
     }
