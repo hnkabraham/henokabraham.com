@@ -7,7 +7,14 @@ import {
   RUNWAY_HEADING,
   sampleBayFlight,
   sampleBayCamera,
+  smooth,
 } from '@/lib/bay-flight';
+import {
+  createAirportBuildings,
+  type AirportBuildings,
+} from '@/lib/sfo-buildings';
+import { addWingFlex } from '@/lib/airframe-flex';
+import { airportUV, addBaySurface } from '@/lib/bay-surface';
 import type { createBayAudio } from '@/lib/bay-audio';
 
 type Props = {
@@ -43,27 +50,27 @@ export default function BayFlightScene(props: Props) {
         powerPreference: 'high-performance',
       });
       renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.4 : 1.7));
-      renderer.toneMapping = T.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.05;
+      renderer.toneMapping = T.AgXToneMapping;
+      renderer.toneMappingExposure = 0.94;
       renderer.outputColorSpace = T.SRGBColorSpace;
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = T.PCFSoftShadowMap;
       container.appendChild(renderer.domElement);
       const scene = new T.Scene();
-      scene.background = new T.Color(0xc1dcea);
-      scene.fog = new T.FogExp2(0xc1dcea, 0.000047);
+      scene.background = new T.Color(0xb8d1e2);
+      scene.fog = new T.FogExp2(0xb8d1e2, 0.000034);
       const camera = new T.PerspectiveCamera(39, 1, 1, 250000);
       const sky = new Sky();
       sky.scale.setScalar(180000);
-      sky.material.uniforms.turbidity.value = 2;
-      sky.material.uniforms.rayleigh.value = 1.5;
+      sky.material.uniforms.turbidity.value = 2.8;
+      sky.material.uniforms.rayleigh.value = 1.35;
       sky.material.uniforms.mieCoefficient.value = 0.003;
       sky.material.uniforms.mieDirectionalG.value = 0.8;
-      const sunlight = new T.Vector3(-0.5, 0.75, 0.45).normalize();
+      const sunlight = new T.Vector3(-0.58, 0.58, 0.57).normalize();
       sky.material.uniforms.sunPosition.value.copy(sunlight);
       scene.add(sky);
-      scene.add(new T.HemisphereLight(0xcfe7ff, 0x748077, 1.7));
-      const sun = new T.DirectionalLight(0xfff0d8, 3.2);
+      scene.add(new T.HemisphereLight(0xcfe7ff, 0x526056, 0.38));
+      const sun = new T.DirectionalLight(0xfff2df, 3.5);
       sun.castShadow = true;
       sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
       Object.assign(sun.shadow.camera, {
@@ -74,7 +81,8 @@ export default function BayFlightScene(props: Props) {
         near: 1,
         far: 1200,
       });
-      sun.shadow.normalBias = 0.14;
+      sun.shadow.normalBias = 0.045;
+      sun.shadow.radius = 2;
       sun.shadow.bias = -0.00015;
       scene.add(sun, sun.target);
       const world = new T.Group();
@@ -208,8 +216,39 @@ export default function BayFlightScene(props: Props) {
           },
         ),
         new HDRLoader().loadAsync('/scenery/daylight.hdr'),
+        textureLoader.loadAsync(
+          mobile
+            ? '/scenery/sfo-detail-mobile.webp'
+            : '/scenery/sfo-detail.webp',
+        ),
+        textureLoader.loadAsync('/scenery/runway-color.webp'),
+        textureLoader.loadAsync('/scenery/runway-normal.webp'),
+        textureLoader.loadAsync('/scenery/runway-roughness.webp'),
+        fetch('/scenery/sfo-buildings.json', { signal: abort.signal }).then(
+          (r) => {
+            if (!r.ok) throw new Error('Buildings unavailable');
+            return r.json() as Promise<AirportBuildings>;
+          },
+        ),
       ]);
-      const [modelResult, mapResult, elevationResult, lightResult] = resources;
+      const [
+        modelResult,
+        mapResult,
+        elevationResult,
+        lightResult,
+        airportResult,
+        asphaltResult,
+        normalResult,
+        roughnessResult,
+        buildingsResult,
+      ] = resources;
+      for (const result of [
+        airportResult,
+        asphaltResult,
+        normalResult,
+        roughnessResult,
+      ])
+        if (result.status === 'fulfilled') ownTexture(result.value);
       // GLTF and texture loaders can finish after React unmounts.
       if (
         disposed ||
@@ -250,6 +289,16 @@ export default function BayFlightScene(props: Props) {
               4,
           );
         }
+      const airportCoordinates = new Float32Array(position.count * 2);
+      for (let i = 0; i < position.count; i++) {
+        const sourceX = position.getX(i) / 10 + 5900;
+        const sourceY = position.getZ(i) / 10 + 7600;
+        airportCoordinates.set(airportUV(sourceX, sourceY), i * 2);
+      }
+      terrainGeometry.setAttribute(
+        'airportUv',
+        new T.BufferAttribute(airportCoordinates, 2),
+      );
       terrainGeometry.computeVertexNormals();
       const terrainMaterial = new T.MeshStandardMaterial({
         map,
@@ -257,6 +306,16 @@ export default function BayFlightScene(props: Props) {
         metalness: 0,
         color: 0xe7edf0,
       });
+      const airportMap =
+        airportResult.status === 'fulfilled' ? airportResult.value : null;
+      if (airportMap) {
+        airportMap.colorSpace = T.SRGBColorSpace;
+        airportMap.anisotropy = Math.min(
+          16,
+          renderer.capabilities.getMaxAnisotropy(),
+        );
+      }
+      const waterTime = addBaySurface(terrainMaterial, airportMap);
       const terrain = new T.Mesh(terrainGeometry, terrainMaterial);
       terrain.position.set(
         (5900 - BAY_ORIGIN[0]) * 10,
@@ -265,11 +324,13 @@ export default function BayFlightScene(props: Props) {
       );
       terrain.receiveShadow = true;
       world.add(terrain);
+      if (buildingsResult.status === 'fulfilled')
+        world.add(createAirportBuildings(buildingsResult.value, elevation));
       if (lightResult.status === 'fulfilled') {
         const pmrem = new T.PMREMGenerator(renderer);
         environment = pmrem.fromEquirectangular(lightResult.value);
         scene.environment = environment.texture as Texture;
-        scene.environmentIntensity = 0.6;
+        scene.environmentIntensity = 0.95;
         lightResult.value.dispose();
         pmrem.dispose();
       }
@@ -278,30 +339,26 @@ export default function BayFlightScene(props: Props) {
       const runway = new T.Group();
       runway.rotation.y = RUNWAY_HEADING;
       world.add(runway);
-      const asphaltCanvas = document.createElement('canvas');
-      asphaltCanvas.width = asphaltCanvas.height = 256;
-      const ctx = asphaltCanvas.getContext('2d');
-      if (ctx) {
-        const pixels = ctx.createImageData(256, 256);
-        let seed = 73;
-        for (let i = 0; i < pixels.data.length; i += 4) {
-          seed = (seed * 1664525 + 1013904223) >>> 0;
-          const value = 83 + (seed >>> 27);
-          pixels.data.set([value, value + 1, value + 2, 255], i);
-        }
-        ctx.putImageData(pixels, 0, 0);
-      }
-      const asphaltMap = ownTexture(new T.CanvasTexture(asphaltCanvas));
-      asphaltMap.wrapS = asphaltMap.wrapT = T.RepeatWrapping;
-      asphaltMap.repeat.set(10, 600);
-      asphaltMap.colorSpace = T.SRGBColorSpace;
-      asphaltMap.anisotropy = Math.min(
-        8,
-        renderer.capabilities.getMaxAnisotropy(),
+      const pavementMaps = [asphaltResult, normalResult, roughnessResult].map(
+        (result) => (result.status === 'fulfilled' ? result.value : null),
       );
+      for (const texture of pavementMaps)
+        if (texture) {
+          texture.wrapS = texture.wrapT = T.RepeatWrapping;
+          texture.repeat.set(62 / 3, 3690 / 3);
+          texture.anisotropy = Math.min(
+            16,
+            renderer.capabilities.getMaxAnisotropy(),
+          );
+        }
+      if (pavementMaps[0]) pavementMaps[0].colorSpace = T.SRGBColorSpace;
       const pavement = new T.MeshStandardMaterial({
-        map: asphaltMap,
-        roughness: 0.96,
+        color: pavementMaps[0] ? 0xa4a6a8 : 0x606366,
+        map: pavementMaps[0],
+        normalMap: pavementMaps[1],
+        roughnessMap: pavementMaps[2],
+        normalScale: new T.Vector2(0.35, 0.35),
+        roughness: 0.95,
       });
       const white = new T.MeshStandardMaterial({
         color: 0xf1eddf,
@@ -330,7 +387,7 @@ export default function BayFlightScene(props: Props) {
         return mesh;
       }
       surface(62, 3690, 0, -1675, 3, pavement);
-      surface(60, 3550, 0, -1675, 3.02, pavement);
+
       for (const side of [-1, 1])
         surface(0.9, 3510, side * 28.5, -1675, 3.05, white);
       const stripeGeometry = new T.PlaneGeometry(0.9, 30);
@@ -378,20 +435,46 @@ export default function BayFlightScene(props: Props) {
       }
       runway.add(lights);
 
+      const wingFlex = { value: 0 };
+      const wingDepth = new T.MeshDepthMaterial({
+        depthPacking: T.RGBADepthPacking,
+        side: T.DoubleSide,
+      });
+      addWingFlex(wingDepth, wingFlex);
+      materials.add(wingDepth);
+      const finishes = new Map<Material, Material>();
       model.traverse((node) => {
         const mesh = node as Mesh;
         if (!mesh.isMesh) return;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+        mesh.customDepthMaterial = wingDepth;
         const list = Array.isArray(mesh.material)
           ? mesh.material
           : [mesh.material];
-        for (const material of list)
-          if (material instanceof T.MeshStandardMaterial) {
-            material.roughness = Math.max(0.28, material.roughness * 0.8);
-            material.envMapIntensity = 1.05;
-            if (material.map) material.map.anisotropy = 8;
-          }
+        const upgraded = list.map((original) => {
+          if (!(original instanceof T.MeshStandardMaterial)) return original;
+          if (finishes.has(original)) return finishes.get(original)!;
+          const finish = new T.MeshPhysicalMaterial();
+          T.MeshStandardMaterial.prototype.copy.call(finish, original);
+          finish.defines = { STANDARD: '', PHYSICAL: '' };
+          const paint = !!original.map;
+          const dark = original.color.getHSL({ h: 0, s: 0, l: 0 }).l < 0.18;
+          finish.roughness = paint ? 0.31 : dark ? 0.42 : 0.3;
+          finish.metalness = paint || dark ? 0 : 0.65;
+          finish.clearcoat = paint ? 0.85 : 0.12;
+          finish.clearcoatRoughness = 0.22;
+          finish.envMapIntensity = 1.0;
+          if (finish.map)
+            finish.map.anisotropy = Math.min(
+              16,
+              renderer.capabilities.getMaxAnisotropy(),
+            );
+          addWingFlex(finish, wingFlex);
+          finishes.set(original, finish);
+          return finish;
+        });
+        mesh.material = Array.isArray(mesh.material) ? upgraded : upgraded[0];
         if (/Object_(5|7|9|11)_/.test(node.name)) {
           mesh.geometry = mesh.geometry.clone();
           mesh.geometry.computeBoundingBox();
@@ -415,6 +498,7 @@ export default function BayFlightScene(props: Props) {
       function gear(x: number, z: number, nose: boolean) {
         const group = new T.Group();
         group.position.set(x, -5.9, z);
+        group.userData = { nose, side: Math.sign(z) };
         orientedAirframe.add(group);
         gearGroups.push(group);
         const strut = new T.Mesh(
@@ -440,10 +524,10 @@ export default function BayFlightScene(props: Props) {
           for (const side of [-1, 1]) {
             const radius = nose ? 0.52 : 0.68;
             const wheel = new T.Mesh(
-              new T.CylinderGeometry(radius, radius, nose ? 0.3 : 0.46, 18),
+              new T.TorusGeometry(radius * 0.76, radius * 0.24, 10, 28),
               tire,
             );
-            wheel.rotation.x = Math.PI / 2;
+
             wheel.position.set(offset, -2.75, side * (nose ? 0.43 : 0.8));
             wheel.castShadow = true;
             group.add(wheel);
@@ -457,7 +541,7 @@ export default function BayFlightScene(props: Props) {
               steel,
             );
             hub.position.copy(wheel.position);
-            hub.rotation.copy(wheel.rotation);
+            hub.rotation.x = Math.PI / 2;
             group.add(hub);
           }
       }
@@ -509,7 +593,9 @@ export default function BayFlightScene(props: Props) {
         latest.current.audio.current?.update(currentP, isVisible && ready);
         if (!isVisible || (reduced && previousP === currentP)) return;
         previousP = currentP;
+        waterTime.value = reduced ? 0 : now * 0.001;
         const shot = sampleBayFlight(currentP);
+        wingFlex.value = 2.1 * smooth((currentP - 0.35) / 0.24);
         // A floating origin keeps runway shadows stable as the flight travels kilometers.
         planePosition.set(
           shot.position[0],
@@ -521,6 +607,7 @@ export default function BayFlightScene(props: Props) {
         const composition = sampleBayCamera(currentP, width / height);
         cameraOffset.set(...composition.position);
         camera.position.copy(cameraOffset);
+        camera.fov = composition.fov;
         target.set(0, 0, 0);
         camera.lookAt(target);
         camera.setViewOffset(
@@ -534,8 +621,12 @@ export default function BayFlightScene(props: Props) {
         sun.position.copy(sunlight).multiplyScalar(550);
         sun.target.position.set(0, 0, 0);
         for (const group of gearGroups) {
-          group.scale.y = Math.max(0.01, shot.gear);
-          group.position.y = -5.9 + (1 - shot.gear) * 2.6;
+          const folded = 1 - shot.gear;
+          group.rotation.x = group.userData.nose
+            ? 0
+            : group.userData.side * folded * 1.45;
+          group.rotation.z = group.userData.nose ? -folded * 1.5 : 0;
+          group.position.y = -5.9 + folded * 1.15;
           group.visible = shot.gear > 0.02;
         }
         for (const fan of fans)

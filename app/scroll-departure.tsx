@@ -208,6 +208,23 @@ export default function ScrollDeparture({
             </button>
           </div>
         </div>
+        <div className="bay-source-note">
+          <a
+            href="/credits/scene-credits.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ESA · USGS/USDA
+          </a>
+          <span> · </span>
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            © OpenStreetMap
+          </a>
+        </div>
         <div className="bay-progress" aria-hidden="true">
           <i />
         </div>

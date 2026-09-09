@@ -6,7 +6,7 @@
 - Original: [Boeing 787-9](https://sketchfab.com/3d-models/boeing-787-9-b6711e2e698e4e469675c1154a50b7a3), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Optimized derivative downloaded from [God’s Eye View](https://github.com/bilawalsidhu/gods-eye-view/blob/main/public/models/README.md): `https://raw.githubusercontent.com/bilawalsidhu/gods-eye-view/main/public/models/b789.glb`.
 - Local: `public/models/boeing-787-9.glb` (470,200 bytes). The GLB embeds its author, license and original URL.
-- Upstream derivative: geometry/material simplification, 256px WebP texture, real-meter scale, Y up, nose −X. Runtime additions here: retractable modeled landing gear, fan pivots, physical material adjustments, scene lighting and animation. The body asset itself is retained unchanged.
+- Upstream derivative: geometry/material simplification, 256px WebP texture, real-meter scale, Y up, nose −X. Runtime additions here: folding modeled landing gear, rounded tires, fan pivots, elastic wing deformation with matching shadow geometry, physical clearcoat paint and metal finishes, scene lighting and animation. The body asset itself is retained unchanged.
 
 ## Real Bay Area terrain
 
@@ -15,7 +15,7 @@
 - Source JPEG: 10,980 × 14,367, approximately 10 m pixels. Crop: `[3500, 5200, 8300, 10000]`.
 - Derivatives: `public/scenery/sf-bay.webp` (4096²) and `sf-bay-mobile.webp` (2048²), both retained under CC BY-SA 3.0 IGO. Crop and resize are the only image edits.
 - Approximate affine registration to ten USGS reference image patches: RMS 1.06 source pixels in the central Bay. Metadata: `public/credits/bay-georeferencing.json`. Registration is scenery positioning, not survey accuracy.
-- Scene axes follow source-image pixels at 10 meters per pixel, origin at estimated 28R displaced threshold `[5666.01015, 8672.84973]`. Detailed runway aligns toward the 10L end. The flight path, gear and runway details are an artistic reconstruction. Satellite city detail is draped over actual terrain; individual buildings are not modeled.
+- Scene axes follow source-image pixels at 10 meters per pixel, origin at estimated 28R displaced threshold `[5666.01015, 8672.84973]`. Detailed runway aligns toward the 10L end. The flight path, gear and runway details are an artistic reconstruction. Satellite city detail is draped over actual terrain; SFO buildings are extruded from the separately credited OpenStreetMap footprints below.
 
 Elevation uses [Mapzen/Terrarium](https://github.com/tilezen/joerd/blob/master/docs/formats.md) tiles `10/163/395`, `10/163/396`, `10/164/395`, `10/164/396` from `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png`. Credit: Mapzen terrain tiles; United States 3DEP and global terrain data courtesy of the U.S. Geological Survey; ocean terrain data from NOAA. [Full attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md).
 
@@ -40,3 +40,19 @@ Optional jet/wind ambience is synthesized locally with Web Audio. No third-party
 ## Design reference
 
 [Henry Heffernan’s portfolio](https://github.com/henryjeff/portfolio-website) informed the ambition of a coherent environment. Its code and assets were not copied. This site’s scroll-controlled Bay departure and project terminal are original implementations.
+
+## Close SFO scenery
+
+- Source: [USGS / USDA NAIP, The National Map](https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer), public domain. Acquisition date: 2022-05-18; source resolution 0.6 m.
+- `public/scenery/sfo-detail.webp` (4096², approximately 1.59 m/px) and `sfo-detail-mobile.webp` (2048², approximately 3.17 m/px) are derived from a 6.5 km square orthoimagery mosaic. These use EPSG:3857, north up.
+- Outer bounds in Web Mercator meters: west -13626825.603526574, south 4521217.699661355, east -13618619.768127132, north 4529423.535060797.
+- `lib/bay-surface.ts` maps the image through the existing affine registration, feathers its border, and gently balances exposure at rendering time. Non-water land retains the photograph's baked light; low-elevation water receives restrained physical reflections and ripple normals.
+- `public/scenery/sfo-buildings.json`: 562 real OSM footprint features, with original IDs and geometric rings preserved. **© OpenStreetMap contributors**, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/), [attribution](https://www.openstreetmap.org/copyright). This dataset remains separately licensed under ODbL.
+- Source query: OpenStreetMap Overpass, bbox south37.607 / west-122.401 / north37.641 / east-122.373, retrieved 2026-09-09. Non-rendering address/contact tags were omitted. Tagged heights are preferred; floor counts use 3.2 m per floor, otherwise generic buildings use 8 m and hangars 15 m as explicit scene estimates. Most building parts are omitted to prevent overlap, except the tower cabin. The imagery is from 2022 and OSM reflects a later date.
+- `lib/sfo-buildings.ts` retains polygon holes and batches roofs/walls into two draw calls. This is simplified massing, not a surveyed building reconstruction.
+
+## Photographed pavement
+
+- [Asphalt 02](https://polyhaven.com/a/asphalt_02), Rob Tuytel, [CC0](https://polyhaven.com/license).
+- Local 1K maps: `public/scenery/runway-color.webp`, `runway-normal.webp`, `runway-roughness.webp`. Original surface covers 3 × 3 m. OpenGL normal map; color is sRGB, normal/roughness are linear data.
+- The original valid 787 texture embedded in the GLB is retained. This update does not replace the aircraft atlas.

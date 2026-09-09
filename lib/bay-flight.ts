@@ -17,18 +17,18 @@ export const BAY_CHAPTERS = [
 export const BAY_ORIGIN = [5666.01015, 8672.84973] as const;
 export const RUNWAY_HEADING = Math.atan2(320.4, 166.45);
 const keys = [
-  { at: 0, position: [0, 0, 0], velocity: [0, 0, 0], camera: [-95, 23, 110] },
+  { at: 0, position: [0, 0, 0], velocity: [0, 0, 0], camera: [-95, -3, 110] },
   {
     at: 0.15,
     position: [0, 0, 0],
     velocity: [0, 0, 0],
-    camera: [-75, 15, 115],
+    camera: [-75, -4, 115],
   },
   {
     at: 0.37,
     position: [-2440, 0, -1268],
     velocity: [-14500, 0, -7535],
-    camera: [-30, 20, 135],
+    camera: [-30, 1, 135],
   },
   {
     at: 0.49,
@@ -121,14 +121,15 @@ export function sampleBayCamera(progress: number, aspect: number) {
   const portrait = aspect < 1;
   const bookend =
     1 - smooth((progress - 0.16) / 0.15) + smooth((progress - 0.86) / 0.1);
+  const fov = 29 + 8 * smooth((progress - 0.4) / 0.34);
+  const lensDistance =
+    Math.tan((39 * Math.PI) / 360) / Math.tan((fov * Math.PI) / 360);
   return {
-    position: shot.camera.map((n) => n * (portrait ? 1.85 : 1)) as [
-      number,
-      number,
-      number,
-    ],
+    position: shot.camera.map(
+      (n) => n * (portrait ? 1.85 : 1) * lensDistance,
+    ) as [number, number, number],
     offsetX: portrait ? 0 : -0.18,
     offsetY: portrait ? -0.18 * bookend : 0.08 - 0.095 * bookend,
-    fov: 39,
+    fov,
   };
 }
