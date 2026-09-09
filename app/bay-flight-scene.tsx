@@ -34,6 +34,12 @@ import {
 import { createGateFog } from '@/lib/bay-fog';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import { createAirfield, type Airfield } from '@/lib/sfo-airfield';
+import {
+  HeatHazeEffect,
+  createWingtipVortices,
+  thrustSetting,
+  vortexSetting,
+} from '@/lib/bay-thrust';
 import { createTreeMesh, loadTreeCanopies } from '@/lib/bay-trees';
 import {
   CITY_BOUNDS,
@@ -386,6 +392,7 @@ export default function BayFlightScene(props: Props) {
         renderer.domElement.remove();
       };
 
+      const heatHaze = new HeatHazeEffect();
       rendering = createBayRendering(
         renderer,
         scene,
@@ -393,6 +400,7 @@ export default function BayFlightScene(props: Props) {
         sun,
         sunlight,
         mobile,
+        [heatHaze],
       );
       const atmosphereReady = rendering?.ready ?? Promise.resolve(false);
       if (process.env.NODE_ENV !== 'production')
@@ -663,7 +671,7 @@ export default function BayFlightScene(props: Props) {
       if (process.env.NODE_ENV !== 'production')
         Object.assign(
           (window as unknown as { __bayDebug: Record<string, unknown> }).__bayDebug,
-          { surface, clouds, camera, world, debugView, aircraft },
+          { surface, clouds, camera, world, debugView, aircraft, heatHaze },
         );
       const shadeTexture = (texture: Texture) => {
         texture.colorSpace = T.NoColorSpace;
@@ -848,6 +856,10 @@ export default function BayFlightScene(props: Props) {
         }
       });
       orientedAirframe.add(model);
+      const vortices = createWingtipVortices();
+      geometries.add(vortices.geometry);
+      materials.add(vortices.material);
+      orientedAirframe.add(vortices.mesh);
       // Retractable gear is added to the optimized airframe in its original axes.
       const tire = new T.MeshStandardMaterial({
         color: 0x15191e,
@@ -1076,6 +1088,18 @@ export default function BayFlightScene(props: Props) {
         }
         for (const fan of fans)
           fan.rotation.x = reduced ? 0 : now * 0.006 + currentP * 200;
+        // Visible thrust: exhaust haze at the engines' power setting, and
+        // vapour off the tips while the wing is loaded (or through a stunt).
+        heatHaze.place(
+          orientedAirframe,
+          camera,
+          reduced ? 0 : thrustSetting(currentP),
+          now * 0.001,
+        );
+        vortices.update(
+          reduced ? 0 : Math.max(vortexSetting(currentP), stunt ? 1 : 0),
+          now * 0.001,
+        );
       }
       function draw(dt: number) {
         if (rendering) rendering.render(planePosition, dt);
@@ -1161,7 +1185,7 @@ export default function BayFlightScene(props: Props) {
           { egg: (name: EasterEgg) => announce(name) },
         );
       console.log(
-        '%c✈ N787HA %cPersonal Airspace · flight deck extras: click the aircraft to wave, ↑↑↓↓←→←→BA (or type roll) for an aileron roll, type gt350 for a chase car, karl for the fog.',
+        '%c✈ N787HA %cflight deck extras: click the aircraft to wave, ↑↑↓↓←→←→BA (or type roll) for an aileron roll, type gt350 for a chase car, karl for the fog.',
         'font-weight:700;color:#db4f24',
         'color:#47677a',
       );

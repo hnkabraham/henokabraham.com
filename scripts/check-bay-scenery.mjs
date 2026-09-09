@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { transpileModule, ModuleKind } from 'typescript';
+import { transpileModule, ModuleKind, ScriptTarget } from 'typescript';
 import * as T from 'three';
 const compile = async (name) =>
   transpileModule(
     await fs.readFile(new URL(`../lib/${name}.ts`, import.meta.url), 'utf8'),
-    { compilerOptions: { module: ModuleKind.ESNext } },
+    { compilerOptions: { module: ModuleKind.ESNext, target: ScriptTarget.ES2022 } },
   ).outputText;
 const url = (js) =>
   `data:text/javascript;base64,${Buffer.from(js).toString('base64')}`;
@@ -47,6 +47,9 @@ const { createAirfield } = await import(
 );
 const { addLivery, LIVERY_REGIONS, LIVERY_ATLAS } = await import(
   await moduleURL('bay-livery', { './airframe-flex': await moduleURL('airframe-flex') })
+);
+const { HeatHazeEffect, createWingtipVortices, thrustSetting, vortexSetting, NOZZLES, WINGTIPS } = await import(
+  await moduleURL('bay-thrust', { postprocessing: import.meta.resolve('postprocessing') })
 );
 const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
@@ -447,4 +450,40 @@ console.log(
   assert.ok(Math.abs(fuselage(20) - fin(20)) < 1e-9, 'Wave edge continuous at the fin root');
   assert.ok(Math.abs((fuselage(20) - fuselage(19.999)) / 0.001 - (fin(20.001) - fin(20)) / 0.001) < 0.01, 'Wave edge slope continuous at the fin root');
   console.log(`livery check: ${regions.length} atlas regions, patch applied to meshphysical`);
+}
+
+// Thrust: the power schedule follows the flight, the haze effect binds its
+// plumes in view space, and the vortex ribbons are finite and off on the ground.
+{
+  assert.ok(thrustSetting(0) < 0.2 && thrustSetting(0.05) < 0.2, 'Idle at the hold');
+  assert.ok(Math.abs(thrustSetting(0.25) - 1) < 1e-6 && Math.abs(thrustSetting(0.45) - 1) < 1e-6, 'Takeoff power through the roll and rotation');
+  assert.ok(thrustSetting(0.9) > 0.5 && thrustSetting(0.9) < 0.7, 'Climb power once established');
+  assert.equal(vortexSetting(0.3), 0, 'No vapour on the ground');
+  assert.ok(vortexSetting(0.47) > 0.95 && vortexSetting(0.8) === 0, 'Vapour at rotation, gone once climbed out');
+  for (const [x, y, z] of [...NOZZLES, ...WINGTIPS]) assert.ok(Number.isFinite(x + y + z));
+  const haze = new HeatHazeEffect();
+  assert.ok(haze.fragmentShader.includes('void mainUv(inout vec2 uv)') && haze.fragmentShader.includes('readDepth(uv)'), 'Haze distorts the uv against scene depth');
+  const airframe = new T.Group();
+  airframe.rotation.y = -Math.PI / 2;
+  const camera = new T.PerspectiveCamera(39, 16 / 9, 1, 1e5);
+  camera.position.set(0, 20, 120);
+  camera.lookAt(0, 0, 0);
+  camera.updateProjectionMatrix();
+  haze.place(airframe, camera, 1, 3);
+  const a = haze.uniforms.get('plumeA').value, b = haze.uniforms.get('plumeB').value;
+  assert.equal(a.length, 2);
+  for (let i = 0; i < 2; i++) {
+    assert.ok(a[i].z < 0 && b[i].z < 0, 'Plumes sit in front of the camera in view space');
+    assert.ok(Math.abs(a[i].distanceTo(b[i]) - 24) < 1e-3, 'Plume length preserved by the view transform');
+  }
+  assert.equal(haze.uniforms.get('heat').value, 1);
+  const vortices = createWingtipVortices();
+  const p = vortices.geometry.attributes.position;
+  for (let i = 0; i < p.count; i++) assert.ok(Number.isFinite(p.getX(i) + p.getY(i) + p.getZ(i)));
+  assert.ok(vortices.geometry.index.count > 1000 && vortices.material.fragmentShader.includes('max(0.0, 1.0 - vAlong)'), 'Ribbons indexed; pow base guarded against NaN');
+  vortices.update(0, 1);
+  assert.equal(vortices.mesh.visible, false);
+  vortices.update(1, 2);
+  assert.equal(vortices.mesh.visible, true);
+  console.log(`thrust check: ${p.count} ribbon vertices, haze plumes ${a[0].z.toFixed(0)} m and ${a[1].z.toFixed(0)} m ahead of the camera`);
 }

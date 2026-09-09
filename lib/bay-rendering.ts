@@ -8,6 +8,7 @@ import { N8AOPostPass } from 'n8ao';
 import {
   BlendFunction,
   BloomEffect,
+  type Effect,
   EffectComposer,
   EffectPass,
   HueSaturationEffect,
@@ -48,6 +49,7 @@ export function createBayRendering(
   sun: DirectionalLight,
   sunlight: Vector3,
   mobile: boolean,
+  effects: Effect[] = [],
 ) {
   // Keep the existing direct renderer on devices without float render targets.
   if (!renderer.extensions.has('EXT_color_buffer_float')) return undefined;
@@ -78,6 +80,9 @@ export function createBayRendering(
   occlusion.outputTargetInternal.texture.type = HalfFloatType;
   occlusion.outputTargetInternal.texture.colorSpace = LinearSRGBColorSpace;
   composer.addPass(occlusion);
+  // Scene-space effects that distort the lit image (the engines' heat haze)
+  // run before aerial perspective and bloom so the haze inherits both.
+  if (effects.length) composer.addPass(new EffectPass(camera, ...effects));
 
   const sunDirection = sunlight.clone().transformDirection(BAY_TO_ECEF);
   const atmosphere = new AerialPerspectiveEffect(camera, {

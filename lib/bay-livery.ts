@@ -142,7 +142,7 @@ function drawAtlas(context: CanvasRenderingContext2D) {
 
   // Titles forward of the wing, the registration aft, the URL under the
   // belly and the monogram on the engine cowls.
-  fitText(context, 'PERSONAL AIRSPACE', LIVERY_REGIONS.titles, {
+  fitText(context, 'HENOK ABRAHAM', LIVERY_REGIONS.titles, {
     font: SANS,
     weight: 640,
     tracking: 0.08,
