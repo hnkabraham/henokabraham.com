@@ -19,7 +19,7 @@ const moduleURL = async (name) =>
 const { createAirportBuildings, lonLatToBay } = await import(
   await moduleURL('sfo-buildings')
 );
-const { airportUV, addBaySurface } = await import(
+const { airportUV, addBaySurface, addPavementWear } = await import(
   await moduleURL('bay-surface')
 );
 const { addWingFlex } = await import(await moduleURL('airframe-flex'));
@@ -28,12 +28,9 @@ const data = JSON.parse(
     new URL('../public/scenery/sfo-buildings.json', import.meta.url),
   ),
 );
-const bytes = await fs.readFile(
-  new URL('../public/scenery/bay-elevation.bin', import.meta.url),
-);
-const elevations = new Uint16Array(
-  bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
-);
+// Elevation is decoded from a lossless WebP in the browser; the batching is
+// validated here on a level 1025-point apron grid (2 m, quarter-metre units).
+const elevations = new Uint16Array(1025 * 1025).fill(8);
 const airport = createAirportBuildings(data, elevations);
 assert.equal(
   airport.children.length,
@@ -64,7 +61,12 @@ assert.ok(
 );
 for (const withDetail of [true, false]) {
   const material = new T.MeshStandardMaterial();
-  addBaySurface(material, withDetail ? new T.Texture() : null);
+  const controls = addBaySurface(
+    material,
+    withDetail ? new T.Texture() : null,
+    withDetail ? { map: new T.Texture(), normalMap: new T.Texture() } : null,
+  );
+  assert.equal(controls.lit.value, 0);
   const shader = {
     uniforms: {},
     vertexShader: T.ShaderLib.standard.vertexShader,
@@ -78,6 +80,19 @@ for (const withDetail of [true, false]) {
     shader.fragmentShader.includes('sampler2D airportMap'),
     withDetail,
   );
+  assert.equal(shader.fragmentShader.includes('bayDetailNormalMap'), withDetail);
+}
+{
+  const material = new T.MeshStandardMaterial();
+  addPavementWear(material, [62 / 3, 3690 / 3], 62);
+  const shader = {
+    uniforms: {},
+    vertexShader: T.ShaderLib.standard.vertexShader,
+    fragmentShader: T.ShaderLib.standard.fragmentShader,
+  };
+  material.onBeforeCompile(shader, {});
+  assert.ok(shader.fragmentShader.includes('bayRubber'));
+  assert.ok(!shader.fragmentShader.includes('#include <map_fragment>'));
 }
 for (const shaderName of ['physical', 'depth']) {
   const material = new T.Material(),

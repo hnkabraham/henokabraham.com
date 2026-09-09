@@ -1,6 +1,8 @@
 import {
   AerialPerspectiveEffect,
   PrecomputedTexturesLoader,
+  SkyMaterial,
+  getSunLightColor,
 } from '@takram/three-atmosphere';
 import { N8AOPostPass } from 'n8ao';
 import {
@@ -8,26 +10,42 @@ import {
   BloomEffect,
   EffectComposer,
   EffectPass,
+  HueSaturationEffect,
   RenderPass,
   ToneMappingEffect,
   ToneMappingMode,
 } from 'postprocessing';
 import {
   Color,
+  CubeCamera,
   HalfFloatType,
   LinearSRGBColorSpace,
+  Mesh,
   NoToneMapping,
+  PlaneGeometry,
+  PMREMGenerator,
+  Scene,
   Vector3,
+  WebGLCubeRenderTarget,
+  type DirectionalLight,
   type PerspectiveCamera,
-  type Scene,
   type WebGLRenderer,
+  type WebGLRenderTarget,
 } from 'three';
 import { BAY_TO_ECEF, updateAtmosphereOrigin } from './bay-atmosphere';
+
+/**
+ * AgX exposure once the scene is lit in the atmosphere's relative-luminance
+ * units: a sunlit white surface sits near 1.0 before the AgX shoulder, the
+ * zenith stays a deep blue and the horizon brightens physically.
+ */
+export const ATMOSPHERE_EXPOSURE = 2.1;
 
 export function createBayRendering(
   renderer: WebGLRenderer,
   scene: Scene,
   camera: PerspectiveCamera,
+  sun: DirectionalLight,
   sunlight: Vector3,
   mobile: boolean,
 ) {
@@ -61,15 +79,17 @@ export function createBayRendering(
   occlusion.outputTargetInternal.texture.colorSpace = LinearSRGBColorSpace;
   composer.addPass(occlusion);
 
+  const sunDirection = sunlight.clone().transformDirection(BAY_TO_ECEF);
   const atmosphere = new AerialPerspectiveEffect(camera, {
     sky: true,
     sun: true,
     moon: false,
-    // The airframe already has PBR lighting; apply scattering only.
+    // Meshes are lit by the sun light and sky environment below, in the same
+    // units, so the effect only adds transmittance, inscatter and the sky.
     sunLight: false,
     skyLight: false,
     correctGeometricError: false,
-    sunDirection: sunlight.clone().transformDirection(BAY_TO_ECEF),
+    sunDirection,
   });
   atmosphere.worldToECEFMatrix.copy(BAY_TO_ECEF);
   const atmospherePass = new EffectPass(camera, atmosphere);
@@ -88,9 +108,36 @@ export function createBayRendering(
     camera,
     bloom,
     new ToneMappingEffect({ mode: ToneMappingMode.AGX }),
+    // AgX desaturates the sky and land it compresses; restore a little.
+    new HueSaturationEffect({ saturation: 0.12 }),
   );
   finish.dithering = true;
   composer.addPass(finish);
+
+  // The same scattering tables light the meshes: the sky is rendered into a
+  // small cubemap around the aircraft for image-based diffuse and specular
+  // light, and the sun light takes its colour from the transmittance table.
+  const skyMaterial = new SkyMaterial({
+    sun: false,
+    moon: false,
+    ground: true,
+    groundAlbedo: new Color(0.2, 0.21, 0.18),
+    sunDirection,
+  });
+  skyMaterial.worldToECEFMatrix.copy(BAY_TO_ECEF);
+  const skyMesh = new Mesh(new PlaneGeometry(2, 2), skyMaterial);
+  skyMesh.frustumCulled = false;
+  const skyScene = new Scene();
+  skyScene.add(skyMesh);
+  const skyTarget = new WebGLCubeRenderTarget(mobile ? 64 : 128, {
+    type: HalfFloatType,
+  });
+  const skyCamera = new CubeCamera(1, 1e6, skyTarget);
+  const pmrem = new PMREMGenerator(renderer);
+  let environment: WebGLRenderTarget | null = null;
+  let environmentAge = Infinity;
+  const sunColor = new Color();
+  const sunPosition = new Vector3();
 
   // Ship compressed LUTs from Takram's reference asset revision. No external
   // requests, credentials, or expensive multi-frame GPU precomputation.
@@ -110,7 +157,9 @@ export function createBayRendering(
           return;
         }
         Object.assign(atmosphere, lookupTextures);
+        Object.assign(skyMaterial, lookupTextures);
         atmospherePass.enabled = true;
+        pmrem.compileCubemapShader();
         resolve(true);
       },
       undefined,
@@ -118,6 +167,31 @@ export function createBayRendering(
     );
   });
   const scratch = new Vector3();
+
+  function updateLighting(dt: number) {
+    if (!atmospherePass.enabled) return;
+    sunPosition.setFromMatrixPosition(atmosphere.worldToECEFMatrix);
+    getSunLightColor(
+      lookupTextures.transmittanceTexture,
+      sunPosition,
+      sunDirection,
+      sunColor,
+    );
+    sun.color.copy(sunColor);
+    sun.intensity = 1;
+    environmentAge += dt;
+    // Altitude changes the sky slowly; refresh the cubemap a few times a second.
+    if (environment && environmentAge < 0.4) return;
+    environmentAge = 0;
+    skyMaterial.worldToECEFMatrix.copy(atmosphere.worldToECEFMatrix);
+    skyCamera.updateMatrixWorld(true);
+    skyCamera.update(renderer, skyScene);
+    environment = pmrem.fromCubemap(skyTarget.texture, environment);
+    if (scene.environment !== environment.texture) {
+      scene.environment = environment.texture;
+      scene.environmentIntensity = 1;
+    }
+  }
 
   return {
     ready,
@@ -130,6 +204,7 @@ export function createBayRendering(
         localPosition,
         scratch,
       );
+      updateLighting(dt);
       composer.render(dt);
     },
     dispose() {
@@ -141,6 +216,11 @@ export function createBayRendering(
         if (key.endsWith('Quad')) value?.dispose?.();
       }
       composer.dispose();
+      skyMesh.geometry.dispose();
+      skyMaterial.dispose();
+      skyTarget.dispose();
+      environment?.dispose();
+      pmrem.dispose();
       Object.values(lookupTextures).forEach((texture) => texture?.dispose());
     },
   };

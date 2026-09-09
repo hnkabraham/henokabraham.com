@@ -140,9 +140,17 @@ for (const [width, height] of [
   );
 }
 const elevation = await fs.readFile(
-  new URL('../public/scenery/bay-elevation.bin', import.meta.url),
+  new URL('../public/scenery/bay-elevation.webp', import.meta.url),
 );
-assert.equal(elevation.length, 257 * 257 * 2);
+// Lossless WebP (VP8L): RIFF header, then a 14-bit width-1 and height-1.
+assert.equal(elevation.toString('latin1', 0, 4), 'RIFF');
+assert.equal(elevation.toString('latin1', 8, 16), 'WEBPVP8L');
+assert.equal(elevation[20], 0x2f, 'VP8L signature');
+const bits = elevation.readUInt32LE(21);
+const gridWidth = (bits & 0x3fff) + 1,
+  gridHeight = ((bits >> 14) & 0x3fff) + 1;
+assert.equal(gridWidth, 1025);
+assert.equal(gridHeight, 1025);
 assert.ok(Math.abs(RUNWAY_HEADING - Math.atan2(320.4, 166.45)) < 0.000001);
 console.log(
   `Passed: ${meshCount} aircraft meshes; chapter positions; 2,000 continuous route samples; gear; camera clipping; elevation grid.`,

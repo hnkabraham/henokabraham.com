@@ -16,16 +16,18 @@ Takram also offers volumetric clouds. The requested clear sky benefits more from
 
 ## Pipeline and compatibility
 
-1. Render PBR aircraft, real terrain, asphalt and building geometry to a half-float target.
+1. Render PBR aircraft, real terrain, asphalt and building geometry to a half-float target. The meshes are lit in the atmosphere's own relative-luminance units: the directional sun takes its colour from the transmittance table at the aircraft's position (`getSunLightColor`), and image-based diffuse and specular light comes from a 128² (64² on phones) cubemap of Takram's `SkyMaterial` rendered around the aircraft and prefiltered with PMREM, refreshed a few times per second as altitude changes. The sun disc is excluded from that cubemap because the directional light already provides it. Terrain imagery is treated as albedo under this light; only under the fallback sky does it keep its baked exposure.
 2. Apply N8AO from the actual scene depth, preserving wing displacement. N8AO 2.0.1's internal beauty target is explicitly changed from unsigned byte to half float so highlights are not clipped before composition.
 3. Apply atmospheric transmittance and inscattering. Post-process sun/sky lighting remains disabled because the materials already receive PBR light. Atmospheric sky replaces the Three.js fallback sky only after all lookup textures load successfully. Exponential fog is removed at the same time to prevent applying haze twice.
-4. Add restrained HDR bloom, then AgX tone mapping and dithering. Tone mapping and gamma conversion are applied once.
+4. Add restrained HDR bloom, then AgX tone mapping at exposure 2.1 (so a sunlit white surface sits near the start of the AgX shoulder while the zenith stays a deep blue), a 12% saturation recovery for the sky and land that AgX compresses, and dithering. Tone mapping and gamma conversion are applied once.
 
-Phone settings use lower AO resolution and fewer bloom levels; multisampling and a bounded pixel budget keep high-DPI render targets under control. Reduced-motion behavior and offscreen/hidden-tab suspension are preserved. Missing atmospheric textures retain the simpler sky; missing floating-point framebuffer support uses the direct renderer. Every composer target, lookup texture and N8AO fullscreen wrapper is disposed on unmount.
+Before the canvas fades in, every program is compiled asynchronously and one frame is drawn, so the first visible frame does not stall on shader compilation.
+
+Phone settings use lower AO resolution, fewer bloom levels, a 512² terrain grid and a smaller sky cubemap; multisampling and a bounded pixel budget keep high-DPI render targets under control. Reduced-motion behavior and offscreen/hidden-tab suspension are preserved. Missing atmospheric textures retain the simpler sky; missing floating-point framebuffer support uses the direct renderer. Every composer target, lookup texture and N8AO fullscreen wrapper is disposed on unmount.
 
 ## Validation
 
-`scripts/check-bay-rendering.mjs` decodes all three actual EXR lookup textures, verifies dimensions and finite half-float samples, checks 1,001 floating-origin transforms and SFO coordinates, and exercises the installed atmosphere/postprocessing shader assembler. The existing flight checks validate camera framing and route continuity; scenery checks validate geometry and material/depth shader integration. TypeScript and the production build verify the installed dependency combination. These checks do not constitute browser visual or device-performance QA.
+`scripts/check-bay-rendering.mjs` decodes all three actual EXR lookup textures, verifies dimensions and finite half-float samples, checks 1,001 floating-origin transforms and SFO coordinates, samples the sun colour the scene lights with from the transmittance table, and exercises the installed atmosphere/postprocessing shader assembler. The flight checks also validate the lossless WebP elevation grid's 1025² header. The existing flight checks validate camera framing and route continuity; scenery checks validate geometry and material/depth shader integration. TypeScript and the production build verify the installed dependency combination. These checks do not constitute browser visual or device-performance QA.
 
 The tangent-plane scenery introduces under 55 meters of ellipsoid-height difference at the farthest point of this cinematic route. It is not a navigational simulation.
 

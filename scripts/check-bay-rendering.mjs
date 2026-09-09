@@ -4,7 +4,10 @@ import { transpileModule, ModuleKind } from 'typescript';
 import * as T from 'three';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { Geodetic } from '@takram/three-geospatial';
-import { AerialPerspectiveEffect } from '@takram/three-atmosphere';
+import {
+  AerialPerspectiveEffect,
+  getSunLightColor,
+} from '@takram/three-atmosphere';
 import {
   EffectPass,
   BloomEffect,
@@ -67,6 +70,7 @@ assert.ok(
 );
 
 let totalBytes = 0;
+const lookups = {};
 for (const [name, width, height] of [
   ['transmittance', 256, 64],
   ['scattering', 256, 128 * 32],
@@ -93,7 +97,32 @@ for (const [name, width, height] of [
     nonzero > (width * height) / 3,
     `${name}: populated lookup texture`,
   );
+  lookups[name] = new T.DataTexture(
+    exr.data,
+    exr.width,
+    exr.height,
+    T.RGBAFormat,
+    T.HalfFloatType,
+  );
 }
+
+// The scene's directional sun takes this colour, in the sky's own units.
+const sunDirection = new T.Vector3(-0.58, 0.58, 0.57)
+  .normalize()
+  .transformDirection(BAY_TO_ECEF);
+const sunColor = getSunLightColor(
+  lookups.transmittance,
+  new T.Vector3().setFromMatrixPosition(BAY_TO_ECEF),
+  sunDirection,
+);
+assert.ok(
+  [sunColor.r, sunColor.g, sunColor.b].every((v) => Number.isFinite(v) && v > 0.5),
+  'Sun colour from the transmittance table must be a bright, finite daylight',
+);
+assert.ok(
+  sunColor.r > sunColor.b,
+  'Low-altitude transmittance should warm the sun colour',
+);
 
 // Exercise the actual installed library's shader assembler and camera update.
 // This is a CPU integration check; it does not claim a browser/GPU visual test.
@@ -139,5 +168,5 @@ assert.ok(
 atmospherePass.dispose();
 finish.dispose();
 console.log(
-  `Passed: 1,001 floating-origin transforms; ${totalBytes.toLocaleString()} bytes of valid atmosphere LUTs; atmospheric depth, sky and HDR shader assembly.`,
+  `Passed: 1,001 floating-origin transforms; ${totalBytes.toLocaleString()} bytes of valid atmosphere LUTs; sun colour ${[sunColor.r, sunColor.g, sunColor.b].map((v) => v.toFixed(2)).join('/')}; atmospheric depth, sky and HDR shader assembly.`,
 );
