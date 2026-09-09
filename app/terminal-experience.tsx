@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
   ArrowRight,
@@ -17,7 +17,11 @@ import {
   Compass,
   RotateCcw,
 } from 'lucide-react';
-import AircraftScene, { type AircraftView } from './aircraft-scene';
+import AircraftScene, {
+  type AircraftView,
+  type SceneStatus,
+} from './aircraft-scene';
+import { useAirspaceDepth } from './use-airspace-depth';
 import { flights, openSource } from './flight-data';
 import {
   Dialog,
@@ -53,9 +57,27 @@ export default function TerminalExperience() {
   const [projectOpen, setProjectOpen] = useState(false);
   const [viewReset, setViewReset] = useState(0);
   const flight = flights[selected];
+  const root = useRef<HTMLDivElement>(null);
+  const [cinematic, setCinematic] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [sceneStatus, setSceneStatus] = useState<SceneStatus>('loading');
+  const finishFlight = useCallback(() => setCinematic(false), []);
+  useAirspaceDepth(root, moving && !reducedMotion);
+  useEffect(() => {
+    if (!cinematic) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCinematic(false);
+    };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [cinematic]);
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setMoving(!preference.matches);
+    const update = () => {
+      setMoving(!preference.matches);
+      setReducedMotion(preference.matches);
+      if (preference.matches) setCinematic(false);
+    };
     update();
     preference.addEventListener('change', update);
     return () => preference.removeEventListener('change', update);
@@ -65,7 +87,7 @@ export default function TerminalExperience() {
   };
 
   return (
-    <div className="airport">
+    <div className="airport" ref={root} data-motion={moving && !reducedMotion}>
       <a className="skip-link" href="#departures">
         Skip to projects
       </a>
@@ -96,12 +118,16 @@ export default function TerminalExperience() {
         <StationClock />
       </header>
       <main>
-        <section className="sky-section" aria-labelledby="welcome-title">
+        <section
+          className="sky-section"
+          aria-labelledby="welcome-title"
+          data-flying={cinematic}
+        >
           <div className="sky-background" />
           <div className="sky-coordinate mono">
             PERSONAL PORTFOLIO / TERMINAL H.A
           </div>
-          <div className="welcome-copy">
+          <div className="welcome-copy" inert={cinematic}>
             <p className="eyebrow">
               <span className="orange-line" /> YOU’VE ARRIVED AT THE RIGHT PLACE
             </p>
@@ -126,17 +152,51 @@ export default function TerminalExperience() {
             moving={moving}
             destination={selected}
             reset={viewReset}
+            cinematic={cinematic}
+            onCinematicEnd={finishFlight}
+            onStatusChange={setSceneStatus}
           />
+          {cinematic && (
+            <div className="flight-director">
+              <p className="eyebrow">A NINE-SECOND CHANGE OF PERSPECTIVE</p>
+              <h2>Enjoy the view.</h2>
+              <p>Drag to take over. Esc to return.</p>
+            </div>
+          )}
           <div className="scene-annotation mono">
             <span>FLIGHT H.A — 001</span>
             <span>BOUND FOR THE NEXT IDEA</span>
           </div>
           <div className="scene-controls">
+            <button
+              className="scenic-flight-button"
+              onClick={() => {
+                if (cinematic) setCinematic(false);
+                else {
+                  setMoving(true);
+                  setCinematic(true);
+                  const sky = root.current?.querySelector('.sky-section');
+                  if (sky && sky.getBoundingClientRect().top < -100)
+                    sky.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              disabled={reducedMotion || sceneStatus !== 'ready'}
+              aria-pressed={cinematic}
+              title={
+                reducedMotion
+                  ? 'Animation is disabled by your reduced-motion preference'
+                  : 'Play a nine-second scenic flight'
+              }
+            >
+              {cinematic ? <X size={16} /> : <PlaneTakeoff size={16} />}
+              {cinematic ? 'Back to cruise' : 'Take a flight'}
+            </button>
             <ToggleGroup
               className="camera-views"
               value={[view]}
               onValueChange={(values) => {
                 if (values[0]) {
+                  setCinematic(false);
                   setView(values[0] as AircraftView);
                   setViewReset((n) => n + 1);
                 }
@@ -149,10 +209,12 @@ export default function TerminalExperience() {
             </ToggleGroup>
             <button
               className="motion-button"
-              onClick={() => setMoving(!moving)}
-              aria-label={
-                moving ? 'Pause aircraft motion' : 'Resume aircraft motion'
-              }
+              onClick={() => {
+                setCinematic(false);
+                setMoving(!moving);
+              }}
+              disabled={reducedMotion}
+              aria-label={moving ? 'Pause all motion' : 'Resume motion'}
               title={moving ? 'Pause motion' : 'Resume motion'}
             >
               {moving ? <Pause size={14} /> : <Play size={14} />}
@@ -160,6 +222,7 @@ export default function TerminalExperience() {
             <button
               className="motion-button"
               onClick={() => {
+                setCinematic(false);
                 setView('cruise');
                 setViewReset((n) => n + 1);
               }}
@@ -186,7 +249,7 @@ export default function TerminalExperience() {
           id="departures"
           aria-labelledby="departures-title"
         >
-          <div className="terminal-section-top">
+          <div className="terminal-section-top" data-reveal>
             <div className="terminal-section-label">
               <span className="section-marker">01</span>
               <div>
@@ -201,7 +264,11 @@ export default function TerminalExperience() {
             </p>
           </div>
           <div className="departure-layout">
-            <div className="departure-board">
+            <div
+              className="departure-board depth-surface"
+              data-depth="board"
+              data-reveal
+            >
               <div className="board-title">
                 <span>
                   <PlaneTakeoff size={20} /> PROJECT DEPARTURES
@@ -250,9 +317,17 @@ export default function TerminalExperience() {
                 <span>SELECT A ROW →</span>
               </div>
             </div>
-            <Dialog open={projectOpen} onOpenChange={setProjectOpen}>
+            <Dialog
+              open={projectOpen}
+              onOpenChange={(open) => {
+                setProjectOpen(open);
+                if (open) setCinematic(false);
+              }}
+            >
               <aside
-                className="boarding-pass"
+                className="boarding-pass depth-surface"
+                data-depth="ticket"
+                data-reveal
                 id="selected-project"
                 aria-label="Selected project"
               >
@@ -377,6 +452,7 @@ export default function TerminalExperience() {
         </section>
         <section
           className="open-hangar"
+          data-reveal
           id="open-source"
           aria-labelledby="hangar-title"
         >
@@ -419,6 +495,7 @@ export default function TerminalExperience() {
         <section
           id="about"
           className="about-section"
+          data-reveal
           aria-labelledby="about-title"
         >
           <div className="about-heading">
@@ -472,7 +549,11 @@ export default function TerminalExperience() {
             </div>
           </div>
         </section>
-        <section className="contact-section" aria-labelledby="contact-title">
+        <section
+          className="contact-section"
+          data-reveal
+          aria-labelledby="contact-title"
+        >
           <div className="contact-top mono">
             <span>
               <Radio size={15} /> TOWER, THIS IS HENOK.
@@ -513,7 +594,7 @@ export default function TerminalExperience() {
             <DialogTitle>Scene credits</DialogTitle>
             <DialogDescription>
               Aircraft: Cesium Air from CesiumJS Contributors, used under Apache
-              2.0. Cloud backdrop generated for this portfolio. Built with
+              2.0. Cloud imagery generated for this portfolio. Built with
               Three.js.
             </DialogDescription>
             <a
