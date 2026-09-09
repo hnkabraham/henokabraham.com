@@ -15,7 +15,6 @@ import {
 } from '@/lib/sfo-buildings';
 import {
   addCloudShade,
-  addLivery,
   addSkinDetail,
   addWingFlex,
 } from '@/lib/airframe-flex';
@@ -33,7 +32,7 @@ import {
   type EasterEgg,
 } from '@/lib/bay-easter-eggs';
 import { createGateFog } from '@/lib/bay-fog';
-import { createLiveryTexture } from '@/lib/bay-livery';
+import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import { createAirfield, type Airfield } from '@/lib/sfo-airfield';
 import { createTreeMesh, loadTreeCanopies } from '@/lib/bay-trees';
 import {
@@ -664,7 +663,7 @@ export default function BayFlightScene(props: Props) {
       if (process.env.NODE_ENV !== 'production')
         Object.assign(
           (window as unknown as { __bayDebug: Record<string, unknown> }).__bayDebug,
-          { surface, clouds, camera, world, debugView },
+          { surface, clouds, camera, world, debugView, aircraft },
         );
       const shadeTexture = (texture: Texture) => {
         texture.colorSpace = T.NoColorSpace;
@@ -824,7 +823,7 @@ export default function BayFlightScene(props: Props) {
             // Real skins have faint waviness between frames; it keeps the
             // clearcoat reflections from reading as a perfect mirror.
             finish.normalMap = skinNormal;
-            finish.normalScale = new T.Vector2(0.12, 0.12);
+            finish.normalScale = new T.Vector2(0.06, 0.06);
           }
           if (finish.map)
             finish.map.anisotropy = Math.min(

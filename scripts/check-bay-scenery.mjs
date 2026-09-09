@@ -45,6 +45,9 @@ const { createGateFog } = await import(await moduleURL('bay-fog'));
 const { createAirfield } = await import(
   await moduleURL('sfo-airfield', { './bay-city': cityURL })
 );
+const { addLivery, LIVERY_REGIONS, LIVERY_ATLAS } = await import(
+  await moduleURL('bay-livery', { './airframe-flex': await moduleURL('airframe-flex') })
+);
 const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
   await fs.readFile(
@@ -412,4 +415,36 @@ console.log(
   });
   built.update(1234);
   console.log(`airfield check: ${meshes} meshes, ${built.counts.aircraft} aircraft, ${built.counts.lights.toLocaleString()} lights, ${built.counts.flashers} flashers`);
+}
+
+// Livery: the atlas regions tile the canvas without overlap, and the shader
+// patch lands on the standard chunk anchors of the physical material.
+{
+  const regions = Object.entries(LIVERY_REGIONS);
+  for (const [name, [x0, y0, x1, y1]] of regions) {
+    assert.ok(x0 >= 0 && y0 >= 0 && x1 <= LIVERY_ATLAS && y1 <= LIVERY_ATLAS && x1 > x0 && y1 > y0, `Region ${name} fits the atlas`);
+    for (const [other, [a0, b0, a1, b1]] of regions)
+      if (other !== name)
+        assert.ok(x1 <= a0 || a1 <= x0 || y1 <= b0 || b1 <= y0, `Regions ${name} and ${other} do not overlap`);
+  }
+  const material = new T.MeshPhysicalMaterial();
+  addLivery(material, new T.Texture());
+  const shader = {
+    uniforms: {},
+    vertexShader: T.ShaderChunk.meshphysical_vert,
+    fragmentShader: T.ShaderChunk.meshphysical_frag,
+  };
+  material.onBeforeCompile(shader);
+  assert.ok(shader.uniforms.liveryMap, 'Livery atlas bound as a uniform');
+  assert.ok(shader.vertexShader.includes('vLiveryPoint = position;'), 'Model-space point passed to the fragment stage');
+  for (const needle of ['liverySweep(', 'liverySweepSlope(', 'LIV_FIN_PORT', 'LIV_TITLES', 'LIV_REGISTRATION', 'LIV_URL', 'LIV_NACELLE', 'diffuseColor.rgb = col;'])
+    assert.ok(shader.fragmentShader.includes(needle), `Livery fragment carries ${needle}`);
+  assert.ok(material.customProgramCacheKey().includes('livery-v5'), 'Livery patch keyed');
+  // The wave's edge is continuous with a matching slope where the fuselage
+  // curve hands over to the fin curve at x = 20.
+  const fuselage = (x) => -6.6 + 6.6 * ((x - 2.5) / 17.5) ** 2;
+  const fin = (x) => 0.754 * (x - 20) - 0.019 * (x - 20) ** 2;
+  assert.ok(Math.abs(fuselage(20) - fin(20)) < 1e-9, 'Wave edge continuous at the fin root');
+  assert.ok(Math.abs((fuselage(20) - fuselage(19.999)) / 0.001 - (fin(20.001) - fin(20)) / 0.001) < 0.01, 'Wave edge slope continuous at the fin root');
+  console.log(`livery check: ${regions.length} atlas regions, patch applied to meshphysical`);
 }
