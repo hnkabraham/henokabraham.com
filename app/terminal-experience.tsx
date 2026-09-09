@@ -22,6 +22,7 @@ import AircraftScene, {
   type SceneStatus,
 } from './aircraft-scene';
 import { useAirspaceDepth } from './use-airspace-depth';
+import DepartureIntro from './departure-intro';
 import { flights, openSource } from './flight-data';
 import {
   Dialog,
@@ -61,6 +62,8 @@ export default function TerminalExperience() {
   const [cinematic, setCinematic] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [sceneStatus, setSceneStatus] = useState<SceneStatus>('loading');
+  const [introOpen, setIntroOpen] = useState(true);
+  const closeIntro = useCallback(() => setIntroOpen(false), []);
   const finishFlight = useCallback(() => setCinematic(false), []);
   useAirspaceDepth(root, moving && !reducedMotion);
   useEffect(() => {
@@ -88,6 +91,7 @@ export default function TerminalExperience() {
 
   return (
     <div className="airport" ref={root} data-motion={moving && !reducedMotion}>
+      {introOpen && <DepartureIntro open={introOpen} onClose={closeIntro} />}
       <a className="skip-link" href="#departures">
         Skip to projects
       </a>
@@ -131,7 +135,7 @@ export default function TerminalExperience() {
             <p className="eyebrow">
               <span className="orange-line" /> YOU’VE ARRIVED AT THE RIGHT PLACE
             </p>
-            <h1 id="welcome-title">
+            <h1 id="welcome-title" tabIndex={-1}>
               Curiosity.
               <br />
               Cleared for
@@ -150,6 +154,7 @@ export default function TerminalExperience() {
           <AircraftScene
             view={view}
             moving={moving}
+            active={!introOpen}
             destination={selected}
             reset={viewReset}
             cinematic={cinematic}
@@ -230,6 +235,16 @@ export default function TerminalExperience() {
               title="Reset view"
             >
               <RotateCcw size={14} />
+            </button>
+            <button
+              className="replay-departure"
+              disabled={reducedMotion}
+              onClick={() => {
+                setCinematic(false);
+                setIntroOpen(true);
+              }}
+            >
+              <RotateCcw size={14} /> Replay intro
             </button>
             <span className="drag-hint mono">
               <Move size={12} /> DRAG TO EXPLORE · ARROW KEYS TO STEER

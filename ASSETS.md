@@ -26,6 +26,12 @@
 - Optimized copy: `public/images/downshift-dashboard.jpg`.
 - Shows simulator mode; identified as such in the project briefing.
 
+## Opening airfield and audio
+
+- The opening airfield uses original Three.js geometry for runway markings, lights, and distant hangars. It reuses the credited Cesium aircraft and generated cloud image above.
+- Runway light halos use a small radial canvas texture; no new photographic assets were added.
+- Optional propeller and wind ambience is synthesized locally with Web Audio. No recordings or third-party audio are used.
+
 ## Design reference
 
 [Henry Heffernan's portfolio](https://github.com/henryjeff/portfolio-website) informed the goal of a coherent explorable environment. Its code, models, and visual design were not copied. This website uses an original aviation terminal concept.

@@ -13,6 +13,7 @@ import {
 export type AircraftView = 'cruise' | 'overhead' | 'nose';
 export type SceneStatus = 'loading' | 'ready' | 'unavailable';
 type Props = {
+  active: boolean;
   view: AircraftView;
   moving: boolean;
   destination: number;
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export default function AircraftScene({
+  active,
   view,
   moving,
   destination,
@@ -33,6 +35,7 @@ export default function AircraftScene({
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const state = useRef({
+    active,
     view,
     moving,
     destination,
@@ -43,6 +46,7 @@ export default function AircraftScene({
   const [status, setStatus] = useState<SceneStatus>('loading');
   useEffect(() => {
     state.current = {
+      active,
       view,
       moving,
       destination,
@@ -50,7 +54,7 @@ export default function AircraftScene({
       cinematic,
       onCinematicEnd,
     };
-  }, [view, moving, destination, reset, cinematic, onCinematicEnd]);
+  }, [active, view, moving, destination, reset, cinematic, onCinematicEnd]);
   useEffect(() => {
     onStatusChange(status);
   }, [status, onStatusChange]);
@@ -270,7 +274,7 @@ export default function AircraftScene({
       const frame = (time: number) => {
         const delta = Math.min(Math.max((time - lastTime) / 1000, 0), 0.04);
         lastTime = time;
-        if (!visible || document.hidden) return;
+        if (!visible || document.hidden || !state.current.active) return;
         const current = state.current;
         const animate = current.moving && !reduced.matches;
         if (!animate) {
