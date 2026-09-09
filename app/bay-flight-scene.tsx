@@ -34,6 +34,7 @@ import {
 import { createGateFog } from '@/lib/bay-fog';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import { createAirfield, type Airfield } from '@/lib/sfo-airfield';
+import { createTraffic, type RoadNetwork } from '@/lib/bay-traffic';
 import {
   HeatHazeEffect,
   createWingtipVortices,
@@ -42,8 +43,8 @@ import {
 } from '@/lib/bay-thrust';
 import { createTreeMesh, loadTreeCanopies } from '@/lib/bay-trees';
 import {
-  CITY_BOUNDS,
-  CITY_IMAGERY_READY,
+  CLIMB_BOUNDS,
+  CLIMB_IMAGERY_READY,
   MERCATOR_ORIGIN,
   NORTH_BOUNDS,
   RUNWAY_BOUNDS,
@@ -567,7 +568,7 @@ export default function BayFlightScene(props: Props) {
         { bounds: NORTH_BOUNDS, texture: null, feather: 0.05, shade: null },
         // No baked shade of its own: the north corridor's covers it, and the
         // terrain shader is already near the 16 texture-unit limit.
-        ...(mobile ? [] : [{ bounds: CITY_BOUNDS, texture: null, feather: 0.04 }]),
+        ...(mobile ? [] : [{ bounds: CLIMB_BOUNDS, texture: null, feather: 0.04 }]),
         {
           bounds: SFO_BOUNDS,
           texture:
@@ -634,6 +635,7 @@ export default function BayFlightScene(props: Props) {
       const fadingLayers = new Set<number>();
       const fadingShades = new Set<number>();
       let city: ReturnType<typeof createCityMesh> | null = null;
+      let traffic: ReturnType<typeof createTraffic> | null = null;
       let cityAge = 0;
       let trees: Awaited<ReturnType<typeof createTreeMesh>> | null = null;
       let treeAge = 0;
@@ -1100,6 +1102,7 @@ export default function BayFlightScene(props: Props) {
           reduced ? 0 : Math.max(vortexSetting(currentP), stunt ? 1 : 0),
           now * 0.001,
         );
+              if (traffic && !reduced) traffic.update(now);
       }
       function draw(dt: number) {
         if (rendering) rendering.render(planePosition, dt);
@@ -1219,10 +1222,31 @@ export default function BayFlightScene(props: Props) {
             surface.layers[index].texture.value = texture;
             fadingLayers.add(index);
           });
-        if (capable && CITY_IMAGERY_READY)
-          loadLazyTexture('/scenery/naip-city.webp', imagery, (texture) => {
+        if (capable && CLIMB_IMAGERY_READY)
+          loadLazyTexture('/scenery/naip-climb.webp', imagery, (texture) => {
             surface.layers[2].texture.value = texture;
             fadingLayers.add(2);
+          });
+        // Freeway traffic under the climb-out, from OpenStreetMap carriageways.
+        void fetch('/scenery/bay-roads.json', { signal: abort.signal })
+          .then((response) => {
+            if (!response.ok) throw new Error('Roads unavailable');
+            return response.json() as Promise<RoadNetwork>;
+          })
+          .then((roads) => {
+            if (disposed) return;
+            const built = createTraffic(
+              roads,
+              { grid: elevation, size: gridSize },
+              { density: capable ? 1 : 0.45 },
+            );
+            geometries.add(built.geometry);
+            materials.add(built.material);
+            world.add(built.mesh);
+            traffic = built;
+          })
+          .catch(() => {
+            // The climb-out simply stays without traffic.
           });
         for (const [index, url] of lazyShades)
           loadLazyTexture(url, shadeTexture, (texture) => {

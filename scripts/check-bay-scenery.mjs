@@ -51,6 +51,9 @@ const { addLivery, LIVERY_REGIONS, LIVERY_ATLAS } = await import(
 const { HeatHazeEffect, createWingtipVortices, thrustSetting, vortexSetting, NOZZLES, WINGTIPS } = await import(
   await moduleURL('bay-thrust', { postprocessing: import.meta.resolve('postprocessing') })
 );
+const { createTraffic } = await import(await moduleURL('bay-traffic', { './bay-city': cityURL }));
+const { CLIMB_BOUNDS, CLIMB_IMAGERY_READY } = await import(surfaceURL);
+const { sampleBayFlight } = await import(flightURL);
 const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
   await fs.readFile(
@@ -486,4 +489,32 @@ console.log(
   vortices.update(1, 2);
   assert.equal(vortices.mesh.visible, true);
   console.log(`thrust check: ${p.count} ribbon vertices, haze plumes ${a[0].z.toFixed(0)} m and ${a[1].z.toFixed(0)} m ahead of the camera`);
+}
+
+// Climb-out imagery and traffic: the sharper layer covers the low part of the
+// climb, and the freeway vehicles stay on finite, moving positions.
+{
+  for (const p of [0.42, 0.47, 0.52, 0.58]) {
+    const shot = sampleBayFlight(p);
+    const [mx, my] = mercator(shot.position[0] / 10 + 5666.01015, shot.position[2] / 10 + 8672.84973);
+    assert.ok(mx > CLIMB_BOUNDS[0] && mx < CLIMB_BOUNDS[2] && my > CLIMB_BOUNDS[1] && my < CLIMB_BOUNDS[3], `Climb layer covers the track at ${p}`);
+  }
+  if (CLIMB_IMAGERY_READY)
+    assert.ok((await fs.stat(new URL('../public/scenery/naip-climb.webp', import.meta.url))).size > 1e6, 'Climb imagery shipped');
+  const roads = JSON.parse(await fs.readFile(new URL('../public/scenery/bay-roads.json', import.meta.url)));
+  assert.ok(roads.ways.length > 300 && roads.ways.every((way) => way.points.length >= 2 && way.lanes >= 1), 'Carriageways packed');
+  const traffic = createTraffic(roads, { grid: elevations, size: 1025 });
+  assert.ok(traffic.count > 800 && traffic.count < 6000, `Vehicle count (${traffic.count})`);
+  const before = Float32Array.from(traffic.mesh.instanceMatrix.array);
+  traffic.update(4000);
+  const after = traffic.mesh.instanceMatrix.array;
+  let moved = 0;
+  for (let v = 0; v < traffic.count; v++) {
+    const m = v * 16;
+    for (let k = 0; k < 16; k++) assert.ok(Number.isFinite(after[m + k]), 'Vehicle matrices finite');
+    assert.ok(after[m + 13] > 0 && after[m + 13] < 400, 'Vehicles sit on the ground');
+    if (Math.hypot(after[m + 12] - before[m + 12], after[m + 14] - before[m + 14]) > 20) moved++;
+  }
+  assert.ok(moved > traffic.count * 0.9, 'Vehicles advanced along their carriageways');
+  console.log(`traffic check: ${traffic.count} vehicles on ${traffic.kilometres.toFixed(1)} km of carriageway, ${moved} moved`);
 }

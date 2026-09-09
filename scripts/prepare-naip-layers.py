@@ -16,16 +16,16 @@ import urllib.request
 from PIL import Image
 
 SERVICE = 'https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage'
-# name: (bounds, output size, tile size). The desktop-only city layer is a
-# 4 × 4 mosaic of 2048² tiles at its final 1.5 m resolution (larger exports
-# time out on the service), so it is not oversampled like the others.
+# name: (bounds, output size, tile size, grid). The climb layer is a 6 × 6
+# mosaic of 2048² tiles downsampled 2× to 6144² (1.46 m/px) over the
+# climb-out area where the aircraft is lowest.
 LAYERS = {
-    'runway': ([-13623646.065, 4524879.257, -13621046.065, 4527479.257], 4096, 2048),
-    'south': ([-13631947.74, 4525293.17, -13615947.74, 4541293.17], 4096, 2048),
-    'north': ([-13636902.989, 4542449.687, -13620902.989, 4558449.687], 4096, 2048),
-    'city': ([-13636000.0, 4545000.0, -13623712.0, 4557288.0], 8192, 2048),
+    'runway': ([-13623646.065, 4524879.257, -13621046.065, 4527479.257], 4096, 2048, 4),
+    'south': ([-13631947.74, 4525293.17, -13615947.74, 4541293.17], 4096, 2048, 4),
+    'north': ([-13636902.989, 4542449.687, -13620902.989, 4558449.687], 4096, 2048, 4),
+    'city': ([-13636000.0, 4545000.0, -13623712.0, 4557288.0], 8192, 2048, 4),
+    'climb': ([-13632500.0, 4526800.0, -13623500.0, 4535800.0], 6144, 2048, 6),
 }
-GRID = 4
 only = set(sys.argv[2:])
 cache = pathlib.Path(sys.argv[1])
 cache.mkdir(parents=True, exist_ok=True)
@@ -50,7 +50,7 @@ def fetch(bbox, path, tile):
             time.sleep(5 * (attempt + 1))
     raise SystemExit(f'failed {path}')
 
-for name, ((x0, y0, x1, y1), size, TILE) in LAYERS.items():
+for name, ((x0, y0, x1, y1), size, TILE, GRID) in LAYERS.items():
     if only and name not in only:
         continue
     width, height = (x1 - x0) / GRID, (y1 - y0) / GRID

@@ -17,16 +17,17 @@ export const SOUTH_BOUNDS = [
 export const NORTH_BOUNDS = [
   -13636902.989, 4542449.687, -13620902.989, 4558449.687,
 ] as const;
-/** Desktop-only 1.5 m layer over northern San Francisco (8192², lazy). */
-export const CITY_BOUNDS = [
-  -13636000, 4545000, -13623712, 4557288,
-] as const;
 /**
- * Set to true once `scripts/prepare-naip-layers.py city` has produced
- * public/scenery/naip-city.webp; the USGS export service timed out on every
- * attempt during the 2026-09-09 build, so the layer is wired but not shipped.
+ * Desktop-only 1.46 m layer over the climb-out (6144², lazy): South San
+ * Francisco, San Bruno and the bay shore where the aircraft is lowest. It
+ * takes the slot once planned for a northern-city layer, whose USGS export
+ * timed out on every attempt; the corridor layers still cover the north.
  */
-export const CITY_IMAGERY_READY = false;
+export const CLIMB_BOUNDS = [
+  -13632500, 4526800, -13623500, 4535800,
+] as const;
+/** False only if `scripts/prepare-naip-layers.py climb` has not produced the file. */
+export const CLIMB_IMAGERY_READY = true;
 /** Web Mercator coordinates are stored relative to this corner for float precision. */
 export const MERCATOR_ORIGIN = [SFO_BOUNDS[0], SFO_BOUNDS[1]] as const;
 
