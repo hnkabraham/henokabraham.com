@@ -13,7 +13,7 @@
 - Source: [ESA, San Francisco Bay](https://www.esa.int/ESA_Multimedia/Images/2020/05/San_Francisco_Bay), acquired January 25, 2019, [CC BY-SA 3.0 IGO](https://creativecommons.org/licenses/by-sa/3.0/igo/).
 - Required credit: **contains modified Copernicus Sentinel data (2019), processed by ESA**.
 - Source JPEG: 10,980 × 14,367, approximately 10 m pixels. Crop: `[3500, 5200, 8300, 10000]`.
-- Derivatives: `public/scenery/sf-bay.webp` (4096²) and `sf-bay-mobile.webp` (2048²), both retained under CC BY-SA 3.0 IGO. Crop and resize are the only image edits.
+- Derivative: `public/scenery/sf-bay-mobile.webp` (2048², 23 m/px), retained under CC BY-SA 3.0 IGO and now served to every device; the 4096² version was dropped once the NAIP corridors carried everything the camera looks at closely. Crop and resize are the only image edits.
 - Approximate affine registration to ten USGS reference image patches: RMS 1.06 source pixels in the central Bay. Metadata: `public/credits/bay-georeferencing.json`. Registration is scenery positioning, not survey accuracy.
 - Scene axes follow source-image pixels at 10 meters per pixel, origin at estimated 28R displaced threshold `[5666.01015, 8672.84973]`. Detailed runway aligns toward the 10L end. The flight path, gear and runway details are an artistic reconstruction. Satellite city detail is draped over actual terrain; SFO buildings are extruded from the separately credited OpenStreetMap footprints below.
 
@@ -51,6 +51,7 @@ Optional jet/wind ambience is synthesized locally with Web Audio. No third-party
   - `naip-south.webp` (4096², 3.91 m/px, 3,041,996 bytes; `-mobile` 611,472 bytes): 16 km from the airport's north edge over the peninsula cities to San Bruno Mountain and the southern city. West -13631947.74, south 4525293.17, east -13615947.74, north 4541293.17.
   - `naip-north.webp` (4096², 3.91 m/px, 4,132,122 bytes; `-mobile` 866,060 bytes): 16 km over San Francisco, the Golden Gate, Angel Island and the Marin shore. West -13636902.989, south 4542449.687, east -13620902.989, north 4558449.687.
   - The two corridor layers are requested after the first frame and fade in over about a second, so the opening shot does not wait for them.
+  - `naip-city.webp` (planned, 8192², 1.5 m/px, desktop only): a 4 × 4 mosaic of 2048² exports over northern San Francisco, west -13636000, south 4545000, east -13623712, north 4557288, produced by `python3 scripts/prepare-naip-layers.py /path/to/tile-cache city`. The layer, its bounds (`CITY_BOUNDS`) and its lazy load are wired in `lib/bay-surface.ts` and `app/bay-flight-scene.tsx` behind `CITY_IMAGERY_READY`, which stays false until the file exists: the USGS export service answered every request for this area with a gateway timeout on 2026-09-09.
 - `lib/bay-surface.ts` stacks these layers coarse to fine in one Web Mercator frame derived from the existing affine registration, feathers each border, and gently balances exposure at rendering time. Under the fallback sky non-water land retains the photograph's baked light; under the physical atmosphere it is treated as albedo lit by the same sun and sky. Low-elevation water receives restrained physical reflections from a generated tileable ripple normal at three scales, from metre ripples to kilometre wind streaks. Within about 900 m of the camera, two scales of the photographed asphalt colour and normal maps below add the grain that metre-scale orthoimagery cannot carry, fading out with distance.
 - `public/scenery/sfo-buildings.json`: 562 real OSM footprint features, with original IDs and geometric rings preserved. **© OpenStreetMap contributors**, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/), [attribution](https://www.openstreetmap.org/copyright). This dataset remains separately licensed under ODbL.
 - Source query: OpenStreetMap Overpass, bbox south37.607 / west-122.401 / north37.641 / east-122.373, retrieved 2026-09-09. Non-rendering address/contact tags were omitted. Tagged heights are preferred; floor counts use 3.2 m per floor, otherwise generic buildings use 8 m and hangars 15 m as explicit scene estimates. Most building parts are omitted to prevent overlap, except the tower cabin. The imagery is from 2022 and OSM reflects a later date.
@@ -66,6 +67,24 @@ Optional jet/wind ambience is synthesized locally with Web Audio. No third-party
 - Roof colours are sampled per building from the NAIP corridor layers at the footprint centre, so the walls (a lighter, desaturated derivative) agree with the photograph the roof itself is textured with.
 - The phone subset keeps buildings at least 12 m tall or 500 m² in footprint.
 - `lib/bay-city.ts` extrudes the file into one flat-shaded indexed mesh at runtime, in short slices between frames: a bottom ring sunk 1.5 m below the terrain and a roof ring at the highest ground point plus the height, with per-vertex wall colour, glazing amount in the alpha channel and a `lift` attribute that lets the city rise out of the imagery over about two seconds. Roofs are draped in the same imagery layers as the terrain through the shared Mercator projection; walls take the tint with floor banding and a darker street level. This is block massing from footprints, not a photogrammetric city.
+
+## Baked shadows and sky visibility
+
+- `public/scenery/shade-south.webp`, `shade-north.webp` (4096², 3.91 m/px, 960,768 and 1,373,960 bytes) and `shade-sfo.webp` (4096², 2 m/px, 428,566 bytes), with 2048² `-mobile` versions: generated by `python3 scripts/prepare-bay-shadows.py --cache /path/to/city-cache`. Each imagery layer's height field is the terrain grid plus every building footprint (the corridor city and the airport set); the scene's fixed sun (26° elevation, west-south-west) is marched through it in image space with a 0.4 m bias and a 1.5 m soft edge, and eight horizon directions give a cosine-weighted sky-visibility term. Red is the direct-sun factor, green the sky visibility, blurred by 0.8 px and stored at WebP quality 60.
+- `lib/bay-surface.ts` samples them through the same Mercator projection as the imagery, coarse to fine, and applies the sun factor to the directional light and the sky factor to image-based light (at half strength) on the terrain, the city's roofs and the tree canopies; walls only take the street-level shadow near the ground. A separate 3 m/px map for the city layer was baked and dropped: it would have pushed the terrain shader past the 16 texture units most GPUs expose.
+
+## Cloud shadows
+
+- A 256² tileable value noise (four octaves, seed 11, generated at load) drifts across the scene at about 6 m/s over a 3.5 km repeat. Where it exceeds a threshold it removes up to 45 % of the direct sun and 10 % of the sky light on terrain, city and trees; the aircraft samples the same field on the CPU at its own position so it darkens with the ground beneath it. The sky itself stays clear; the shadows read as thin cloud out of frame.
+
+## Tree canopies
+
+- `public/scenery/bay-trees.bin.gz` (309,841 canopies, 1,765,278 bytes; `-mobile` 51,845 canopies, 331,652 bytes): `python3 scripts/prepare-bay-trees.py --cache /path/to/city-cache` classifies dark green pixels of the south and north NAIP layers that are not buildings (masks left by the shadow bake, grown by one pixel) as canopy, keeps 42 % of them at random (7 % for phones), and writes local metres (1 m), a diameter of 5–14 m biased by darkness, and the photograph's colour darkened toward green. Each record is 8 bytes.
+- `lib/bay-trees.ts` draws them as one instanced octahedron per tree, twisted deterministically, coloured per instance and standing on the sampled terrain; canopies grow in over 1.5 s after loading. Lawns and roofs are excluded by the classifier's brightness threshold and the building mask, so parks, hillsides and street trees are covered but not every backyard tree.
+
+## Livery
+
+- `lib/bay-livery.ts` draws the site's own livery into a 2048² canvas at load: a navy fin with an orange trailing-edge stripe and the monogram (one panel per side so lettering reads correctly from both), the registration N787HA on the rear fuselage and the wordmark forward of the wing. `addLivery` in `lib/airframe-flex.ts` projects it in the model's own axes (nose −X, port +Z) over the base paint, with a navy sweep on the tail cone. The registration is fictional.
 
 ## Photographed pavement
 

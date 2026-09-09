@@ -26,8 +26,12 @@ const { createAirportBuildings, lonLatToBay } = await import(
 const surfaceURL = await moduleURL('bay-surface');
 const { airportUV, addBaySurface, addPavementWear, SFO_BOUNDS, RUNWAY_BOUNDS } =
   await import(surfaceURL);
+const cityURL = await moduleURL('bay-city', { './bay-surface': surfaceURL });
 const { parseCityBuildings, buildCityGeometry, sampleElevation } =
-  await import(await moduleURL('bay-city', { './bay-surface': surfaceURL }));
+  await import(cityURL);
+const { createTreeMesh } = await import(
+  await moduleURL('bay-trees', { './bay-surface': surfaceURL, './bay-city': cityURL })
+);
 const { addWingFlex } = await import(await moduleURL('airframe-flex'));
 const data = JSON.parse(
   await fs.readFile(
@@ -228,4 +232,34 @@ console.log(
   assert.equal(walls, vertexCount * 2, 'Two triangles per wall');
   assert.equal(roofs, vertexCount - rings.length * 2, 'A fan or ear-clipped roof per building');
   console.log(`city check: ${walls} wall and ${roofs} roof triangles face the right way`);
+}
+
+// Tree canopies: three packed records become one instanced mesh standing on
+// the terrain, coloured from the photograph.
+{
+  const buffer = new ArrayBuffer(4 + 3 * 8);
+  const view = new DataView(buffer);
+  view.setUint32(0, 3, true);
+  [[100, -200, 80, 60, 90, 40], [-1500, 300, 120, 50, 80, 30], [40, 40, 55, 70, 100, 50]].forEach((t, i) => {
+    const at = 4 + i * 8;
+    view.setInt16(at, t[0], true);
+    view.setInt16(at + 2, t[1], true);
+    view.setUint8(at + 4, t[2]);
+    view.setUint8(at + 5, t[3]);
+    view.setUint8(at + 6, t[4]);
+    view.setUint8(at + 7, t[5]);
+  });
+  const trees = { count: 3, records: new DataView(buffer, 4, 24) };
+  const material = new T.MeshStandardMaterial();
+  const surface = addBaySurface(material, [{ bounds: SFO_BOUNDS, texture: null, shade: null }], null);
+  const built = await createTreeMesh(trees, { grid: elevations, size: 1025 }, [{ bounds: SFO_BOUNDS, texture: null, shade: null }], surface);
+  assert.equal(built.mesh.count, 3);
+  const m = new T.Matrix4(), p = new T.Vector3(), q = new T.Quaternion(), sc = new T.Vector3();
+  built.mesh.getMatrixAt(1, m);
+  m.decompose(p, q, sc);
+  assert.ok(Math.abs(p.x + 1500) < 0.001 && Math.abs(p.z - 300) < 0.001, 'Trees stand where the file puts them');
+  assert.ok(Math.abs(p.y - (2 + 12 * 0.42)) < 0.001, 'Canopies sit on the terrain at their own radius');
+  assert.ok(Math.abs(sc.x - 12) < 0.001, 'Diameter drives the instance scale');
+  assert.ok(built.mesh.instanceColor, 'Per-tree colours are uploaded');
+  console.log('tree check: 3 canopies placed, scaled and coloured');
 }

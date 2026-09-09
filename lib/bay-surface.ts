@@ -1,4 +1,4 @@
-import type { MeshStandardMaterial, Texture } from 'three';
+import { ShaderChunk, type MeshStandardMaterial, type Texture } from 'three';
 import { BAY_ORIGIN } from './bay-flight';
 
 // NAIP's exact EPSG:3857 bounds. Coordinates are converted from the existing
@@ -17,6 +17,16 @@ export const SOUTH_BOUNDS = [
 export const NORTH_BOUNDS = [
   -13636902.989, 4542449.687, -13620902.989, 4558449.687,
 ] as const;
+/** Desktop-only 1.5 m layer over northern San Francisco (8192², lazy). */
+export const CITY_BOUNDS = [
+  -13636000, 4545000, -13623712, 4557288,
+] as const;
+/**
+ * Set to true once `scripts/prepare-naip-layers.py city` has produced
+ * public/scenery/naip-city.webp; the USGS export service timed out on every
+ * attempt during the 2026-09-09 build, so the layer is wired but not shipped.
+ */
+export const CITY_IMAGERY_READY = false;
 /** Web Mercator coordinates are stored relative to this corner for float precision. */
 export const MERCATOR_ORIGIN = [SFO_BOUNDS[0], SFO_BOUNDS[1]] as const;
 
@@ -45,6 +55,11 @@ export type SurfaceLayer = {
   texture: Texture | null;
   /** Feathered border, as a fraction of the layer's extent. */
   feather?: number;
+  /**
+   * Baked shading over the same bounds (red: sun, green: sky visibility).
+   * Present but null while it is still downloading; absent for none.
+   */
+  shade?: Texture | null;
 };
 
 export type BaySurfaceControls = {
@@ -55,11 +70,17 @@ export type BaySurfaceControls = {
    * 1 treats the imagery as albedo lit by the atmosphere's sun and sky.
    */
   lit: { value: number };
+  /** Tileable noise for the drifting cloud shadows; null disables them. */
+  cloud: { value: Texture | null };
   /** Per layer: assign a texture later and raise `ready` from 0 to 1. */
-  layers: { texture: { value: Texture | null }; ready: { value: number } }[];
+  layers: {
+    texture: { value: Texture | null };
+    ready: { value: number };
+    shade: { value: Texture | null };
+    shadeReady: { value: number };
+  }[];
 };
 
-type LayerControls = BaySurfaceControls['layers'];
 type ShaderParameters = Parameters<
   NonNullable<MeshStandardMaterial['onBeforeCompile']>
 >[0];
@@ -68,13 +89,16 @@ type ShaderParameters = Parameters<
 function bindLayerUniforms(
   shader: ShaderParameters,
   layers: SurfaceLayer[],
-  controls: LayerControls,
-  lit: { value: number },
+  surface: Pick<BaySurfaceControls, 'layers' | 'lit' | 'time' | 'cloud'>,
 ) {
-  shader.uniforms.bayLit = lit;
+  shader.uniforms.bayLit = surface.lit;
+  shader.uniforms.bayTime = surface.time;
+  shader.uniforms.bayCloudMap = surface.cloud;
   layers.forEach((layer, i) => {
-    shader.uniforms[`layerMap${i}`] = controls[i].texture;
-    shader.uniforms[`layerReady${i}`] = controls[i].ready;
+    shader.uniforms[`layerMap${i}`] = surface.layers[i].texture;
+    shader.uniforms[`layerReady${i}`] = surface.layers[i].ready;
+    shader.uniforms[`layerShade${i}`] = surface.layers[i].shade;
+    shader.uniforms[`layerShadeReady${i}`] = surface.layers[i].shadeReady;
     shader.uniforms[`layerBounds${i}`] = {
       value: [
         layer.bounds[0] - MERCATOR_ORIGIN[0],
@@ -86,26 +110,52 @@ function bindLayerUniforms(
   });
 }
 
+const hasShade = (layer: SurfaceLayer) => layer.shade !== undefined;
+
 /** Fragment declarations shared by every material draped in the imagery. */
 function layerDeclarations(layers: SurfaceLayer[]) {
   return `uniform float bayLit;
+      uniform float bayTime;
+      uniform sampler2D bayCloudMap;
       ${layers
         .map(
-          (_, i) =>
-            `uniform sampler2D layerMap${i}; uniform float layerReady${i}; uniform vec4 layerBounds${i};`,
+          (layer, i) =>
+            `uniform sampler2D layerMap${i}; uniform float layerReady${i}; uniform vec4 layerBounds${i};` +
+            (hasShade(layer)
+              ? ` uniform sampler2D layerShade${i}; uniform float layerShadeReady${i};`
+              : ''),
         )
         .join('\n')}
       varying vec2 vMercator;
-      vec3 bayImagery(sampler2D map, vec4 bounds, float feather, float ready, vec3 fallback) {
+      float bayDirectShade = 1.0;
+      float baySkyShade = 1.0;
+      float bayLayerWeight(vec4 bounds, float feather, float ready) {
         vec2 uv = (vMercator - bounds.xy) / (bounds.zw - bounds.xy);
         float border = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-        float weight = smoothstep(0.0, feather, border) * ready;
+        return smoothstep(0.0, feather, border) * ready;
+      }
+      vec2 bayLayerUv(vec4 bounds) {
+        return clamp((vMercator - bounds.xy) / (bounds.zw - bounds.xy), 0.0, 1.0);
+      }
+      vec3 bayImagery(sampler2D map, vec4 bounds, float feather, float ready, vec3 fallback) {
+        float weight = bayLayerWeight(bounds, feather, ready);
         if (weight <= 0.0) return fallback;
-        vec3 color = texture2D(map, clamp(uv, 0.0, 1.0)).rgb;
+        vec3 color = texture2D(map, bayLayerUv(bounds)).rgb;
         // NAIP's overcast exposure is gently balanced against the wider satellite
         // scene; as albedo under the physical sun it would otherwise read too bright.
         color = max(vec3(0.0), (color - vec3(.16)) * 1.16 + vec3(.16)) * mix(1.0, 0.78, bayLit);
         return mix(fallback, color, weight);
+      }
+      // Baked sun shadow (x) and sky visibility (y) from the same projection.
+      vec2 bayShade(sampler2D map, vec4 bounds, float feather, float ready, vec2 fallback) {
+        float weight = bayLayerWeight(bounds, feather, ready);
+        if (weight <= 0.0) return fallback;
+        return mix(fallback, texture2D(map, bayLayerUv(bounds)).rg, weight);
+      }
+      // Sparse, soft cloud shadows drifting across the whole scene.
+      float bayCloud() {
+        float noise = texture2D(bayCloudMap, vMercator * 0.00028 + bayTime * vec2(0.0018, 0.0011)).r;
+        return smoothstep(0.56, 0.82, noise);
       }`;
 }
 
@@ -117,6 +167,43 @@ function layerSampling(layers: SurfaceLayer[], target: string) {
         `${target} = bayImagery(layerMap${i}, layerBounds${i}, ${(layer.feather ?? 0.075).toFixed(4)}, layerReady${i}, ${target});`,
     )
     .join('\n');
+}
+
+/** Resolves the baked and cloud shading factors for the current fragment. */
+function shadeSampling(layers: SurfaceLayer[]) {
+  return `vec2 bayShadeFactors = vec2(1.0);
+      ${layers
+        .map((layer, i) =>
+          hasShade(layer)
+            ? `bayShadeFactors = bayShade(layerShade${i}, layerBounds${i}, ${(layer.feather ?? 0.075).toFixed(4)}, layerShadeReady${i}, bayShadeFactors);`
+            : '',
+        )
+        .join('\n')}
+      float bayCloudCover = bayCloud();
+      bayDirectShade = bayShadeFactors.x * (1.0 - 0.45 * bayCloudCover);
+      baySkyShade = mix(1.0, bayShadeFactors.y, 0.5) * (1.0 - 0.1 * bayCloudCover);`;
+}
+
+/**
+ * Applies `bayDirectShade` to the sun and `baySkyShade` to image-based
+ * light by expanding the two lighting chunks in place.
+ */
+function applyShadeToLights(shader: ShaderParameters) {
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      '#include <lights_fragment_begin>',
+      ShaderChunk.lights_fragment_begin.replace(
+        'getDirectionalLightInfo( directionalLight, directLight );',
+        'getDirectionalLightInfo( directionalLight, directLight );\n\t\tdirectLight.color *= bayDirectShade;',
+      ),
+    )
+    .replace(
+      '#include <lights_fragment_maps>',
+      ShaderChunk.lights_fragment_maps.replace(
+        'iblIrradiance += getIBLIrradiance( geometryNormal );',
+        'iblIrradiance += getIBLIrradiance( geometryNormal ) * baySkyShade;',
+      ),
+    );
 }
 
 /**
@@ -136,13 +223,16 @@ export function addBaySurface(
 ): BaySurfaceControls {
   const time = { value: 0 };
   const lit = { value: 0 };
+  const cloud = { value: null as Texture | null };
   const layerControls = layers.map((layer) => ({
     texture: { value: layer.texture },
     ready: { value: layer.texture ? 1 : 0 },
+    shade: { value: layer.shade ?? null },
+    shadeReady: { value: layer.shade ? 1 : 0 },
   }));
+  const controls = { time, lit, cloud, layers: layerControls };
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.bayTime = time;
-    bindLayerUniforms(shader, layers, layerControls, lit);
+    bindLayerUniforms(shader, layers, controls);
     if (detail) {
       shader.uniforms.bayDetailMap = { value: detail.map };
       shader.uniforms.bayDetailNormalMap = { value: detail.normalMap };
@@ -165,7 +255,6 @@ export function addBaySurface(
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <common>',
       `#include <common>
-      uniform float bayTime;
       ${detail ? 'uniform sampler2D bayDetailMap; uniform sampler2D bayDetailNormalMap; uniform sampler2D bayWaterNormalMap;' : ''}
       varying vec3 vTerrainPoint;
       float bayDetail = 0.0;
@@ -175,6 +264,9 @@ export function addBaySurface(
       '#include <map_fragment>',
       `#include <map_fragment>
       ${layerSampling(layers, 'diffuseColor.rgb')}
+      ${shadeSampling(layers)}
+      // The fallback sky keeps the photograph's light, so darken it directly.
+      diffuseColor.rgb *= mix(1.0, 0.55 + 0.45 * bayDirectShade, 1.0 - bayLit);
       float water = (1.0-smoothstep(.25, 1.4, vTerrainPoint.y))
         * smoothstep(1.04, 1.2, diffuseColor.g / max(.001, diffuseColor.r))
         * smoothstep(.75, .95, diffuseColor.b / max(.001, diffuseColor.r));
@@ -234,10 +326,11 @@ export function addBaySurface(
       outgoingLight = mix(diffuseColor.rgb*.92, outgoingLight, max(water, bayLit));
       #include <opaque_fragment>`,
     );
+    applyShadeToLights(shader);
   };
   material.customProgramCacheKey = () =>
-    `bay-layers${layers.length}-${detail ? 'grain' : 'flat'}-v4`;
-  return { time, lit, layers: layerControls };
+    `bay-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-${detail ? 'grain' : 'flat'}-v5`;
+  return controls;
 }
 
 /**
@@ -264,7 +357,7 @@ export function addCityImagery(
     ox - MERCATOR_ORIGIN[0], oy - MERCATOR_ORIGIN[1], 1,
   ];
   material.onBeforeCompile = (shader) => {
-    bindLayerUniforms(shader, layers, surface.layers, surface.lit);
+    bindLayerUniforms(shader, layers, surface);
     shader.uniforms.cityRise = rise;
     shader.uniforms.cityMercator = { value: localToMercator };
     shader.vertexShader = shader.vertexShader
@@ -303,6 +396,9 @@ export function addCityImagery(
       cityRoof = smoothstep(0.5, 0.8, dot(cityNormal, cityUp));
       vec3 roofColor = diffuseColor.rgb;
       ${layerSampling(layers, 'roofColor')}
+      ${shadeSampling(layers)}
+      // Walls stand in the street's shade only near the ground.
+      bayDirectShade = mix(mix(1.0, bayDirectShade, 1.0 - smoothstep(2.0, 12.0, vLift)), bayDirectShade, cityRoof);
       // Glazing bands per floor, stronger on commercial blocks and towers.
       float glass = vColor.a;
       float floorPhase = fract(vCityY / 3.3);
@@ -318,8 +414,64 @@ export function addCityImagery(
         `#include <roughnessmap_fragment>
       roughnessFactor = mix(mix(0.78, 0.32, glazing * glass), 0.86, cityRoof);`,
       );
+    applyShadeToLights(shader);
   };
-  material.customProgramCacheKey = () => `bay-city-layers${layers.length}-v1`;
+  material.customProgramCacheKey = () =>
+    `bay-city-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-v2`;
+}
+
+/**
+ * Ground-standing instanced props (tree canopies) lit under the same baked
+ * shadows and cloud cover as the terrain they stand on.
+ */
+export function addGroundShade(
+  material: MeshStandardMaterial,
+  layers: SurfaceLayer[],
+  surface: BaySurfaceControls,
+  grow: { value: number } = { value: 1 },
+) {
+  const [ox, oy] = mercator(BAY_ORIGIN[0], BAY_ORIGIN[1]);
+  const [ex, ey] = mercator(BAY_ORIGIN[0] + 1, BAY_ORIGIN[1]);
+  const [sx, sy] = mercator(BAY_ORIGIN[0], BAY_ORIGIN[1] + 1);
+  const localToMercator = [
+    (ex - ox) / 10, (ey - oy) / 10, 0,
+    (sx - ox) / 10, (sy - oy) / 10, 0,
+    ox - MERCATOR_ORIGIN[0], oy - MERCATOR_ORIGIN[1], 1,
+  ];
+  material.onBeforeCompile = (shader) => {
+    bindLayerUniforms(shader, layers, surface);
+    shader.uniforms.cityMercator = { value: localToMercator };
+    shader.uniforms.bayGrow = grow;
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+      uniform mat3 cityMercator;
+      uniform float bayGrow;
+      varying vec2 vMercator;`,
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+      // Props grow from their own centre as they arrive.
+      transformed *= bayGrow;
+      vec3 bayLocal = position;
+      #ifdef USE_INSTANCING
+      bayLocal = (instanceMatrix * vec4(position, 1.0)).xyz;
+      #endif
+      vMercator = (cityMercator * vec3(bayLocal.x, bayLocal.z, 1.0)).xy;`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${layerDeclarations(layers)}`)
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+      ${shadeSampling(layers)}`,
+      );
+    applyShadeToLights(shader);
+  };
+  material.customProgramCacheKey = () =>
+    `bay-ground-shade-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-v1`;
 }
 
 /**

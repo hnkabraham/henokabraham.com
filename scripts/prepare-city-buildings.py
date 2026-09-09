@@ -407,12 +407,12 @@ def footprint(points, lon, lat, height, kind, images, stats):
     }
 
 
-def build(cache, out):
+def iterate_footprints(cache, stats=None):
+    """Yields (lon/lat ring, height, kind, tags-or-None) for every footprint of
+    both sources after the airport, county-line and underground filters."""
     import glob
-    images = load_layers()
+    stats = stats if stats is not None else {}
     seen = set()
-    buildings = []
-    stats = {'elements': 0, 'skipped': 0, 'defaults': 0, 'nonconvex': 0, 'datasf': 0}
     for path in sorted(glob.glob(os.path.join(cache, f't{ROWS}x{COLS}-*.json.gz'))):
         with gzip.open(path) as handle:
             data = json.load(handle)
@@ -421,7 +421,7 @@ def build(cache, out):
             if key in seen:
                 continue
             seen.add(key)
-            stats['elements'] += 1
+            stats['elements'] = stats.get('elements', 0) + 1
             tags = element.get('tags', {})
             if tags.get('building') in ('no', None) or tags.get('location') == 'underground':
                 continue
@@ -440,15 +440,14 @@ def build(cache, out):
                     continue
                 if lat >= SF_COUNTY_LINE:
                     continue
-                points = [local(p['lon'], p['lat']) for p in closed]
+                lonlat = [(p['lon'], p['lat']) for p in closed]
+                points = [local(*p) for p in lonlat]
                 area = abs(area2(clean(points))) / 2 if len(clean(points)) >= 3 else 0
                 building, kind = classify(tags, area)
                 height = height_of(tags, building, element['id'])
                 if 'height' not in tags and 'building:levels' not in tags:
-                    stats['defaults'] += 1
-                entry = footprint(points, lon, lat, height, kind, images, stats)
-                if entry:
-                    buildings.append(entry)
+                    stats['defaults'] = stats.get('defaults', 0) + 1
+                yield lonlat, height, kind, tags
     for path in sorted(glob.glob(os.path.join(cache, 'datasf-*.json.gz'))):
         with gzip.open(path) as handle:
             rows = json.load(handle)
@@ -470,15 +469,25 @@ def build(cache, out):
                 closed = ring[:-1] if ring[0] == ring[-1] else ring
                 if len(closed) < 3:
                     continue
-                lon = sum(p[0] for p in closed) / len(closed)
-                lat = sum(p[1] for p in closed) / len(closed)
-                points = [local(p[0], p[1]) for p in closed]
+                lonlat = [(p[0], p[1]) for p in closed]
+                points = [local(*p) for p in lonlat]
                 area = abs(area2(clean(points))) / 2 if len(clean(points)) >= 3 else 0
                 kind = 1 if height >= 20 else 2 if area > 1500 and height < 15 else 0
-                entry = footprint(points, lon, lat, height, kind, images, stats)
-                if entry:
-                    stats['datasf'] += 1
-                    buildings.append(entry)
+                stats['datasf'] = stats.get('datasf', 0) + 1
+                yield lonlat, height, kind, None
+
+
+def build(cache, out):
+    images = load_layers()
+    buildings = []
+    stats = {'elements': 0, 'skipped': 0, 'defaults': 0, 'nonconvex': 0, 'datasf': 0}
+    for lonlat, height, kind, _tags in iterate_footprints(cache, stats):
+        lon = sum(p[0] for p in lonlat) / len(lonlat)
+        lat = sum(p[1] for p in lonlat) / len(lonlat)
+        points = [local(*p) for p in lonlat]
+        entry = footprint(points, lon, lat, height, kind, images, stats)
+        if entry:
+            buildings.append(entry)
     print(f'{stats}, kept {len(buildings)}', flush=True)
     write(buildings, out)
     mobile = [b for b in buildings if b['height'] >= 12 or b['area'] >= 500]

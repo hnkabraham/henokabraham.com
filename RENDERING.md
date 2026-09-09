@@ -31,7 +31,10 @@ Phone settings use lower AO resolution, fewer bloom levels, a 512² terrain grid
 - The sky cubemap is refreshed every 0.4 s or as soon as the aircraft has moved 150 m since the last refresh, whichever comes first, so image-based light never pops during a fast climb.
 - The shadow camera reaches 8 km along the sun, and the aircraft's shadow fades between 900 m and 2,300 m of altitude instead of cutting off when the ground left the old 1.2 km frustum. The depth bias scales with the new range.
 - The reading-area scrim cross-fades between its preflight and in-flight gradients rather than switching.
-- The corridor city is one indexed, flat-shaded draw call (about 4.1 million triangles on desktop) built after the first frame and lit like the terrain, including N8AO between neighbours and the aircraft's shadow on roofs near the airport. It casts no shadows of its own: the shadow map only covers the aircraft.
+- The corridor city is one indexed, flat-shaded draw call (about 4.1 million triangles on desktop) built after the first frame and lit like the terrain, including N8AO between neighbours and the aircraft's shadow on roofs near the airport. Its own shadows and the sky it hides from the streets come from the baked maps described in ASSETS.md, not the shadow map, which only covers the aircraft.
+- After the first frame the page measures 45 frame times. A desktop with a median under 21 ms and 8192-px textures gets the full city, the full canopy set and, once its export exists, the 1.5 m city imagery; anything slower, and every phone, gets the phone-sized city and canopy instead. Hidden tabs cannot measure and are assumed capable after 8 s.
+- The wide 10 m satellite image now ships only as its 2048² version on every device: the corridors carry all the detail the camera looks at, and the wide image only shows in the far distance, which trims the opening download by about 4 MB.
+- Texture units: the terrain material uses 15 of the 16 fragment samplers most GPUs expose (base map, five imagery layers, three shade maps, cloud noise, pavement colour and normal, water normal, shadow map, environment). Adding another sampler there needs one of these removed first.
 
 ## Validation
 
