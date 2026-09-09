@@ -1,8 +1,8 @@
 # Henok Abraham — Personal Airspace
 
-An aviation-themed personal portfolio with a Three.js aircraft scene, interactive project departures, boarding-pass briefings, public repositories, and a flight-log biography. The opening aircraft arrival, replayable nine-second scenic flight, layered clouds, and pointer-responsive paper surfaces give the page depth.
+A personal portfolio opening with a scroll-controlled Boeing 787-9 departure from SFO. A single continuous camera follows preflight, runway acceleration, rotation, a climb over real San Francisco Bay imagery and terrain, and clear skies. The flight leads into the project departure board, project briefings, public repositories, biography and GitHub contact.
 
-The site now opens with a full-screen dusk airfield. Visitors can begin an 8.8-second takeoff and climb into the portfolio, or skip immediately. The runway has dimensional lights, ground shadows, and distant hangars; a coordinated camera path follows the same aircraft from the ground into daylight and clouds. Optional synthesized engine and wind audio starts only after the visitor enables sound and launches. The aircraft controls' Replay intro button restarts the experience.
+Native scrolling works with wheel, trackpad, touch and keyboard; no scroll interception or timed launch is used. Five chapter buttons jump along the same path. Visitors can skip directly to projects, return to preflight, or enable synthesized jet ambience. Reduced-motion preferences show a static cruise view in a short opening section. Asset or WebGL failure keeps a sky fallback and direct access to the portfolio. GPU rendering and audio pause when the scene is offscreen or the document is hidden.
 
 ## Develop
 
@@ -15,13 +15,14 @@ npm run dev
 
 ```sh
 npx tsc --noEmit --incremental false
+node scripts/check-bay-flight.mjs
 npm run build
 ```
 
-Edit project descriptions and links in `app/flight-data.ts`, the experience in `app/terminal-experience.tsx`, and the theme in `app/globals.css`. The aircraft lives in `app/aircraft-scene.tsx` and loads only in the browser. Keyboard arrows and camera presets provide alternatives to dragging; motion follows system preferences and can be paused. Project information remains available when WebGL cannot initialize.
+`app/scroll-departure.tsx` maps native scroll to chapter progress. `lib/bay-flight.ts` defines a continuous Hermite flight path in meters and its camera shots. `app/bay-flight-scene.tsx` loads the aircraft, terrain and HDR illumination, and renders a floating-origin scene with animated gear and fans. `app/bay-departure.css` controls the sticky journey and responsive composition. `lib/bay-audio.ts` creates optional ambience only inside a user gesture.
 
-Asset sources and licenses are documented in [ASSETS.md](ASSETS.md). Hosting configuration belongs to the existing Sites project in `.openai/hosting.json`; retain its project ID when publishing updates.
+Portfolio content lives in `app/flight-data.ts` and `app/terminal-experience.tsx`. Pointer depth on project cards is handled by `app/use-airspace-depth.ts`. General typography and the portfolio sections are in `app/globals.css`.
 
-The scenic-flight camera path is defined in `lib/flight-motion.ts`. `app/use-airspace-depth.ts` handles pointer depth and progressive section entrances without re-rendering React on every pointer event. The scene pauses autonomous animation while offscreen or in a hidden tab, and respects reduced-motion preferences. Dragging, selecting a camera, pausing, or pressing Escape ends a scenic flight.
+Sources, licenses, asset sizes and scenery approximations are documented in [ASSETS.md](ASSETS.md) and linked from Scene credits on the website. The terrain data preparation script accepts a directory containing the credited source tiles and registration JSON. Production assets are already included; no runtime mapping service, API key or external asset request is needed.
 
-The opening sequence is separate: `app/departure-intro.tsx` owns its accessible dialog and lifecycle, `app/departure-scene.tsx` draws the airfield, and `lib/departure-motion.ts` choreographs the camera and aircraft. Escape, Skip intro, system reduced motion, and WebGL failure all provide a path to the portfolio. Its scene and audio resources are released when closed; the main aircraft scene suspends drawing while the intro is open. No reference-site code or assets are included.
+Retain the existing Sites project ID in `.openai/hosting.json` when publishing updates. This checkout does not manage VPS or custom-domain DNS configuration.

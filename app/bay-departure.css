@@ -1,0 +1,517 @@
+.bay-journey {
+  height: 680svh;
+  position: relative;
+  background: #c1d9e8;
+  color: #163448;
+}
+.bay-sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.bay-canvas {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#82b9df, #d7e7ed 65%, #b4cbd3);
+}
+.bay-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.bay-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #edf4f966 0, #e9f1f929 34%, transparent 62%),
+    linear-gradient(0deg, #112f476e, transparent 25%);
+}
+.bay-flight-label {
+  position: absolute;
+  left: 4.5%;
+  top: 31px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+.bay-flight-label > span:last-child {
+  margin-left: 15px;
+  color: #47677a;
+}
+.bay-live-dot {
+  height: 5px;
+  width: 5px;
+  border-radius: 50%;
+  background: #bb5f33;
+  box-shadow: 0 0 0 4px #bc693217;
+}
+.bay-skip {
+  position: absolute;
+  top: 25px;
+  right: 4.5%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 0.875rem;
+}
+.bay-story {
+  position: absolute;
+  left: 7%;
+  top: 17%;
+  max-width: 560px;
+  pointer-events: none;
+  animation: bay-caption 0.65s both;
+}
+.bay-story .eyebrow {
+  margin: 0 0 24px;
+  color: #466477;
+}
+.bay-story h1 {
+  font-size: clamp(3.8rem, 6.8vw, 7.5rem);
+  line-height: 1.02;
+  font-weight: 430;
+  letter-spacing: -0.075em;
+  white-space: pre-line;
+  margin: 0 0 25px;
+}
+.bay-description {
+  max-width: 330px;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #3c5c70;
+  margin: 0;
+}
+.bay-explore {
+  display: inline-flex;
+  gap: 18px;
+  align-items: center;
+  margin-top: 27px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #58718377;
+  pointer-events: auto;
+  font-size: 1rem;
+}
+.bay-journey:not([data-phase='preflight']) .bay-story {
+  top: auto;
+  bottom: 18%;
+}
+.bay-journey:not([data-phase='preflight']) .bay-story h1 {
+  font-size: clamp(2.5rem, 4vw, 4.5rem);
+}
+.bay-journey:not([data-phase='preflight']) .bay-scrim {
+  background:
+    linear-gradient(0deg, #e6f0f599, transparent 48%),
+    linear-gradient(180deg, #e0eef480, transparent 20%);
+}
+.bay-journey[data-phase='cruise'] .bay-story {
+  top: 18%;
+  bottom: auto;
+}
+.bay-journey[data-phase='cruise'] .bay-story h1 {
+  font-size: clamp(3.6rem, 6.5vw, 7rem);
+}
+.bay-chapters {
+  position: absolute;
+  right: 4.5%;
+  top: 37%;
+  display: flex;
+  flex-direction: column;
+  gap: 19px;
+}
+.bay-chapters button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: transparent;
+  border: 0;
+  padding: 4px 0;
+  color: #45667a;
+  font-size: 0.75rem;
+  text-align: right;
+  justify-content: end;
+}
+.bay-chapters button span:nth-child(2) {
+  width: 76px;
+}
+.bay-chapters button span:first-child {
+  opacity: 0.45;
+}
+.bay-chapters button i {
+  height: 1px;
+  width: 19px;
+  background: currentColor;
+  opacity: 0.5;
+  transition: width 0.3s;
+}
+.bay-chapters button[aria-current='step'] {
+  color: #a4502c;
+}
+.bay-chapters button[aria-current='step'] i {
+  width: 32px;
+  opacity: 1;
+}
+.bay-bottom {
+  position: absolute;
+  bottom: 35px;
+  left: 4.5%;
+  right: 4.5%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #eef4f6;
+}
+.bay-scroll-cue {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.bay-scroll-cue > .mono {
+  font-size: 0.75rem;
+  letter-spacing: 0.075em;
+}
+.bay-scroll-cue small {
+  display: block;
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 0.875rem;
+  letter-spacing: 0;
+  margin-top: 6px;
+  opacity: 0.78;
+}
+.bay-scroll-track {
+  display: block;
+  width: 24px;
+  height: 38px;
+  border: 1px solid #f2f5f6aa;
+  border-radius: 20px;
+  position: relative;
+}
+.bay-scroll-track i {
+  position: absolute;
+  left: 10px;
+  top: 7px;
+  width: 2px;
+  height: 8px;
+  background: #f4f8fa;
+  border-radius: 2px;
+  animation: bay-scroll 2s ease-in-out infinite;
+}
+.bay-utilities {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.bay-utilities button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 8px 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+.bay-loading {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+.bay-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: #ffffff22;
+}
+.bay-progress i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform: scaleX(var(--flight-progress, 0));
+  transform-origin: left;
+  background: #db8857;
+}
+.bay-journey[data-phase='bay'] .bay-bottom,
+.bay-journey[data-phase='cruise'] .bay-bottom {
+  color: #21465f;
+}
+.bay-journey[data-phase='bay'] .bay-scroll-track,
+.bay-journey[data-phase='cruise'] .bay-scroll-track {
+  border-color: #21465f88;
+}
+.bay-journey[data-phase='bay'] .bay-scroll-track i,
+.bay-journey[data-phase='cruise'] .bay-scroll-track i {
+  background: #21465f;
+}
+.bay-journey[data-reduced='true'] {
+  height: 100svh;
+}
+.bay-journey[data-reduced='true'] .bay-chapters,
+.bay-journey[data-reduced='true'] .bay-scroll-track {
+  display: none;
+}
+@keyframes bay-caption {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes bay-scroll {
+  0%,
+  100% {
+    opacity: 0.4;
+    translate: 0 0;
+  }
+  50% {
+    opacity: 1;
+    translate: 0 12px;
+  }
+}
+@media (max-width: 800px) {
+  .bay-journey {
+    height: 600svh;
+  }
+  .bay-sticky {
+    min-height: 560px;
+  }
+  .bay-flight-label {
+    top: 25px;
+    left: 6%;
+    gap: 8px;
+  }
+  .bay-flight-label > span:last-child {
+    display: none;
+  }
+  .bay-skip {
+    right: 6%;
+    top: 20px;
+    font-size: 0.75rem;
+    gap: 6px;
+  }
+  .bay-story {
+    left: 7%;
+    top: 14%;
+    max-width: 85%;
+  }
+  .bay-story h1 {
+    font-size: clamp(3rem, 11vw, 5rem);
+    letter-spacing: -0.065em;
+    margin-bottom: 19px;
+  }
+  .bay-story .eyebrow {
+    font-size: 0.75rem;
+    margin-bottom: 20px;
+  }
+  .bay-description {
+    font-size: 1rem;
+    max-width: 295px;
+  }
+  .bay-journey:not([data-phase='preflight']) .bay-story {
+    bottom: 22%;
+  }
+  .bay-journey:not([data-phase='preflight']) .bay-story h1 {
+    font-size: 2.5rem;
+  }
+  .bay-journey[data-phase='cruise'] .bay-story {
+    top: 16%;
+  }
+  .bay-journey[data-phase='cruise'] .bay-story h1 {
+    font-size: 3.4rem;
+  }
+  .bay-chapters {
+    top: auto;
+    bottom: 125px;
+    left: 7%;
+    right: 7%;
+    flex-direction: row;
+    gap: 0;
+    justify-content: space-between;
+  }
+  .bay-chapters button {
+    padding-block: 10px;
+    gap: 6px;
+  }
+  .bay-chapters button span:nth-child(2) {
+    display: none;
+  }
+  .bay-chapters button i {
+    width: 19px;
+  }
+  .bay-chapters button[aria-current='step'] i {
+    width: 26px;
+  }
+  .bay-bottom {
+    left: 7%;
+    right: 7%;
+    bottom: 29px;
+    gap: 10px;
+  }
+  .bay-scroll-cue {
+    gap: 10px;
+  }
+  .bay-scroll-cue > .mono {
+    font-size: 0.75rem;
+    letter-spacing: 0;
+  }
+  .bay-scroll-cue small {
+    font-size: 0.75rem;
+  }
+  .bay-scroll-track {
+    flex-shrink: 0;
+  }
+  .bay-utilities {
+    gap: 15px;
+  }
+  .bay-utilities button {
+    font-size: 0.75rem;
+  }
+  .bay-loading {
+    position: absolute;
+    bottom: 65px;
+    left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bay-journey {
+    height: 100svh;
+  }
+  .bay-story,
+  .bay-scroll-track i {
+    animation: none;
+  }
+}
+.bay-poster {
+  position: absolute;
+  inset: 0;
+  background: url('/images/cruise-sky.jpg') center / cover;
+}
+.bay-canvas canvas {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.3s ease;
+}
+.bay-canvas canvas.is-ready {
+  opacity: 1;
+}
+.bay-utilities button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.bay-journey[data-status='unavailable'] {
+  height: 100svh;
+}
+.bay-journey[data-status='unavailable'] .bay-chapters,
+.bay-journey[data-status='unavailable'] .bay-scroll-track {
+  display: none;
+}
+.bay-journey[data-phase='roll'] .bay-bottom,
+.bay-journey[data-phase='liftoff'] .bay-bottom {
+  color: #21465f;
+}
+.bay-journey[data-phase='roll'] .bay-scroll-track,
+.bay-journey[data-phase='liftoff'] .bay-scroll-track {
+  border-color: #21465f88;
+}
+.bay-journey[data-phase='roll'] .bay-scroll-track i,
+.bay-journey[data-phase='liftoff'] .bay-scroll-track i {
+  background: #21465f;
+}
+.bay-chapters button,
+.bay-utilities button,
+.bay-skip {
+  min-height: 44px;
+  cursor: pointer;
+}
+.bay-utilities button:last-child {
+  min-width: 30px;
+  justify-content: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bay-canvas canvas {
+    transition: none;
+  }
+}
+@media (max-width: 390px) {
+  .bay-flight-label {
+    font-size: 0.65rem;
+  }
+  .bay-scroll-track {
+    display: none;
+  }
+  .bay-bottom {
+    gap: 5px;
+  }
+  .bay-utilities {
+    gap: 8px;
+  }
+}
+@media (max-height: 600px) and (min-width: 801px) {
+  .bay-sticky {
+    min-height: 0;
+  }
+  .bay-story {
+    top: 20%;
+  }
+  .bay-story h1 {
+    font-size: 4rem;
+  }
+  .bay-chapters {
+    top: 23%;
+    gap: 2px;
+  }
+  .bay-journey:not([data-phase='preflight']) .bay-story {
+    bottom: 20%;
+  }
+  .bay-description {
+    max-width: 420px;
+  }
+}
+@media (min-width: 801px) {
+  .bay-story {
+    max-width: min(560px, 42vw);
+  }
+}
+@media (max-width: 800px) {
+  .bay-journey:not([data-phase='preflight']) .bay-story {
+    top: 14%;
+    bottom: auto;
+  }
+  .bay-journey[data-phase='cruise'] .bay-story {
+    top: 14%;
+  }
+  .bay-journey[data-phase='cruise'] .bay-story h1 {
+    font-size: 3rem;
+  }
+}
+
+.bay-start-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #274f68;
+  margin: 21px 0 0;
+  font-size: 0.875rem;
+}
+@media (scripting: none) {
+  .bay-journey {
+    height: 100svh;
+  }
+  .bay-chapters,
+  .bay-utilities,
+  .bay-start-hint {
+    display: none;
+  }
+}

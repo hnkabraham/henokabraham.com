@@ -1,0 +1,173 @@
+{
+  "method": "Approximate affine image registration against USGS ImageryOnly orthophoto export, EPSG:3857; ten spatially distributed landmarks, central SF Bay only; no native geotransform was embedded in ESA JPEG/TIFF.",
+  "sourceImageDimensions": [
+    10980,
+    14367
+  ],
+  "sourcePixelsOrigin": "top-left; x right, y down",
+  "satellitePixelToWebMercatorMatrix": [
+    [
+      12.632550004563015,
+      -0.072422595551702,
+      -13691784.723241135
+    ],
+    [
+      -0.07970501185485107,
+      -12.68491441838439,
+      4635494.015743029
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "webMercatorToSatellitePixelMatrix": [
+    [
+      0.07915772966115583,
+      -0.0004519390553973489,
+      1085905.55448784
+    ],
+    [
+      -0.0004973835512757917,
+      -0.0788309597692652,
+      358610.37375675904
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "registrationResidualPixels": [
+    0.4333632183944578,
+    1.7770630154289024,
+    0.7065883973832437,
+    0.5434045587403059,
+    1.0065245791186634,
+    1.3548356450894572,
+    0.6667365715262628,
+    1.4527276814201493,
+    1.2398361174911903,
+    0.48585993325557303
+  ],
+  "registrationRmsPixels": 1.06382294186427,
+  "workingAccuracyNote": "Visually and numerically good for a scenery flight route, not a surveyed or navigation-grade georeference. Errors may increase outside the matching-landmark region.",
+  "landmarks": {
+    "sfo10L_physical": {
+      "lonLat": [
+        -122.39339186666666,
+        37.62873871666667
+      ],
+      "sourcePixelXY": [
+        5353.711192740593,
+        8510.605914901127
+      ]
+    },
+    "sfo28R_physical": {
+      "lonLat": [
+        -122.35714111666667,
+        37.613533616666665
+      ],
+      "sourcePixelXY": [
+        5674.1112683976535,
+        8677.058749681979
+      ]
+    },
+    "sfo28R_displaced_threshold": {
+      "lonLat": [
+        -122.35805769444444,
+        37.61391813888889
+      ],
+      "sourcePixelXY": [
+        5666.010148728732,
+        8672.849734295625
+      ]
+    },
+    "golden_gate_center": {
+      "lonLat": [
+        -122.4783,
+        37.8199
+      ],
+      "sourcePixelXY": [
+        4593.358945343876,
+        6394.448405246134
+      ]
+    },
+    "sfo_reference": {
+      "lonLat": [
+        -122.375,
+        37.6213
+      ],
+      "sourcePixelXY": [
+        5516.249119810993,
+        8592.006743469741
+      ]
+    }
+  },
+  "suggestedCropXYXY": [
+    3500,
+    5200,
+    8300,
+    10000
+  ],
+  "suggestedCropDimensions": [
+    4800,
+    4800
+  ],
+  "suggestedCropCornersLonLat": {
+    "NW": [
+      -122.6015974243632,
+      37.9279566246677
+    ],
+    "NE": [
+      -122.05689281253106,
+      37.92524567222686
+    ],
+    "SE": [
+      -122.06001561210707,
+      37.492530203929874
+    ],
+    "SW": [
+      -122.60472022393921,
+      37.495257032425535
+    ]
+  },
+  "suggestedCropUVNotes": "For top-left-origin image coordinates use u=(x-3500)/4800, v=(y-5200)/4800. Three.js texture V orientation depends on flipY and mesh UV setup; explicitly check with landmarks.",
+  "coordinateSources": [
+    "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer",
+    "https://www.airnav.com/airport/SFO"
+  ],
+  "bridgeAndCityManualPixelAnchors": {
+    "GoldenGateNorthEnd": [
+      4580,
+      6250
+    ],
+    "GoldenGateSouthEnd": [
+      4603,
+      6498
+    ],
+    "DowntownSF": [
+      5206,
+      6603
+    ],
+    "BayBridgeSFShore": [
+      5390,
+      6740
+    ],
+    "BayBridgeYerbaBuena": [
+      5565,
+      6470
+    ],
+    "BayBridgeOaklandShore": [
+      5990,
+      6350
+    ]
+  },
+  "derivedTextureFile": "/scenery/sf-bay.webp",
+  "derivedTextureDimensions": [
+    4096,
+    4096
+  ],
+  "derivedTexturePixelToSourcePixel": "source_x = 3500 + texture_x * 4800/4096; source_y = 5200 + texture_y * 4800/4096"
+}

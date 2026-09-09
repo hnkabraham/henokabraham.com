@@ -1,28 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowDown,
   ArrowRight,
   ArrowUpRight,
   Plane,
   PlaneTakeoff,
-  Radio,
-  Move,
-  Pause,
-  Play,
   CodeXml,
   Check,
   X,
   Compass,
-  RotateCcw,
+  Radio,
 } from 'lucide-react';
-import AircraftScene, {
-  type AircraftView,
-  type SceneStatus,
-} from './aircraft-scene';
 import { useAirspaceDepth } from './use-airspace-depth';
-import DepartureIntro from './departure-intro';
+import ScrollDeparture from './scroll-departure';
 import { flights, openSource } from './flight-data';
 import {
   Dialog,
@@ -32,7 +23,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 function StationClock() {
   const [time, setTime] = useState('--:--:--');
@@ -53,34 +43,14 @@ function StationClock() {
 
 export default function TerminalExperience() {
   const [selected, setSelected] = useState(0);
-  const [view, setView] = useState<AircraftView>('cruise');
-  const [moving, setMoving] = useState(true);
   const [projectOpen, setProjectOpen] = useState(false);
-  const [viewReset, setViewReset] = useState(0);
   const flight = flights[selected];
   const root = useRef<HTMLDivElement>(null);
-  const [cinematic, setCinematic] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [sceneStatus, setSceneStatus] = useState<SceneStatus>('loading');
-  const [introOpen, setIntroOpen] = useState(true);
-  const closeIntro = useCallback(() => setIntroOpen(false), []);
-  const finishFlight = useCallback(() => setCinematic(false), []);
-  useAirspaceDepth(root, moving && !reducedMotion);
-  useEffect(() => {
-    if (!cinematic) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setCinematic(false);
-    };
-    window.addEventListener('keydown', onEscape);
-    return () => window.removeEventListener('keydown', onEscape);
-  }, [cinematic]);
+  useAirspaceDepth(root, !reducedMotion);
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => {
-      setMoving(!preference.matches);
-      setReducedMotion(preference.matches);
-      if (preference.matches) setCinematic(false);
-    };
+    const update = () => setReducedMotion(preference.matches);
     update();
     preference.addEventListener('change', update);
     return () => preference.removeEventListener('change', update);
@@ -90,13 +60,12 @@ export default function TerminalExperience() {
   };
 
   return (
-    <div className="airport" ref={root} data-motion={moving && !reducedMotion}>
-      {introOpen && <DepartureIntro open={introOpen} onClose={closeIntro} />}
+    <div className="airport" ref={root} data-motion={!reducedMotion}>
       <a className="skip-link" href="#departures">
         Skip to projects
       </a>
       <header className="terminal-header">
-        <a href="#" className="brand" aria-label="Henok Abraham, home">
+        <a href="#flight" className="brand" aria-label="Henok Abraham, home">
           <span className="brand-symbol" aria-hidden="true">
             <Plane size={21} strokeWidth={1.6} />
           </span>
@@ -122,143 +91,7 @@ export default function TerminalExperience() {
         <StationClock />
       </header>
       <main>
-        <section
-          className="sky-section"
-          aria-labelledby="welcome-title"
-          data-flying={cinematic}
-        >
-          <div className="sky-background" />
-          <div className="sky-coordinate mono">
-            PERSONAL PORTFOLIO / TERMINAL H.A
-          </div>
-          <div className="welcome-copy" inert={cinematic}>
-            <p className="eyebrow">
-              <span className="orange-line" /> YOU’VE ARRIVED AT THE RIGHT PLACE
-            </p>
-            <h1 id="welcome-title" tabIndex={-1}>
-              Curiosity.
-              <br />
-              Cleared for
-              <br />
-              <em>takeoff.</em>
-            </h1>
-            <p className="welcome-description">
-              I’m Henok. A developer who loves aviation,
-              <br className="desktop-break" /> connects unlikely things, and
-              builds what’s next.
-            </p>
-            <a href="#departures" className="boarding-cta">
-              Explore my destinations <ArrowDown size={16} />
-            </a>
-          </div>
-          <AircraftScene
-            view={view}
-            moving={moving}
-            active={!introOpen}
-            destination={selected}
-            reset={viewReset}
-            cinematic={cinematic}
-            onCinematicEnd={finishFlight}
-            onStatusChange={setSceneStatus}
-          />
-          {cinematic && (
-            <div className="flight-director">
-              <p className="eyebrow">A NINE-SECOND CHANGE OF PERSPECTIVE</p>
-              <h2>Enjoy the view.</h2>
-              <p>Drag to take over. Esc to return.</p>
-            </div>
-          )}
-          <div className="scene-annotation mono">
-            <span>FLIGHT H.A — 001</span>
-            <span>BOUND FOR THE NEXT IDEA</span>
-          </div>
-          <div className="scene-controls">
-            <button
-              className="scenic-flight-button"
-              onClick={() => {
-                if (cinematic) setCinematic(false);
-                else {
-                  setMoving(true);
-                  setCinematic(true);
-                  const sky = root.current?.querySelector('.sky-section');
-                  if (sky && sky.getBoundingClientRect().top < -100)
-                    sky.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }}
-              disabled={reducedMotion || sceneStatus !== 'ready'}
-              aria-pressed={cinematic}
-              title={
-                reducedMotion
-                  ? 'Animation is disabled by your reduced-motion preference'
-                  : 'Play a nine-second scenic flight'
-              }
-            >
-              {cinematic ? <X size={16} /> : <PlaneTakeoff size={16} />}
-              {cinematic ? 'Back to cruise' : 'Take a flight'}
-            </button>
-            <ToggleGroup
-              className="camera-views"
-              value={[view]}
-              onValueChange={(values) => {
-                if (values[0]) {
-                  setCinematic(false);
-                  setView(values[0] as AircraftView);
-                  setViewReset((n) => n + 1);
-                }
-              }}
-              aria-label="Aircraft camera"
-            >
-              <ToggleGroupItem value="cruise">Cruise</ToggleGroupItem>
-              <ToggleGroupItem value="overhead">Overhead</ToggleGroupItem>
-              <ToggleGroupItem value="nose">Nose view</ToggleGroupItem>
-            </ToggleGroup>
-            <button
-              className="motion-button"
-              onClick={() => {
-                setCinematic(false);
-                setMoving(!moving);
-              }}
-              disabled={reducedMotion}
-              aria-label={moving ? 'Pause all motion' : 'Resume motion'}
-              title={moving ? 'Pause motion' : 'Resume motion'}
-            >
-              {moving ? <Pause size={14} /> : <Play size={14} />}
-            </button>
-            <button
-              className="motion-button"
-              onClick={() => {
-                setCinematic(false);
-                setView('cruise');
-                setViewReset((n) => n + 1);
-              }}
-              aria-label="Reset aircraft view"
-              title="Reset view"
-            >
-              <RotateCcw size={14} />
-            </button>
-            <button
-              className="replay-departure"
-              disabled={reducedMotion}
-              onClick={() => {
-                setCinematic(false);
-                setIntroOpen(true);
-              }}
-            >
-              <RotateCcw size={14} /> Replay intro
-            </button>
-            <span className="drag-hint mono">
-              <Move size={12} /> DRAG TO EXPLORE · ARROW KEYS TO STEER
-            </span>
-          </div>
-          <div className="sky-footer mono">
-            <span>
-              <Radio size={13} /> A LITTLE CODE. A LOT OF LIFT.
-            </span>
-            <span>
-              SCROLL TO YOUR NEXT DESTINATION <ArrowDown size={13} />
-            </span>
-          </div>
-        </section>
+        <ScrollDeparture reducedMotion={reducedMotion} />
         <section
           className="terminal-section"
           id="departures"
@@ -336,7 +169,6 @@ export default function TerminalExperience() {
               open={projectOpen}
               onOpenChange={(open) => {
                 setProjectOpen(open);
-                if (open) setCinematic(false);
               }}
             >
               <aside
@@ -596,7 +428,7 @@ export default function TerminalExperience() {
           </div>
           <div className="contact-bottom mono">
             <span>THANK YOU FOR FLYING THROUGH.</span>
-            <a href="#">BACK TO THE CLOUDS ↑</a>
+            <a href="#flight">BACK TO THE RUNWAY ↑</a>
           </div>
         </section>
       </main>
@@ -608,16 +440,18 @@ export default function TerminalExperience() {
           <DialogContent className="credits-dialog">
             <DialogTitle>Scene credits</DialogTitle>
             <DialogDescription>
-              Aircraft: Cesium Air from CesiumJS Contributors, used under Apache
-              2.0. Cloud imagery generated for this portfolio. Built with
-              Three.js.
+              Boeing 787-9 by Nobilis2, CC BY 4.0. Optimized model with added
+              animated landing gear. Bay imagery contains modified Copernicus
+              Sentinel data (2019), processed by ESA, cropped and resized under
+              CC BY-SA 3.0 IGO. Elevation: Mapzen / USGS / NOAA. Daylight: Greg
+              Zaal and Jarod Guest, Poly Haven, CC0.
             </DialogDescription>
             <a
-              href="/credits/cesium-license.md"
+              href="/credits/scene-credits.html"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Aircraft license and attribution <ArrowUpRight size={14} />
+              Full sources, licenses and scene notes <ArrowUpRight size={14} />
             </a>
           </DialogContent>
         </Dialog>
