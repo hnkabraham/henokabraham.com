@@ -4,8 +4,10 @@
   python3 scripts/prepare-bay-trees.py --cache /path/to/city-cache
 
 Dark green pixels of the south and north corridor layers that are not
-buildings (masks left by scripts/prepare-bay-shadows.py) become canopy
-instances, thinned to a density the page can draw. Each tree is written to
+buildings (masks left by scripts/prepare-bay-shadows.py) and not water
+(the terrain grid is at sea level, which also excludes the Golden Gate's
+shadow on the strait) become canopy instances, thinned to a density the
+page can draw. Each tree is written to
 public/scenery/bay-trees.bin.gz as local metres, size and the photograph's
 colour, read by lib/bay-trees.ts.
 """
@@ -13,12 +15,23 @@ import argparse
 import gzip
 import os
 import pathlib
+import importlib.util
 import struct
 
 import numpy as np
 from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def shadow_tools():
+    """The terrain helpers of prepare-bay-shadows.py (hyphenated, so loaded by path)."""
+    spec = importlib.util.spec_from_file_location(
+        'prepare_bay_shadows', pathlib.Path(__file__).resolve().parent / 'prepare-bay-shadows.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.terrain_grid, module.terrain_heights
+
 LAYERS = {
     'south': [-13631947.74, 4525293.17, -13615947.74, 4541293.17],
     'north': [-13636902.989, 4542449.687, -13620902.989, 4558449.687],
@@ -34,11 +47,13 @@ def local_from_mercator(mx, my):
     return (px - BAY_ORIGIN[0]) * 10, (py - BAY_ORIGIN[1]) * 10
 
 
-def canopy(name, bounds, cache, rng):
+def canopy(name, bounds, cache, rng, grid):
     x0, y0, x1, y1 = bounds
     photo = np.asarray(Image.open(ROOT / f'public/scenery/naip-{name}.webp').convert('RGB'), dtype=np.float32) / 255
     size = photo.shape[0]
     mask = np.asarray(Image.open(pathlib.Path(cache) / f'buildings-{name}.png').resize((size, size), Image.NEAREST)) > 0
+    # Nothing grows on the water; the terrain grid is clamped to sea level there.
+    mask |= shadow_tools()[1](bounds, size, grid) < 0.3
     r, g, b = photo[..., 0], photo[..., 1], photo[..., 2]
     luminance = 0.299 * r + 0.587 * g + 0.114 * b
     greenness = (g - r) / (g + r + 0.05)
@@ -79,7 +94,8 @@ if __name__ == '__main__':
     parser.add_argument('--cache', required=True)
     args = parser.parse_args()
     rng = np.random.default_rng(7)
-    parts = [canopy(name, bounds, args.cache, rng) for name, bounds in LAYERS.items()]
+    grid = shadow_tools()[0]()
+    parts = [canopy(name, bounds, args.cache, rng, grid) for name, bounds in LAYERS.items()]
     lx = np.concatenate([p[0] for p in parts])
     lz = np.concatenate([p[1] for p in parts])
     diameter = np.concatenate([p[2] for p in parts])

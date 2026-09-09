@@ -24,6 +24,15 @@ import {
   createCityMesh,
   loadCityBuildings,
 } from '@/lib/bay-city';
+import { createGoldenGateBridge } from '@/lib/bay-bridge';
+import { createChaseCar } from '@/lib/bay-chase-car';
+import {
+  AIRBORNE_PROGRESS,
+  EGG_MESSAGES,
+  watchEasterEggs,
+  type EasterEgg,
+} from '@/lib/bay-easter-eggs';
+import { createGateFog } from '@/lib/bay-fog';
 import { createLiveryTexture } from '@/lib/bay-livery';
 import { createTreeMesh, loadTreeCanopies } from '@/lib/bay-trees';
 import {
@@ -277,6 +286,7 @@ export default function BayFlightScene(props: Props) {
       const materials = new Set<Material>();
       const textures = new Set<Texture>();
       let environment: InstanceType<typeof T.WebGLRenderTarget> | undefined;
+      const eggs: { stop?: () => void } = {};
       let frame = 0,
         visible = true,
         ready = false,
@@ -356,6 +366,7 @@ export default function BayFlightScene(props: Props) {
         abort.abort();
         clearTimeout(lazyTimer);
         cancelAnimationFrame(frame);
+        eggs.stop?.();
         observer.disconnect();
         document.removeEventListener('visibilitychange', visibilityChange);
         latest.current.audio.current?.update(0, false);
@@ -611,13 +622,41 @@ export default function BayFlightScene(props: Props) {
       let cityAge = 0;
       let trees: Awaited<ReturnType<typeof createTreeMesh>> | null = null;
       let treeAge = 0;
+      let bridge: ReturnType<typeof createGoldenGateBridge> | null = null;
+      // Easter eggs: a wing wave or aileron roll layered over the flight
+      // path, a chase car on the runway and a fog bank through the Gate.
+      let stunt: { kind: 'wave' | 'roll'; start: number } | null = null;
+      let chaseCar: ReturnType<typeof createChaseCar> | null = null;
+      let gateFog: ReturnType<typeof createGateFog> | null = null;
+      const remembered = (key: string) => {
+        try {
+          return localStorage.getItem(key) === '1';
+        } catch {
+          return false;
+        }
+      };
+      const remember = (key: string, on: boolean) => {
+        try {
+          localStorage.setItem(key, on ? '1' : '0');
+        } catch {
+          // Private browsing only forgets the setting.
+        }
+      };
+      let chaseOn = remembered('bay-egg-chase');
+      let fogOn = remembered('bay-egg-fog');
       const clouds = createCloudField(T);
       ownTexture(clouds.texture);
       surface.cloud.value = clouds.texture;
+      // Development probes can park the camera anywhere in local metres.
+      const debugView: {
+        position?: [number, number, number];
+        target?: [number, number, number];
+        fov?: number;
+      } = {};
       if (process.env.NODE_ENV !== 'production')
         Object.assign(
           (window as unknown as { __bayDebug: Record<string, unknown> }).__bayDebug,
-          { surface, clouds },
+          { surface, clouds, camera, world, debugView },
         );
       const shadeTexture = (texture: Texture) => {
         texture.colorSpace = T.NoColorSpace;
@@ -911,6 +950,24 @@ export default function BayFlightScene(props: Props) {
         }
         const shot = sampleBayFlight(currentP);
         wingFlex.value = 2.1 * smooth((currentP - 0.35) / 0.24);
+        let stuntRoll = 0,
+          stuntPitch = 0;
+        if (stunt && !reduced) {
+          const length = stunt.kind === 'roll' ? 3.6 : 2.6;
+          const t = (now - stunt.start) / 1000 / length;
+          if (t >= 1) stunt = null;
+          else if (stunt.kind === 'roll') {
+            // A full aileron roll that starts and stops smoothly, with a
+            // little pitch-up on entry and the wings loading through it.
+            stuntRoll = 2 * Math.PI * (t - Math.sin(2 * Math.PI * t) / (2 * Math.PI));
+            stuntPitch = 0.07 * Math.sin(Math.PI * t);
+            wingFlex.value += 0.9 * Math.sin(Math.PI * t);
+          } else {
+            const envelope = Math.sin(Math.PI * t);
+            stuntRoll = 0.24 * envelope * Math.sin(4 * Math.PI * t);
+            wingFlex.value += 0.5 * envelope;
+          }
+        }
         // A floating origin keeps runway shadows stable as the flight travels kilometers.
         planePosition.set(
           shot.position[0],
@@ -918,7 +975,36 @@ export default function BayFlightScene(props: Props) {
           shot.position[2],
         );
         world.position.copy(planePosition).multiplyScalar(-1);
-        aircraft.rotation.set(shot.pitch, shot.heading, shot.bank, 'YXZ');
+        aircraft.rotation.set(
+          shot.pitch + stuntPitch,
+          shot.heading,
+          shot.bank + stuntRoll,
+          'YXZ',
+        );
+        if (chaseCar) {
+          // Drag-racing the Dreamliner down 28R from the runway shoulder:
+          // ahead off the line, then steadily dropped as the jet accelerates.
+          const forward = [-Math.sin(RUNWAY_HEADING), -Math.cos(RUNWAY_HEADING)];
+          const along = shot.position[0] * forward[0] + shot.position[2] * forward[1];
+          const carAlong = 32 + along * (1 - 0.25 * smooth((along - 300) / 2400));
+          chaseCar.group.visible = chaseOn && currentP < 0.46;
+          chaseCar.group.position.set(
+            forward[0] * carAlong + forward[1] * 46,
+            3.02,
+            forward[1] * carAlong - forward[0] * 46,
+          );
+          chaseCar.group.rotation.y = RUNWAY_HEADING;
+          for (const wheel of chaseCar.wheels) wheel.rotation.x = -carAlong / 0.34;
+        }
+        if (gateFog) {
+          const target = fogOn ? 1 : 0;
+          const value = gateFog.opacity.value;
+          gateFog.opacity.value = reduced
+            ? target
+            : value + Math.sign(target - value) * Math.min(Math.abs(target - value), dt / 2.5);
+          gateFog.time.value = surface.time.value;
+          gateFog.group.visible = gateFog.opacity.value > 0.001;
+        }
         const composition = sampleBayCamera(currentP, width / height);
         cameraOffset.set(...composition.position);
         camera.position.copy(cameraOffset);
@@ -933,6 +1019,12 @@ export default function BayFlightScene(props: Props) {
           width,
           height,
         );
+        if (debugView.position && debugView.target) {
+          camera.position.set(...debugView.position).sub(planePosition);
+          camera.fov = debugView.fov ?? 39;
+          camera.lookAt(target.set(...debugView.target).sub(planePosition));
+          camera.clearViewOffset();
+        }
         sun.position.copy(sunlight).multiplyScalar(550);
         sun.target.position.set(0, 0, 0);
         // A 787's shadow softens into a faint blur by a couple of kilometres up.
@@ -976,6 +1068,81 @@ export default function BayFlightScene(props: Props) {
       ready = true;
       latest.current.onStatus('ready');
       renderer.domElement.classList.add('is-ready');
+      const announce = (egg: EasterEgg | 'grounded', on = true) =>
+        window.dispatchEvent(
+          new CustomEvent('bay-easter-egg', {
+            detail: { egg, message: EGG_MESSAGES[egg](on) },
+          }),
+        );
+      const enableChase = () => {
+        if (chaseCar) return;
+        const built = createChaseCar();
+        built.geometries.forEach((geometry) => geometries.add(geometry));
+        built.materials.forEach((material) => materials.add(material));
+        chaseCar = built;
+        void renderer.compileAsync(built.group, camera, scene).then(() => {
+          if (!disposed) world.add(built.group);
+        });
+      };
+      const enableFog = () => {
+        if (gateFog || !bridge) return;
+        const built = createGateFog(bridge.frame);
+        geometries.add(built.geometry);
+        built.materials.forEach((material) => materials.add(material));
+        gateFog = built;
+        void renderer.compileAsync(built.group, camera, scene).then(() => {
+          if (!disposed) world.add(built.group);
+        });
+      };
+      if (chaseOn) enableChase();
+      const aircraftSphere = new T.Sphere(new T.Vector3(0, -3, 0), 36);
+      const raycaster = new T.Raycaster();
+      const pointer = new T.Vector2();
+      const stopEggs = watchEasterEggs(
+        renderer.domElement,
+        (x, y) => {
+          const rect = renderer.domElement.getBoundingClientRect();
+          pointer.set(
+            ((x - rect.left) / rect.width) * 2 - 1,
+            -((y - rect.top) / rect.height) * 2 + 1,
+          );
+          raycaster.setFromCamera(pointer, camera);
+          return raycaster.ray.intersectsSphere(aircraftSphere);
+        },
+        (egg) => {
+          if (egg === 'wave' || egg === 'roll') {
+            if (latest.current.reducedMotion) return;
+            if (stunt?.kind === 'roll') return;
+            if (currentP < AIRBORNE_PROGRESS) {
+              announce('grounded');
+              return;
+            }
+            stunt = { kind: egg, start: performance.now() };
+            announce(egg);
+          } else if (egg === 'chase') {
+            chaseOn = !chaseOn;
+            remember('bay-egg-chase', chaseOn);
+            if (chaseOn) enableChase();
+            announce(egg, chaseOn);
+          } else {
+            fogOn = !fogOn;
+            remember('bay-egg-fog', fogOn);
+            if (fogOn) enableFog();
+            announce(egg, fogOn);
+          }
+        },
+      );
+      eggs.stop = stopEggs;
+      if (process.env.NODE_ENV !== 'production')
+        Object.assign(
+          (window as unknown as { __bayDebug: Record<string, unknown> }).__bayDebug,
+          { egg: (name: EasterEgg) => announce(name) },
+        );
+      console.log(
+        '%c✈ N787HA %cPersonal Airspace · flight deck extras: click the aircraft to wave, ↑↑↓↓←→←→BA (or type roll) for an aileron roll, type gt350 for a chase car, karl for the fog.',
+        'font-weight:700;color:#db4f24',
+        'color:#47677a',
+      );
       // The corridor imagery, baked shadows, city and trees load after the
       // first frame. Heavier variants wait for a short frame-time measurement
       // so a weaker GPU gets the phone-sized city and canopy instead.
@@ -1035,6 +1202,25 @@ export default function BayFlightScene(props: Props) {
             world.add(city.mesh);
           })
           .catch(() => {});
+        // The Golden Gate is procedural: no download, one compile.
+        try {
+          const built = createGoldenGateBridge(
+            { grid: elevation, size: gridSize },
+            layers,
+            surface,
+          );
+          built.geometries.forEach((geometry) => geometries.add(geometry));
+          built.materials.forEach((material) => materials.add(material));
+          if (built.texture) ownTexture(built.texture);
+          void renderer.compileAsync(built.group, camera, scene).then(() => {
+            if (disposed) return;
+            bridge = built;
+            world.add(built.group);
+            if (fogOn) enableFog();
+          });
+        } catch {
+          // A malformed elevation grid only costs the bridge.
+        }
         void loadTreeCanopies(`/scenery/bay-trees${detail}.bin.gz`, abort.signal)
           .then(async (canopies) => {
             if (disposed) return;

@@ -33,6 +33,15 @@ const { createTreeMesh } = await import(
   await moduleURL('bay-trees', { './bay-surface': surfaceURL, './bay-city': cityURL })
 );
 const { addWingFlex } = await import(await moduleURL('airframe-flex'));
+const { createGoldenGateBridge, goldenGateFrame } = await import(
+  await moduleURL('bay-bridge', { './bay-surface': surfaceURL, './bay-city': cityURL })
+);
+const { createKeyWatcher, createClickWatcher, EGG_MESSAGES, AIRBORNE_PROGRESS } = await import(
+  await moduleURL('bay-easter-eggs')
+);
+const { createChaseCar } = await import(await moduleURL('bay-chase-car'));
+const { createGateFog } = await import(await moduleURL('bay-fog'));
+const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
   await fs.readFile(
     new URL('../public/scenery/sfo-buildings.json', import.meta.url),
@@ -262,4 +271,102 @@ console.log(
   assert.ok(Math.abs(sc.x - 12) < 0.001, 'Diameter drives the instance scale');
   assert.ok(built.mesh.instanceColor, 'Per-tree colours are uploaded');
   console.log('tree check: 3 canopies placed, scaled and coloured');
+}
+
+// Golden Gate Bridge: the Mercator inverse round-trips the registration,
+// the deck frame points north, the towers rise 227 m over the strait, the
+// cables sag to just above the roadway, and the terrain shader carries the
+// mask that hides the photographed deck.
+{
+  const [mx, my] = mercator(5666.01015, 8672.84973);
+  const back = mercatorToLocal(mx, my);
+  assert.ok(Math.hypot(...back) < 0.05, 'mercatorToLocal inverts mercator at the runway threshold');
+  const frame = goldenGateFrame();
+  assert.ok(frame.axis[1] < -0.99 && Math.abs(frame.axis[0]) < 0.12, 'Deck axis points north, slightly west');
+  assert.ok(Math.abs(frame.axis[0] * frame.perp[0] + frame.axis[1] * frame.perp[1]) < 1e-9);
+  assert.ok(frame.perp[0] > 0.99, 'Across axis points east');
+  // The strait is at sea level; a synthetic grid with the water at 0 and the
+  // land rising toward the row edges exercises the ramps and viaduct bents.
+  const grid = new Uint16Array(1025 * 1025);
+  const [south, north] = GOLDEN_GATE.towers;
+  const elevation = { grid, size: 1025 };
+  const material = new T.MeshStandardMaterial();
+  const layers = [{ bounds: SFO_BOUNDS, texture: null, shade: null }];
+  const surface = addBaySurface(material, layers, null);
+  const bridge = createGoldenGateBridge(elevation, layers, surface);
+  assert.equal(bridge.group.children.length, 5, 'Steel, road, concrete, cables and hangers');
+  let triangles = 0;
+  for (const mesh of bridge.group.children) {
+    const p = mesh.geometry.attributes.position;
+    triangles += mesh.geometry.index.count / 3;
+    for (let i = 0; i < p.count; i++) assert.ok(Number.isFinite(p.getX(i) + p.getY(i) + p.getZ(i)));
+  }
+  assert.ok(triangles > 3000 && triangles < 60000, `Bridge stays light (${triangles} triangles)`);
+  const steel = bridge.group.children.find((m) => m.name === 'golden-gate-steel');
+  const top = steel.geometry.boundingSphere;
+  assert.ok(top, 'Bounding spheres are computed for culling');
+  const positions = steel.geometry.attributes.position;
+  let highest = -Infinity;
+  for (let i = 0; i < positions.count; i++) highest = Math.max(highest, positions.getY(i));
+  assert.ok(Math.abs(highest - 227) < 0.01, `Tower tops at 227 m (${highest})`);
+  const mid = (south + north) / 2;
+  assert.ok(bridge.deckTop(mid) > bridge.deckTop(south) + 3, 'Roadway cambers up at midspan');
+  assert.ok(bridge.cableTop(mid) - bridge.deckTop(mid) > 2 && bridge.cableTop(mid) - bridge.deckTop(mid) < 6, 'Cables meet the deck at midspan');
+  assert.ok(Math.abs(bridge.cableTop(south) - 227) < 0.01 && Math.abs(bridge.cableTop(north) - 227) < 0.01, 'Cables leave the tower tops');
+  assert.ok(bridge.cableTop(south - 343) < 110, 'Side spans descend to the pylons');
+  assert.ok(bridge.deckTop(-1420) < 3, 'South approach settles onto the ground');
+  const hangers = bridge.group.children.find((m) => m.name === 'golden-gate-hangers');
+  assert.equal(hangers.geometry.attributes.along.itemSize, 1, 'Hanger curtains carry the along attribute');
+  const local = mercatorToLocal(GOLDEN_GATE.centre[0], GOLDEN_GATE.centre[1]);
+  const centre = at(frame, 0, 0);
+  assert.ok(Math.hypot(centre[0] - local[0], centre[1] - local[1]) < 0.01);
+  function at(f, along, across) {
+    return [f.origin[0] + f.axis[0] * along + f.perp[0] * across, f.origin[1] + f.axis[1] * along + f.perp[1] * across];
+  }
+  const shader = { uniforms: {}, vertexShader: T.ShaderLib.standard.vertexShader, fragmentShader: T.ShaderLib.standard.fragmentShader };
+  material.onBeforeCompile(shader, {});
+  assert.ok(shader.fragmentShader.includes('bayBridgeBand()') && shader.fragmentShader.includes('bayBridgeWater()'), 'Terrain hides the photographed deck');
+  assert.ok(shader.fragmentShader.includes('baySampleAt = vMercator;'), 'Shade maps are read at the true position again');
+  for (const mesh of bridge.group.children) {
+    const s2 = { uniforms: {}, vertexShader: T.ShaderLib.standard.vertexShader, fragmentShader: T.ShaderLib.standard.fragmentShader };
+    mesh.material.onBeforeCompile(s2, {});
+    assert.ok(!s2.fragmentShader.includes('vMercator - bounds'), 'Every draped material samples through baySampleAt');
+  }
+  console.log(`bridge check: ${triangles.toLocaleString()} triangles, towers at ${highest} m, deck ${bridge.deckTop(mid).toFixed(1)} m at midspan`);
+}
+
+// Easter eggs: the Konami code and typed words trigger once, a click waves
+// and three quick clicks roll, and the props build finite geometry.
+{
+  const keys = createKeyWatcher();
+  const konami = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  const results = konami.map((k) => keys(k));
+  assert.deepEqual(results.slice(0, -1).filter(Boolean), [], 'Nothing fires before the sequence completes');
+  assert.equal(results[results.length - 1], 'roll');
+  assert.equal(keys('a'), null, 'The sequence resets after firing');
+  for (const [word, egg] of [['roll', 'roll'], ['gt350', 'chase'], ['shelby', 'chase'], ['karl', 'fog'], ['wave', 'wave']]) {
+    const watcher = createKeyWatcher();
+    let fired = null;
+    for (const ch of 'x' + word) fired = watcher(ch) ?? fired;
+    assert.equal(fired, egg, `typing ${word}`);
+  }
+  const clicks = createClickWatcher(650);
+  assert.equal(clicks(0), 'wave');
+  assert.equal(clicks(200), 'wave');
+  assert.equal(clicks(400), 'roll', 'Three quick clicks roll');
+  assert.equal(clicks(2000), 'wave', 'A later click starts over');
+  for (const egg of ['wave', 'roll', 'chase', 'fog', 'grounded']) assert.ok(EGG_MESSAGES[egg](true).length > 8);
+  assert.ok(AIRBORNE_PROGRESS > 0.47 && AIRBORNE_PROGRESS < 0.6, 'Stunts wait for the gear to be up');
+  const car = createChaseCar();
+  assert.ok(car.group.children.length > 12 && car.wheels.length === 8);
+  car.group.updateMatrixWorld(true);
+  const box = new T.Box3().setFromObject(car.group);
+  assert.ok(box.min.y > -0.01 && box.max.y < 1.5 && box.max.z - box.min.z < 5.2, 'Car-sized, wheels on the ground');
+  const fog = createGateFog(goldenGateFrame());
+  assert.equal(fog.group.children.length, 7);
+  assert.equal(fog.group.visible, false, 'Fog starts hidden');
+  const fogShader = { uniforms: {}, vertexShader: T.ShaderLib.standard.vertexShader, fragmentShader: T.ShaderLib.standard.fragmentShader };
+  fog.materials[0].onBeforeCompile(fogShader, {});
+  assert.ok(fogShader.fragmentShader.includes('fogField(') && fogShader.uniforms.fogOpacity === fog.opacity);
+  console.log('easter egg check: Konami, typed words, click cadence, chase car and fog sheets');
 }

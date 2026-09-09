@@ -30,6 +30,33 @@ export const CITY_IMAGERY_READY = false;
 /** Web Mercator coordinates are stored relative to this corner for float precision. */
 export const MERCATOR_ORIGIN = [SFO_BOUNDS[0], SFO_BOUNDS[1]] as const;
 
+/**
+ * The Golden Gate Bridge's deck axis, fitted through the OpenStreetMap
+ * roadway nodes at both ends of the straight suspended section (ways
+ * 537838948 and 595194543, retrieved 2026-09-09): the deck centre in
+ * EPSG:3857, the unit axis pointing north along the deck, and the metres
+ * per Mercator unit at that latitude. `lib/bay-bridge.ts` builds the 3D
+ * bridge in this frame and the terrain shader hides the photographed deck
+ * beneath it. Distances along the deck are metres from the centre.
+ */
+export const GOLDEN_GATE = {
+  centre: [-13634254.19, 4554025.73],
+  axis: [-0.09205, 0.99575],
+  scale: 1.2685,
+  /** Tower and anchorage-pylon positions along the deck, metres. */
+  towers: [-655, 625],
+  pylons: [-998, 968],
+} as const;
+
+/** Inverse of `mercator`: EPSG:3857 metres to local scene metres. */
+export function mercatorToLocal(mx: number, my: number) {
+  const px =
+    0.07915772966115583 * mx - 0.0004519390553973489 * my + 1085905.55448784;
+  const py =
+    -0.0004973835512757917 * mx - 0.0788309597692652 * my + 358610.37375675904;
+  return [(px - BAY_ORIGIN[0]) * 10, (py - BAY_ORIGIN[1]) * 10] as const;
+}
+
 export function mercator(sourceX: number, sourceY: number) {
   return [
     12.632550004563015 * sourceX -
@@ -127,15 +154,17 @@ function layerDeclarations(layers: SurfaceLayer[]) {
         )
         .join('\n')}
       varying vec2 vMercator;
+      // Where the layers are read; normally the fragment's own position.
+      vec2 baySampleAt = vec2(0.0);
       float bayDirectShade = 1.0;
       float baySkyShade = 1.0;
       float bayLayerWeight(vec4 bounds, float feather, float ready) {
-        vec2 uv = (vMercator - bounds.xy) / (bounds.zw - bounds.xy);
+        vec2 uv = (baySampleAt - bounds.xy) / (bounds.zw - bounds.xy);
         float border = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
         return smoothstep(0.0, feather, border) * ready;
       }
       vec2 bayLayerUv(vec4 bounds) {
-        return clamp((vMercator - bounds.xy) / (bounds.zw - bounds.xy), 0.0, 1.0);
+        return clamp((baySampleAt - bounds.xy) / (bounds.zw - bounds.xy), 0.0, 1.0);
       }
       vec3 bayImagery(sampler2D map, vec4 bounds, float feather, float ready, vec3 fallback) {
         float weight = bayLayerWeight(bounds, feather, ready);
@@ -159,19 +188,26 @@ function layerDeclarations(layers: SurfaceLayer[]) {
       }`;
 }
 
-/** Samples the layers coarse to fine into `target`, starting from its value. */
-function layerSampling(layers: SurfaceLayer[], target: string) {
-  return layers
-    .map(
-      (layer, i) =>
-        `${target} = bayImagery(layerMap${i}, layerBounds${i}, ${(layer.feather ?? 0.075).toFixed(4)}, layerReady${i}, ${target});`,
-    )
-    .join('\n');
+/**
+ * Samples the layers coarse to fine into `target`, starting from its value,
+ * at the fragment's position or at `at` (Mercator, relative to the origin).
+ */
+function layerSampling(layers: SurfaceLayer[], target: string, at = 'vMercator') {
+  return (
+    `baySampleAt = ${at};\n` +
+    layers
+      .map(
+        (layer, i) =>
+          `${target} = bayImagery(layerMap${i}, layerBounds${i}, ${(layer.feather ?? 0.075).toFixed(4)}, layerReady${i}, ${target});`,
+      )
+      .join('\n')
+  );
 }
 
 /** Resolves the baked and cloud shading factors for the current fragment. */
 function shadeSampling(layers: SurfaceLayer[]) {
-  return `vec2 bayShadeFactors = vec2(1.0);
+  return `baySampleAt = vMercator;
+      vec2 bayShadeFactors = vec2(1.0);
       ${layers
         .map((layer, i) =>
           hasShade(layer)
@@ -182,6 +218,37 @@ function shadeSampling(layers: SurfaceLayer[]) {
       float bayCloudCover = bayCloud();
       bayDirectShade = bayShadeFactors.x * (1.0 - 0.45 * bayCloudCover);
       baySkyShade = mix(1.0, bayShadeFactors.y, 0.5) * (1.0 - 0.1 * bayCloudCover);`;
+}
+
+/**
+ * Band over the strait where the orthophoto's displaced deck is hidden,
+ * and the water sample that replaces it: 60 m east of the photographed
+ * strip, which lies about 30 m east of the true deck. Mercator units.
+ */
+function bridgeMaskDeclarations() {
+  const { centre, axis, scale } = GOLDEN_GATE;
+  const f = (n: number) => n.toFixed(3);
+  const unit = (m: number) => f(m * scale);
+  return `const vec2 bayBridgeOrigin = vec2(${f(centre[0] - MERCATOR_ORIGIN[0])}, ${f(centre[1] - MERCATOR_ORIGIN[1])});
+      const vec2 bayBridgeAxis = vec2(${f(axis[0])}, ${f(axis[1])});
+      const vec2 bayBridgePerp = vec2(${f(axis[1])}, ${f(-axis[0])});
+      float bayBridgeBand() {
+        vec2 rel = vMercator - bayBridgeOrigin;
+        float along = dot(rel, bayBridgeAxis);
+        float across = dot(rel, bayBridgePerp) - ${unit(30)};
+        float span = smoothstep(${unit(-1000)}, ${unit(-960)}, along) * (1.0 - smoothstep(${unit(590)}, ${unit(630)}, along));
+        return span * (1.0 - smoothstep(${unit(17)}, ${unit(24)}, abs(across)));
+      }
+      // The replacement water is taken 75-125 m further east, clear of the
+      // photographed deck's blurred edge, wandering along the deck so the
+      // copy does not streak.
+      vec2 bayBridgeWater() {
+        vec2 rel = vMercator - bayBridgeOrigin;
+        float along = dot(rel, bayBridgeAxis);
+        float across = dot(rel, bayBridgePerp);
+        float wander = 0.5 + 0.35 * sin(along * 0.11) + 0.15 * sin(along * 0.037 + 1.3);
+        return vMercator + bayBridgePerp * (${unit(75)} + ${unit(50)} * wander - across);
+      }`;
 }
 
 /**
@@ -258,12 +325,23 @@ export function addBaySurface(
       ${detail ? 'uniform sampler2D bayDetailMap; uniform sampler2D bayDetailNormalMap; uniform sampler2D bayWaterNormalMap;' : ''}
       varying vec3 vTerrainPoint;
       float bayDetail = 0.0;
-      ${layerDeclarations(layers)}`,
+      ${layerDeclarations(layers)}
+      ${bridgeMaskDeclarations()}`,
     );
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <map_fragment>',
       `#include <map_fragment>
+      vec3 bayBase = diffuseColor.rgb;
       ${layerSampling(layers, 'diffuseColor.rgb')}
+      // The orthophoto shows the Golden Gate's deck displaced east of the
+      // 3D deck (relief displacement of a 70 m high structure). Over the
+      // strait, the photographed strip is replaced by the water beside it.
+      float bayBridge = bayBridgeBand();
+      if (bayBridge > 0.0) {
+        vec3 bayUnder = bayBase;
+        ${layerSampling(layers, 'bayUnder', 'bayBridgeWater()')}
+        diffuseColor.rgb = mix(diffuseColor.rgb, bayUnder, bayBridge);
+      }
       ${shadeSampling(layers)}
       // The fallback sky keeps the photograph's light, so darken it directly.
       diffuseColor.rgb *= mix(1.0, 0.55 + 0.45 * bayDirectShade, 1.0 - bayLit);
@@ -329,7 +407,7 @@ export function addBaySurface(
     applyShadeToLights(shader);
   };
   material.customProgramCacheKey = () =>
-    `bay-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-${detail ? 'grain' : 'flat'}-v5`;
+    `bay-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-${detail ? 'grain' : 'flat'}-v6`;
   return controls;
 }
 
@@ -417,7 +495,7 @@ export function addCityImagery(
     applyShadeToLights(shader);
   };
   material.customProgramCacheKey = () =>
-    `bay-city-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-v2`;
+    `bay-city-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-v3`;
 }
 
 /**
@@ -429,6 +507,8 @@ export function addGroundShade(
   layers: SurfaceLayer[],
   surface: BaySurfaceControls,
   grow: { value: number } = { value: 1 },
+  /** Extra vertex GLSL after `transformed` is set, with a cache-key name. */
+  vertexPatch?: { key: string; glsl: string },
 ) {
   const [ox, oy] = mercator(BAY_ORIGIN[0], BAY_ORIGIN[1]);
   const [ex, ey] = mercator(BAY_ORIGIN[0] + 1, BAY_ORIGIN[1]);
@@ -459,7 +539,8 @@ export function addGroundShade(
       #ifdef USE_INSTANCING
       bayLocal = (instanceMatrix * vec4(position, 1.0)).xyz;
       #endif
-      vMercator = (cityMercator * vec3(bayLocal.x, bayLocal.z, 1.0)).xy;`,
+      vMercator = (cityMercator * vec3(bayLocal.x, bayLocal.z, 1.0)).xy;
+      ${vertexPatch?.glsl ?? ''}`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\n${layerDeclarations(layers)}`)
@@ -471,7 +552,7 @@ export function addGroundShade(
     applyShadeToLights(shader);
   };
   material.customProgramCacheKey = () =>
-    `bay-ground-shade-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-v1`;
+    `bay-ground-shade-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-v2${vertexPatch ? `|${vertexPatch.key}` : ''}`;
 }
 
 /**

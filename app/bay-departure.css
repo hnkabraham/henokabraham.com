@@ -232,6 +232,29 @@
   font-size: 0.75rem;
   opacity: 0.7;
 }
+.bay-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  max-width: min(520px, 86vw);
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: #16344899;
+  color: #f2f6f8;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  animation: bay-toast 0.45s both;
+  pointer-events: none;
+}
+@keyframes bay-toast {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
 .bay-progress {
   position: absolute;
   bottom: 0;

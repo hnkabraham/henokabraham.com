@@ -57,7 +57,23 @@ export default function ScrollDeparture({
     'loading',
   );
   const [sound, setSound] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   useEffect(() => () => audio.current?.dispose(), []);
+  // The scene announces found easter eggs; show each for a few seconds.
+  useEffect(() => {
+    let timer = 0;
+    const onEgg = (event: Event) => {
+      const { message } = (event as CustomEvent<{ message: string }>).detail;
+      setToast(message);
+      clearTimeout(timer);
+      timer = window.setTimeout(() => setToast(null), 4200);
+    };
+    addEventListener('bay-easter-egg', onEgg);
+    return () => {
+      clearTimeout(timer);
+      removeEventListener('bay-easter-egg', onEgg);
+    };
+  }, []);
   const toggleSound = () => {
     if (audio.current) {
       audio.current.dispose();
@@ -208,6 +224,9 @@ export default function ScrollDeparture({
             </button>
           </div>
         </div>
+        <output className="bay-toast mono" hidden={!toast} aria-live="polite">
+          {toast}
+        </output>
         <div className="bay-source-note">
           <a
             href="/credits/scene-credits.html"
