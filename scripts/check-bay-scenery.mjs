@@ -23,6 +23,7 @@ const moduleURL = async (name, links = {}) =>
 const { createAirportBuildings, lonLatToBay } = await import(
   await moduleURL('sfo-buildings')
 );
+const { RUNWAY_HEADING } = await import(flightURL);
 const surfaceURL = await moduleURL('bay-surface');
 const { airportUV, addBaySurface, addPavementWear, SFO_BOUNDS, RUNWAY_BOUNDS } =
   await import(surfaceURL);
@@ -41,6 +42,9 @@ const { createKeyWatcher, createClickWatcher, EGG_MESSAGES, AIRBORNE_PROGRESS } 
 );
 const { createChaseCar } = await import(await moduleURL('bay-chase-car'));
 const { createGateFog } = await import(await moduleURL('bay-fog'));
+const { createAirfield } = await import(
+  await moduleURL('sfo-airfield', { './bay-city': cityURL })
+);
 const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
   await fs.readFile(
@@ -369,4 +373,43 @@ console.log(
   fog.materials[0].onBeforeCompile(fogShader, {});
   assert.ok(fogShader.fragmentShader.includes('fogField(') && fogShader.uniforms.fogOpacity === fog.opacity);
   console.log('easter egg check: Konami, typed words, click cadence, chase car and fog sheets');
+}
+
+// Airfield: the packed OpenStreetMap layout registers to the runway the
+// flight uses, and every prop it places is finite and on the ground.
+{
+  const airfield = JSON.parse(
+    await fs.readFile(new URL('../public/scenery/sfo-airfield.json', import.meta.url)),
+  );
+  const main = airfield.runways.find((r) => r.ref === '10L/28R');
+  assert.ok(main, '28R is in the data');
+  assert.ok(Math.hypot(...main.ends[0]) < 10, '28R starts at the registered threshold');
+  const span = Math.hypot(main.ends[1][0] - main.ends[0][0], main.ends[1][1] - main.ends[0][1]);
+  assert.ok(span > 3400 && span < 3700, `28R is about 3.5 km long (${span.toFixed(0)})`);
+  const forward = [(main.ends[1][0] - main.ends[0][0]) / span, (main.ends[1][1] - main.ends[0][1]) / span];
+  const scene = [-Math.sin(RUNWAY_HEADING), -Math.cos(RUNWAY_HEADING)];
+  assert.ok(forward[0] * scene[0] + forward[1] * scene[1] > 0.9999, 'Runway direction matches the flight heading');
+  assert.ok(airfield.stands.length > 250 && airfield.taxiways.length > 200 && airfield.holdings.length >= 4);
+  for (const stand of airfield.stands)
+    assert.ok(Math.abs(Math.hypot(...stand.heading) - 1) < 0.01, 'Stand headings are unit vectors');
+  const built = createAirfield(airfield, { grid: elevations, size: 1025 });
+  assert.ok(built.counts.aircraft > 120 && built.counts.aircraft < 260, `Parked fleet (${built.counts.aircraft})`);
+  assert.ok(built.counts.lights > 3000 && built.counts.flashers >= 20 && built.counts.piles > 80);
+  let meshes = 0;
+  built.group.traverse((node) => {
+    if (!node.isMesh) return;
+    meshes++;
+    const p = node.geometry.attributes.position;
+    for (let i = 0; i < p.count; i++) assert.ok(Number.isFinite(p.getX(i) + p.getY(i) + p.getZ(i)));
+    if (node.isInstancedMesh) {
+      const m = new T.Matrix4(), v = new T.Vector3();
+      for (let i = 0; i < node.count; i++) {
+        node.getMatrixAt(i, m);
+        v.setFromMatrixPosition(m);
+        assert.ok(Number.isFinite(v.x + v.y + v.z) && v.y > 1 && v.y < 30, 'Instances sit on the field');
+      }
+    }
+  });
+  built.update(1234);
+  console.log(`airfield check: ${meshes} meshes, ${built.counts.aircraft} aircraft, ${built.counts.lights.toLocaleString()} lights, ${built.counts.flashers} flashers`);
 }

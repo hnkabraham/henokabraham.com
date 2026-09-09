@@ -34,6 +34,7 @@ import {
 } from '@/lib/bay-easter-eggs';
 import { createGateFog } from '@/lib/bay-fog';
 import { createLiveryTexture } from '@/lib/bay-livery';
+import { createAirfield, type Airfield } from '@/lib/sfo-airfield';
 import { createTreeMesh, loadTreeCanopies } from '@/lib/bay-trees';
 import {
   CITY_BOUNDS,
@@ -456,6 +457,12 @@ export default function BayFlightScene(props: Props) {
             return r.json() as Promise<AirportBuildings>;
           },
         ),
+        fetch('/scenery/sfo-airfield.json', { signal: abort.signal }).then(
+          (r) => {
+            if (!r.ok) throw new Error('Airfield unavailable');
+            return r.json() as Promise<Airfield>;
+          },
+        ),
       ]);
       const [
         modelResult,
@@ -467,6 +474,7 @@ export default function BayFlightScene(props: Props) {
         normalResult,
         roughnessResult,
         buildingsResult,
+        airfieldResult,
       ] = resources;
       for (const result of [
         airportResult,
@@ -673,6 +681,19 @@ export default function BayFlightScene(props: Props) {
       world.add(terrain);
       if (buildingsResult.status === 'fulfilled')
         world.add(createAirportBuildings(buildingsResult.value, elevation));
+      // Approach light piers, field lighting, signs, markings and the parked
+      // fleet, placed from OpenStreetMap's airfield layout.
+      let airfield: ReturnType<typeof createAirfield> | null = null;
+      if (airfieldResult.status === 'fulfilled') {
+        airfield = createAirfield(airfieldResult.value, {
+          grid: elevation,
+          size: gridSize,
+        });
+        airfield.geometries.forEach((geometry) => geometries.add(geometry));
+        airfield.materials.forEach((material) => materials.add(material));
+        airfield.textures.forEach(ownTexture);
+        world.add(airfield.group);
+      }
 
       // A detailed runway overlays the correct runway in the satellite image.
       const runway = new T.Group();
@@ -728,21 +749,22 @@ export default function BayFlightScene(props: Props) {
           surfaceMesh(1.8, 32, side * (4 + i * 3.8), 32, 3.08, white);
         surfaceMesh(6, 45, side * 17, -305, 3.08, white);
       }
+      // Edge lights are knee-high fixtures 3 m outside the pavement, 61 m apart.
       const lights = new T.InstancedMesh(
-        new T.CylinderGeometry(0.16, 0.25, 0.7, 6),
+        new T.CylinderGeometry(0.11, 0.15, 0.36, 6),
         new T.MeshStandardMaterial({
           color: 0xf7eed3,
           emissive: 0xffeed0,
-          emissiveIntensity: 0.8,
+          emissiveIntensity: 1.2,
         }),
         120,
       );
       transform.rotation.set(0, 0, 0);
       for (let i = 0; i < 120; i++) {
         transform.position.set(
-          i % 2 === 0 ? -31 : 31,
-          3.5,
-          75 - Math.floor(i / 2) * 60,
+          i % 2 === 0 ? -34 : 34,
+          3.18,
+          75 - Math.floor(i / 2) * 61,
         );
         transform.updateMatrix();
         lights.setMatrixAt(i, transform.matrix);
@@ -996,6 +1018,7 @@ export default function BayFlightScene(props: Props) {
           chaseCar.group.rotation.y = RUNWAY_HEADING;
           for (const wheel of chaseCar.wheels) wheel.rotation.x = -carAlong / 0.34;
         }
+        airfield?.update(now);
         if (gateFog) {
           const target = fogOn ? 1 : 0;
           const value = gateFog.opacity.value;
