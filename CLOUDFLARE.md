@@ -1,6 +1,6 @@
 # Deploy to your Cloudflare account
 
-This deployment uses the latest project in `Developer/henokabraham.com`, built with Vinext and the Cloudflare Vite plugin. The Worker is named `henokabraham-com`. The initial destination is the account's `workers.dev` subdomain; this configuration does not change custom-domain DNS.
+This deployment uses the latest project in `Developer/henokabraham.com`, built with Vinext and the Cloudflare Vite plugin. The Worker is named `henokabraham-com`. The primary hostname is `henokabraham.com`, configured as a Cloudflare Worker Custom Domain. The `henokabraham-com.henok37.workers.dev` address is also enabled.
 
 ## Credentials
 
@@ -39,7 +39,7 @@ npm run deploy:cloudflare
 
 The command validates credentials, builds the current source, checks the expected Worker name and bindings, then uploads the Worker and static assets. Wrangler prints the resulting URL. Cloudflare's `workers.dev` deployment is publicly reachable; this is the public personal website target, not the private Sites preview.
 
-Before an initial upload, check for an existing Worker with this name in the selected account. After deployment, check the homepage and representative model, tile and atmosphere URLs. Connecting `henokabraham.com` is a separate custom-domain step and may need zone-scoped access depending on the zone's current setup.
+Before an initial upload, check for an existing Worker with this name in the selected account. After deployment, check the homepage and representative model, tile and atmosphere URLs. `henokabraham.com` is retained in the Cloudflare-target Vite configuration, so subsequent deployments preserve the custom domain. A scoped token used to manage domain routing should also include Zone → Zone → Read and Zone → Workers Routes → Edit, restricted to the `henokabraham.com` zone.
 
 The original `npm run build` command retains Sites support. `npm run build:cloudflare` skips the Sites metadata plugin and enables the direct Cloudflare target; use the deployment command to ensure the correct output is built before upload.
 
@@ -51,7 +51,8 @@ References:
 
 ## Live deployment
 
-- URL: https://henokabraham-com.henok37.workers.dev
+- Primary URL: https://henokabraham.com
+- Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
 - Cloudflare version: `f8d02e53-6452-40a4-a1f2-5ffd7e8c57af`
 - Verification: the live homepage returns HTTP 200; sampled aircraft, terrain manifest, terrain tile, atmosphere lookup and compressed city assets match the local files.

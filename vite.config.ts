@@ -59,7 +59,17 @@ export default defineConfig(async () => {
         config: {
           ...localBindingConfig,
           ...(directCloudflare
-            ? { workers_dev: true, preview_urls: false }
+            ? {
+                workers_dev: true,
+                preview_urls: false,
+                routes: [
+                  {
+                    pattern: 'henokabraham.com',
+                    custom_domain: true,
+                    zone_name: 'henokabraham.com',
+                  },
+                ],
+              }
             : {}),
         },
       }),
