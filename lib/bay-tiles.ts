@@ -100,6 +100,90 @@ export function buildPageTables(
   return { tables, dims };
 }
 
+/**
+ * Incremental page-table maintenance. Every cell holds the nearest resident
+ * page at or above it, so placing a page only claims the cells of its
+ * footprint that still point at a coarser ancestor (or at nothing), and
+ * evicting one hands its cells to the nearest ancestor that is still
+ * resident. Both touch at most a few thousand cells; a full rebuild walks
+ * all 87,381.
+ */
+export function placePage(
+  tables: Uint8Array[],
+  dims: number[],
+  atlasTiles: number,
+  id: number,
+  slot: number,
+) {
+  const level = tileLevel(id);
+  const sx = slot % atlasTiles;
+  const sy = Math.floor(slot / atlasTiles);
+  for (let f = level; f >= 0; f--) {
+    const d = dims[f];
+    const table = tables[f];
+    const span = 1 << (level - f);
+    const x0 = tileX(id) * span;
+    const y0 = tileY(id) * span;
+    for (let y = y0; y < y0 + span; y++)
+      for (let x = x0; x < x0 + span; x++) {
+        const o = (y * d + x) * 4;
+        // A finer resident page keeps its claim on this cell.
+        if (table[o + 3] !== 0 && table[o + 2] < level) continue;
+        table[o] = sx;
+        table[o + 1] = sy;
+        table[o + 2] = level;
+        table[o + 3] = 255;
+      }
+  }
+}
+
+export function evictPage(
+  tables: Uint8Array[],
+  dims: number[],
+  atlasTiles: number,
+  resident: Map<number, number>,
+  id: number,
+  slot: number,
+) {
+  const level = tileLevel(id);
+  const sx = slot % atlasTiles;
+  const sy = Math.floor(slot / atlasTiles);
+  let heir = [0, 0, 0, 0];
+  for (
+    let l = level + 1, x = tileX(id) >> 1, y = tileY(id) >> 1;
+    l < dims.length;
+    l++, x >>= 1, y >>= 1
+  ) {
+    const s = resident.get(tileId(l, x, y));
+    if (s !== undefined) {
+      heir = [s % atlasTiles, Math.floor(s / atlasTiles), l, 255];
+      break;
+    }
+  }
+  for (let f = level; f >= 0; f--) {
+    const d = dims[f];
+    const table = tables[f];
+    const span = 1 << (level - f);
+    const x0 = tileX(id) * span;
+    const y0 = tileY(id) * span;
+    for (let y = y0; y < y0 + span; y++)
+      for (let x = x0; x < x0 + span; x++) {
+        const o = (y * d + x) * 4;
+        if (
+          table[o + 3] === 0 ||
+          table[o + 2] !== level ||
+          table[o] !== sx ||
+          table[o + 1] !== sy
+        )
+          continue;
+        table[o] = heir[0];
+        table[o + 1] = heir[1];
+        table[o + 2] = heir[2];
+        table[o + 3] = heir[3];
+      }
+  }
+}
+
 export type TileOptions = {
   minLevel?: number;
   atlasTiles?: number;
@@ -293,9 +377,12 @@ export function createTileStreamer(
       }
     }
     if (victim >= 0) {
+      const id = slotTile[victim];
       // Slot ownership is checked even though placement is idempotent.
-      if (resident.get(slotTile[victim]) === victim)
-        resident.delete(slotTile[victim]);
+      if (resident.get(id) === victim) {
+        resident.delete(id);
+        evictPage(tables, dims, atlasTiles, resident, id, victim);
+      }
       slotTile[victim] = -1;
     }
     return victim;
@@ -419,6 +506,7 @@ export function createTileStreamer(
         renderer.copyTextureToTexture(source, atlas, null, position);
         slotTile[slot] = id;
         resident.set(id, slot);
+        placePage(tables, dims, atlasTiles, id, slot);
       } catch {
         failed.set(id, now + retryDelayMs);
       } finally {
@@ -429,7 +517,7 @@ export function createTileStreamer(
       uploads++;
     }
     if (dirty) {
-      buildPageTables(pages, levels, atlasTiles, resident, tables);
+      // The tables were maintained per placement; only the upload remains.
       pageTable.needsUpdate = true;
       publications++;
     }

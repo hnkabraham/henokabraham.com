@@ -189,6 +189,20 @@ const { skyEnvironmentMoved } = await compile('bay-rendering', {
   './bay-atmosphere': atmosphereURL,
   '@/lib/scene-assets': `data:text/javascript;base64,${Buffer.from(transpileModule(await fs.readFile(new URL('../lib/scene-assets.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ModuleKind.ESNext } }).outputText).toString('base64')}`,
 });
+const renderingSource = await fs.readFile(
+  new URL('../lib/bay-rendering.ts', import.meta.url),
+  'utf8',
+);
+assert.ok(
+  renderingSource.includes('new PrecomputedTexturesGenerator(') &&
+    renderingSource.includes("priority: 'low'") &&
+    renderingSource.includes('download.abort()'),
+  'Atmosphere tables race GPU generation against a low-priority, abortable download',
+);
+assert.ok(
+  renderingSource.includes('performance.mark(`bay-atmosphere-${winner.source}`)'),
+  'The winning source is marked for measurement',
+);
 assert.equal(
   skyEnvironmentMoved(new T.Vector3(), new T.Vector3()),
   false,

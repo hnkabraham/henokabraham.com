@@ -49,6 +49,7 @@ export async function checkBayLifecycle() {
     'instances',
     'tiles',
     'lazyTimer',
+    'pendingUploads',
     'environment',
   ];
   for (const name of names) {
@@ -149,7 +150,13 @@ export async function checkBayLifecycle() {
   }
 
   // Run the actual animation function with counters for expensive work.
-  const counts = { update: 0, upload: 0, draw: 0, schedule: 0 };
+  const counts = {
+    update: 0,
+    upload: 0,
+    texture: 0,
+    draw: 0,
+    schedule: 0,
+  };
   const context = {
     disposed: false,
     frame: 0,
@@ -181,6 +188,10 @@ export async function checkBayLifecycle() {
     update() {
       counts.update++;
     },
+    uploadPendingTexture() {
+      counts.texture++;
+      return false;
+    },
     draw() {
       counts.draw++;
     },
@@ -195,7 +206,7 @@ export async function checkBayLifecycle() {
   vm.runInContext('animate(1000)', context);
   assert.deepEqual(
     counts,
-    { update: 0, upload: 0, draw: 0, schedule: 0 },
+    { update: 0, upload: 0, texture: 0, draw: 0, schedule: 0 },
     'Offscreen work is suspended',
   );
   context.visible = true;
@@ -216,7 +227,12 @@ export async function checkBayLifecycle() {
     3,
     'A hidden document performs no additional tile work',
   );
+  assert.equal(
+    counts.texture,
+    3,
+    'Lazy texture uploads follow the same visible-frame gating',
+  );
   console.log(
-    'lifecycle check: actual cleanup at five startup stages, instance disposal, hidden-frame gating and reduced-motion invalidation',
+    'lifecycle check: actual cleanup at five startup stages, instance disposal, hidden-frame gating of tile and texture uploads, and reduced-motion invalidation',
   );
 }

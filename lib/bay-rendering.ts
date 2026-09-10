@@ -1,10 +1,12 @@
 import { sceneAsset } from '@/lib/scene-assets';
 import {
   AerialPerspectiveEffect,
-  PrecomputedTexturesLoader,
+  PrecomputedTexturesGenerator,
   SkyMaterial,
   getSunLightColor,
+  type PrecomputedTextures,
 } from '@takram/three-atmosphere';
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { N8AOPostPass } from 'n8ao';
 import {
   BlendFunction,
@@ -20,12 +22,17 @@ import {
 import {
   Color,
   CubeCamera,
+  Data3DTexture,
+  DataTexture,
   HalfFloatType,
+  LinearFilter,
   LinearSRGBColorSpace,
   Mesh,
+  NoColorSpace,
   NoToneMapping,
   PlaneGeometry,
   PMREMGenerator,
+  RGBAFormat,
   Scene,
   Vector3,
   WebGLCubeRenderTarget,
@@ -46,6 +53,98 @@ export const ATMOSPHERE_EXPOSURE = 2.1;
 /** Sky lighting changes slowly over distance and never needs a stationary refresh. */
 export const skyEnvironmentMoved = (position: Vector3, previous: Vector3) =>
   position.distanceToSquared(previous) >= 150 * 150;
+
+/**
+ * A renderer that cannot render to half-float targets reads back zeros, or
+ * NaN/Inf where the fallback formats overflow; such tables must not be used.
+ */
+function validTables(tables: PrecomputedTextures) {
+  return [tables.transmittanceTexture, tables.irradianceTexture].every(
+    (texture) => {
+      const data = texture.userData.imageData;
+      if (!(data instanceof Uint16Array) || data.length === 0) return false;
+      let nonzero = false;
+      for (let i = 0; i < data.length; i++) {
+        if ((data[i] & 0x7c00) === 0x7c00) return false;
+        if (data[i] !== 0) nonzero = true;
+      }
+      return nonzero;
+    },
+  );
+}
+
+/**
+ * The shipped EXR tables, fetched at low priority so they never delay the
+ * opening's other assets, and abortable once the GPU has produced its own.
+ */
+async function fetchTables(
+  base: string,
+  signal: AbortSignal,
+  progress: (received: number, total: number) => void,
+) {
+  const parse = async (name: string) => {
+    const response = await fetch(`${base}/${name}.exr`, {
+      signal,
+      priority: 'low',
+    });
+    if (!response.ok || !response.body)
+      throw new Error(`${name} table unavailable`);
+    // The scattering table is 99% of the bytes; its arrival rate decides
+    // whether the GPU should start computing instead.
+    if (name !== 'scattering')
+      return new EXRLoader().parse(await response.arrayBuffer());
+    const total = Number(response.headers.get('content-length')) || 4094331;
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      progress(received, total);
+    }
+    const bytes = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return new EXRLoader().parse(bytes.buffer);
+  };
+  const [transmittance, scattering, irradiance] = await Promise.all([
+    parse('transmittance'),
+    parse('scattering'),
+    parse('irradiance'),
+  ]);
+  const table = <T extends DataTexture | Data3DTexture>(
+    texture: T,
+    exr: ReturnType<EXRLoader['parse']>,
+  ) => {
+    texture.type = exr.type ?? HalfFloatType;
+    texture.format = exr.format ?? RGBAFormat;
+    texture.colorSpace = exr.colorSpace ?? NoColorSpace;
+    texture.minFilter = LinearFilter;
+    texture.magFilter = LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  };
+  const tables: PrecomputedTextures = {
+    transmittanceTexture: table(
+      new DataTexture(transmittance.data, 256, 64),
+      transmittance,
+    ),
+    scatteringTexture: table(
+      new Data3DTexture(scattering.data, 256, 128, 32),
+      scattering,
+    ),
+    irradianceTexture: table(
+      new DataTexture(irradiance.data, 64, 16),
+      irradiance,
+    ),
+  };
+  return tables;
+}
 
 export function createBayRendering(
   renderer: WebGLRenderer,
@@ -150,38 +249,124 @@ export function createBayRendering(
   const sunColor = new Color();
   const sunPosition = new Vector3();
 
-  // Ship compressed LUTs from Takram's reference asset revision. No external
-  // requests, credentials, or expensive multi-frame GPU precomputation.
-  let lookupTextures: ReturnType<PrecomputedTexturesLoader['load']>;
-  const ready = new Promise<boolean>((resolve) => {
-    lookupTextures = new PrecomputedTexturesLoader({
-      type: HalfFloatType,
-      higherOrderScattering: false,
-    }).load(
+  // The Bruneton tables come from whichever source lands first: a
+  // low-priority download of the shipped EXR tables, or the GPU generator
+  // (a few dozen small passes over idle callbacks, no download) started when
+  // the download is slow. Fast connections finish the 4 MB before the GPU
+  // would; slow ones no longer wait for it.
+  let lookupTextures: PrecomputedTextures | undefined;
+  let generator: PrecomputedTexturesGenerator | undefined;
+  const download = new AbortController();
+  const disposeTables = (tables: PrecomputedTextures) =>
+    Object.values(tables).forEach((texture) => texture?.dispose());
+  const applyTables = (tables: PrecomputedTextures) => {
+    lookupTextures = tables;
+    Object.assign(atmosphere, tables);
+    Object.assign(skyMaterial, tables);
+    atmospherePass.enabled = true;
+    pmrem.compileCubemapShader();
+  };
+  const generateTables = async () => {
+    try {
+      generator = new PrecomputedTexturesGenerator(renderer, {
+        type: HalfFloatType,
+        higherOrderScattering: false,
+      });
+      const tables = await generator.update();
+      if (!validTables(tables)) throw new Error('Atmosphere tables invalid');
+      return tables;
+    } catch {
+      generator?.dispose();
+      generator = undefined;
+      return null;
+    }
+  };
+  const ready = (async () => {
+    performance.mark('bay-atmosphere-start');
+    const startedAt = performance.now();
+    let received = 0;
+    let total = Infinity;
+    const downloaded = fetchTables(
       sceneAsset('/scenery/atmosphere'),
-      () => {
-        if (disposed) {
-          Object.values(lookupTextures).forEach((texture) =>
-            texture?.dispose(),
-          );
-          resolve(false);
-          return;
-        }
-        Object.assign(atmosphere, lookupTextures);
-        Object.assign(skyMaterial, lookupTextures);
-        atmospherePass.enabled = true;
-        pmrem.compileCubemapShader();
-        resolve(true);
+      download.signal,
+      (bytes, size) => {
+        received = bytes;
+        total = size;
       },
-      undefined,
-      () => resolve(false),
+    ).then(
+      (tables) => tables,
+      () => null,
     );
-  });
+    // Generation starts only when the download is projected to take longer
+    // than the GPU would (checked at 400 ms from its arrival rate, and
+    // unconditionally at 900 ms), or when it fails, so fast connections
+    // never spend GPU time and shader compiles on tables about to arrive.
+    let generation: Promise<PrecomputedTextures | null> | undefined;
+    const startGeneration = () => (generation ??= generateTables());
+    const projected = () =>
+      received > 0
+        ? ((performance.now() - startedAt) * total) / received
+        : Infinity;
+    const generated = new Promise<PrecomputedTextures | null>((resolve) => {
+      const early = setTimeout(() => {
+        if (!generation && projected() > 900) resolve(startGeneration());
+      }, 400);
+      const late = setTimeout(() => {
+        if (!generation) resolve(startGeneration());
+      }, 900);
+      void downloaded.then((tables) => {
+        if (!tables) resolve(startGeneration());
+        else if (!generation) {
+          clearTimeout(early);
+          clearTimeout(late);
+          resolve(null);
+        }
+      });
+    });
+    const candidates = [
+      generated.then(
+        (tables) => tables && { tables, source: 'generated' as const },
+      ),
+      downloaded.then(
+        (tables) => tables && { tables, source: 'downloaded' as const },
+      ),
+    ];
+    type Candidate = Awaited<(typeof candidates)[number]>;
+    const winner = await new Promise<Candidate>((resolve) => {
+      let failures = 0;
+      for (const candidate of candidates)
+        void candidate.then((result) => {
+          if (result) resolve(result);
+          else if (++failures === candidates.length) resolve(null);
+        });
+    });
+    // The loser is discarded whenever it lands (or never, once aborted).
+    for (const candidate of candidates)
+      void candidate.then((result) => {
+        if (result && result !== winner) disposeTables(result.tables);
+      });
+    if (!winner || disposed) {
+      download.abort();
+      generator?.dispose();
+      generator = undefined;
+      if (winner) disposeTables(winner.tables);
+      return false;
+    }
+    if (winner.source === 'generated') download.abort();
+    else {
+      // A still-running generator disposes itself once its update settles.
+      generator?.dispose();
+      generator = undefined;
+    }
+    applyTables(winner.tables);
+    performance.mark(`bay-atmosphere-${winner.source}`);
+    return true;
+  })();
   const scratch = new Vector3();
   const observerPosition = new Vector3();
 
   function updateLighting(localPosition: Vector3) {
-    if (!atmospherePass.enabled) return;
+    if (!atmospherePass.enabled || !lookupTextures) return;
     sunPosition.setFromMatrixPosition(atmosphere.worldToECEFMatrix);
     getSunLightColor(
       lookupTextures.transmittanceTexture,
@@ -251,7 +436,10 @@ export function createBayRendering(
       skyTarget.dispose();
       environment?.dispose();
       pmrem.dispose();
-      Object.values(lookupTextures).forEach((texture) => texture?.dispose());
+      download.abort();
+      // Generated tables belong to the generator's render targets.
+      if (generator) generator.dispose();
+      else if (lookupTextures) disposeTables(lookupTextures);
     },
   };
 }

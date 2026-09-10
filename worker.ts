@@ -3,6 +3,19 @@ import { EmailMessage } from 'cloudflare:email';
 import { handleApi, type EdgeEnv } from './server/api';
 import { refreshLiveData } from './server/live';
 import { pruneMetrics } from './server/metrics';
+import { sceneAsset } from './lib/scene-assets';
+
+// The two small fetches that gate the opening's CPU work (terrain build and
+// tile priming) are announced on the document response, so browsers start
+// them before the body arrives and Cloudflare can repeat them as 103 Early
+// Hints ahead of the Worker on later requests. Larger assets stay in the
+// document's low-priority preloads so they cannot delay the scripts.
+const EARLY_HINTS = ['/scenery/bay-elevation.webp', '/tiles/manifest.json']
+  .map(
+    (path) =>
+      `<${sceneAsset(path)}>; rel=preload; as=fetch; crossorigin=anonymous`,
+  )
+  .join(', ');
 
 interface Env extends EdgeEnv {
   CONTACT_EMAIL?: SendEmail;
@@ -43,7 +56,15 @@ const worker = {
             : undefined,
       });
       if (api) return api;
-      return handler.fetch(request, env, ctx);
+      const page = await handler.fetch(request, env, ctx);
+      if (
+        request.method !== 'GET' ||
+        !page.headers.get('content-type')?.includes('text/html')
+      )
+        return page;
+      const hinted = new Response(page.body, page);
+      hinted.headers.append('Link', EARLY_HINTS);
+      return hinted;
     } catch {
       console.error('edge_request_failed');
       return Response.json(

@@ -300,6 +300,12 @@ export default function BayFlightScene(props: Props) {
       let tiles: ReturnType<typeof createTileStreamer> | null = null;
       let lazyTimer: ReturnType<typeof setTimeout> | undefined = undefined;
       let renderDirty = true;
+      // Decoded lazy textures wait here for their one-per-frame upload.
+      const pendingUploads: {
+        texture: Texture;
+        bitmap: ImageBitmap;
+        assign: (texture: Texture) => void;
+      }[] = [];
       let environment: InstanceType<typeof T.WebGLRenderTarget> | undefined;
       const eggs: { stop?: () => void } = {};
       let frame = 0,
@@ -403,6 +409,7 @@ export default function BayFlightScene(props: Props) {
         geometries.forEach((g) => g.dispose());
         materials.forEach((m) => m.dispose());
         textures.forEach((t) => t.dispose());
+        pendingUploads.splice(0).forEach(({ bitmap }) => bitmap.close());
         environment?.dispose();
         sun.shadow.dispose();
         tiles?.dispose();
@@ -1258,24 +1265,47 @@ export default function BayFlightScene(props: Props) {
       let priorMeasuredFrame = 0;
       const yieldNow = () =>
         new Promise<void>((resolve) => setTimeout(resolve, 0));
+      // Lazy layers decode off the main thread and upload one per visible
+      // frame, so imagery and city arriving together cannot stall a scroll.
       const loadLazyTexture = (
         url: string,
         prepare: (texture: Texture) => Texture,
         assign: (texture: Texture) => void,
       ) =>
-        void textureLoader.loadAsync(url).then(
-          (texture) => {
-            if (disposed) {
-              texture.dispose();
-              return;
-            }
-            assign(prepare(ownTexture(texture)));
-            renderDirty = true;
-          },
-          () => {
-            if (!disposed) recordFlightMetric('scene_asset_failure', 1);
-          },
-        );
+        void fetch(url, { signal: abort.signal })
+          .then((response) => {
+            if (!response.ok) throw new Error('Texture unavailable');
+            return response.blob();
+          })
+          .then((blob) =>
+            createImageBitmap(blob, {
+              premultiplyAlpha: 'none',
+              colorSpaceConversion: 'none',
+            }),
+          )
+          .then(
+            (bitmap) => {
+              if (disposed) {
+                bitmap.close();
+                return;
+              }
+              const texture = prepare(ownTexture(new T.Texture(bitmap)));
+              texture.needsUpdate = true;
+              pendingUploads.push({ texture, bitmap, assign });
+              renderDirty = true;
+            },
+            () => {
+              if (!disposed) recordFlightMetric('scene_asset_failure', 1);
+            },
+          );
+      function uploadPendingTexture() {
+        const next = pendingUploads.shift();
+        if (!next) return false;
+        renderer.initTexture(next.texture);
+        next.bitmap.close();
+        next.assign(next.texture);
+        return true;
+      }
       function startLazyLoads(capable: boolean) {
         if (lazyStarted || disposed) return;
         lazyStarted = true;
@@ -1421,6 +1451,7 @@ export default function BayFlightScene(props: Props) {
           );
         tiles?.update(currentP, now);
         if (tiles?.flush(now)) renderDirty = true;
+        if (uploadPendingTexture()) renderDirty = true;
         if (reduced && previousP === currentP && !renderDirty) return;
         update(now, dt);
         latest.current.audio.current?.update(currentP, ready);

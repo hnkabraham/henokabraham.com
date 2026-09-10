@@ -90,6 +90,8 @@ const { createTraffic } = await import(
 );
 const {
   buildPageTables,
+  placePage,
+  evictPage,
   tileId,
   tileLevel,
   tileX,
@@ -998,6 +1000,60 @@ console.log(
   );
   assert.deepEqual(at(0, 8, 9), [9, 0, 1, 255], 'Its children inherit it');
   assert.deepEqual(at(0, 200, 200), [0, 0, 0, 0], 'Nothing resident elsewhere');
+  // Incremental placement and eviction must equal a full rebuild at every step.
+  {
+    let seed = 12345;
+    const random = () =>
+      (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x80000000;
+    const live = new Map();
+    const { tables: incremental, dims: liveDims } = buildPageTables(
+      256,
+      4,
+      20,
+      live,
+    );
+    const slots = new Int32Array(20 * 20).fill(-1);
+    let placements = 0,
+      evictions = 0;
+    for (let step = 0; step < 400; step++) {
+      if (live.size && random() < 0.4) {
+        const ids = [...live.keys()];
+        const id = ids[Math.floor(random() * ids.length)];
+        const slot = live.get(id);
+        live.delete(id);
+        slots[slot] = -1;
+        evictPage(incremental, liveDims, 20, live, id, slot);
+        evictions++;
+      } else {
+        const level = Math.floor(random() * 4);
+        const d = 256 >> level;
+        const id = tileId(
+          level,
+          Math.floor(random() * d),
+          Math.floor(random() * d),
+        );
+        const slot = slots.indexOf(-1);
+        if (live.has(id) || slot < 0) continue;
+        slots[slot] = id;
+        live.set(id, slot);
+        placePage(incremental, liveDims, 20, id, slot);
+        placements++;
+      }
+      const { tables: rebuilt } = buildPageTables(256, 4, 20, live);
+      for (let l = 0; l < rebuilt.length; l++)
+        assert.equal(
+          Buffer.compare(
+            Buffer.from(incremental[l].buffer),
+            Buffer.from(rebuilt[l].buffer),
+          ),
+          0,
+          `step ${step}: level ${l} table matches a full rebuild`,
+        );
+    }
+    console.log(
+      `page table check: ${placements} incremental placements and ${evictions} evictions match full rebuilds`,
+    );
+  }
   for (const { name, maxTextureSize, options } of [
     {
       name: 'desktop',
