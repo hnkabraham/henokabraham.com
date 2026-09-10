@@ -168,6 +168,18 @@ finish.recompile();
 assert.ok(
   finish.fullscreenMaterial.fragmentShader.includes('toneMappingExposure'),
 );
+// That shader multiplies by the renderer's exposure, so the scene has to set
+// it: leaving it at 1 halves the image, and nothing else would say so.
+{
+  const scene = await fs.readFile(
+    new URL('../app/bay-flight-scene.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.ok(
+    scene.includes('renderer.toneMappingExposure = ATMOSPHERE_EXPOSURE'),
+    'The atmosphere path sets the exposure AgX multiplies by',
+  );
+}
 atmospherePass.dispose();
 finish.dispose();
 console.log(
@@ -198,6 +210,12 @@ assert.ok(
     renderingSource.includes("priority: 'low'") &&
     renderingSource.includes('download.abort()'),
   'Atmosphere tables race GPU generation against a low-priority, abortable download',
+);
+assert.ok(
+  renderingSource.includes('brightness: GRADE.brightness') &&
+    renderingSource.includes('contrast: GRADE.contrast') &&
+    renderingSource.includes('saturation: GRADE.saturation'),
+  'The display grade comes from the calibrated constants',
 );
 assert.ok(
   renderingSource.includes('performance.mark(`bay-atmosphere-${winner.source}`)'),

@@ -11,6 +11,7 @@ import { N8AOPostPass } from 'n8ao';
 import {
   BlendFunction,
   BloomEffect,
+  BrightnessContrastEffect,
   type Effect,
   EffectComposer,
   EffectPass,
@@ -47,6 +48,20 @@ import { BAY_TO_ECEF, updateAtmosphereOrigin } from './bay-atmosphere';
  * AgX exposure once the scene is lit in the atmosphere's relative-luminance
  * units: a sunlit white surface sits near 1.0 before the AgX shoulder, the
  * zenith stays a deep blue and the horizon brightens physically.
+ */
+/**
+ * The display grade applied after AgX, calibrated against luminance
+ * percentiles and mean saturation sampled across the scroll; see RENDERING.md.
+ * Saturation is one operator, not two: postprocessing's is nonlinear in its
+ * parameter, so 0.252 is the single value matching the old 0.12 followed by
+ * the 0.15 that measurement settled on.
+ */
+export const GRADE = { brightness: 0.012, contrast: 0.04, saturation: 0.252 };
+/**
+ * Multiplies the scene before AgX. postprocessing injects Three's tone-mapping
+ * chunk, whose AgX does `color *= toneMappingExposure`, so the renderer's
+ * exposure is live on this path even though the renderer's own tone mapping is
+ * off. Dropping it halves the image: the median frame fell from 128 to 93.
  */
 export const ATMOSPHERE_EXPOSURE = 2.1;
 
@@ -213,12 +228,20 @@ export function createBayRendering(
     luminanceSmoothing: 0.5,
     levels: mobile ? 5 : 6,
   });
+  // AgX is a strong desaturating curve: measured over the scroll it left the
+  // mid-climb at 6% mean saturation and the last frame at 74 levels between
+  // the 5th and 95th luminance percentiles. The grade after it restores both.
+  const contrast = new BrightnessContrastEffect({
+    brightness: GRADE.brightness,
+    contrast: GRADE.contrast,
+  });
+  const colour = new HueSaturationEffect({ saturation: GRADE.saturation });
   const finish = new EffectPass(
     camera,
     bloom,
     new ToneMappingEffect({ mode: ToneMappingMode.AGX }),
-    // AgX desaturates the sky and land it compresses; restore a little.
-    new HueSaturationEffect({ saturation: 0.12 }),
+    contrast,
+    colour,
   );
   finish.dithering = true;
   composer.addPass(finish);
@@ -405,6 +428,8 @@ export function createBayRendering(
       atmospherePass,
       finish,
       bloom,
+      contrast,
+      colour,
       freezeEnvironment(frozen: boolean) {
         environmentFrozen = frozen;
       },
