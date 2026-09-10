@@ -108,8 +108,11 @@ void mainUv(inout vec2 uv) {
     float k = 1.0 - length(w) / radius;
     if (k <= 0.0) continue;
     // The haze is densest just aft of the nozzle and thins with the plume;
-    // anything in front of the plume point hides it.
-    float fall = k * k * pow(1.0 - t, 1.6) * smoothstep(0.0, 0.05, t);
+    // anything in front of the plume point hides it. The plume's end cap sits
+    // at t == 1 exactly, and pow(0.0, 1.6) is undefined in GLSL: Metal returns
+    // NaN there, which clamps the sampled uv to a corner and stamps a flat
+    // disc over the scene. Keep the base off zero.
+    float fall = k * k * pow(max(1.0 - t, 1e-4), 1.6) * smoothstep(0.0, 0.05, t);
     float visible = 1.0 - smoothstep(0.4, 1.6, sceneZ - s * dir.z);
     vec3 side = normalize(cross(axis, abs(axis.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
     vec3 rise = cross(side, axis);
@@ -118,7 +121,9 @@ void mainUv(inout vec2 uv) {
     // Up to 0.9 m of apparent displacement at the plume, in screen units.
     offset += n * (0.9 * heat * fall * visible * hazeFocal / s) * vec2(1.0 / aspect, 1.0);
   }
-  uv = clamp(uv + offset, 0.0, 1.0);
+  // Two percent of the frame is far more than a plume should ever displace;
+  // bounding the sum keeps one bad term from smearing the whole image.
+  uv = clamp(uv + clamp(offset, -0.02, 0.02), 0.0, 1.0);
 }
 `;
 
