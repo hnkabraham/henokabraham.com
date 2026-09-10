@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
   ArrowUpRight,
@@ -15,6 +15,11 @@ import {
 } from '@/lib/bay-flight';
 import { createBayAudio } from '@/lib/bay-audio';
 import BayFlightScene from './bay-flight-scene';
+import { replaceFlightLink } from '@/lib/flight-links';
+import {
+  departureAnnotationAt,
+  type DepartureAnnotation,
+} from '@/lib/bay-annotations';
 
 const copy: Record<BayPhase, [string, string, string]> = {
   preflight: [
@@ -46,8 +51,10 @@ const copy: Record<BayPhase, [string, string, string]> = {
 
 export default function ScrollDeparture({
   reducedMotion,
+  entry,
 }: {
   reducedMotion: boolean;
+  entry: { chapter: BayPhase | null } | null;
 }) {
   const root = useRef<HTMLElement>(null);
   const progress = useRef(0);
@@ -58,6 +65,33 @@ export default function ScrollDeparture({
   );
   const [sound, setSound] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [sceneReady, setSceneReady] = useState(false);
+  const [annotation, setAnnotation] = useState<DepartureAnnotation | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    const section = root.current;
+    if (!section || !entry) return;
+    const chapter = BAY_CHAPTERS.find((item) => item.phase === entry.chapter);
+    if (chapter && !reducedMotion) {
+      progress.current = chapter.at;
+      const top = scrollY + section.getBoundingClientRect().top;
+      scrollTo({
+        top: top + chapter.at * Math.max(0, section.offsetHeight - innerHeight),
+        behavior: 'instant',
+      });
+    } else {
+      progress.current = reducedMotion
+        ? 1
+        : clamp01(
+            -section.getBoundingClientRect().top /
+              Math.max(1, section.offsetHeight - innerHeight),
+          );
+    }
+    setPhase(sampleBayFlight(progress.current).phase);
+    // Mount the renderer only after the shared chapter has seeded its ref.
+    setSceneReady(true);
+  }, [entry, reducedMotion]);
   useEffect(() => () => audio.current?.dispose(), []);
   // The scene announces found easter eggs; show each for a few seconds.
   useEffect(() => {
@@ -90,7 +124,7 @@ export default function ScrollDeparture({
   };
   useEffect(() => {
     const section = root.current;
-    if (!section) return;
+    if (!section || !sceneReady) return;
     let frame = 0;
     const update = () => {
       const rect = section.getBoundingClientRect();
@@ -101,7 +135,20 @@ export default function ScrollDeparture({
               -rect.top / Math.max(1, section.offsetHeight - innerHeight),
             );
       section.style.setProperty('--flight-progress', String(progress.current));
-      setPhase(sampleBayFlight(progress.current).phase);
+      const currentPhase = sampleBayFlight(progress.current).phase;
+      setPhase(currentPhase);
+      setAnnotation(
+        reducedMotion || status !== 'ready'
+          ? null
+          : departureAnnotationAt(progress.current),
+      );
+      if (
+        !reducedMotion &&
+        status !== 'unavailable' &&
+        rect.top <= 1 &&
+        rect.bottom > innerHeight
+      )
+        replaceFlightLink({ chapter: currentPhase });
       frame = 0;
     };
     const onScroll = () => {
@@ -115,7 +162,7 @@ export default function ScrollDeparture({
       removeEventListener('scroll', onScroll);
       removeEventListener('resize', onScroll);
     };
-  }, [reducedMotion, status]);
+  }, [reducedMotion, status, sceneReady]);
   const jump = (position: number) => {
     const section = root.current;
     if (!section) return;
@@ -137,12 +184,14 @@ export default function ScrollDeparture({
       aria-label="A 787 departure over San Francisco Bay, controlled by scrolling"
     >
       <div className="bay-sticky">
-        <BayFlightScene
-          progress={progress}
-          reducedMotion={reducedMotion}
-          audio={audio}
-          onStatus={setStatus}
-        />
+        {sceneReady && (
+          <BayFlightScene
+            progress={progress}
+            reducedMotion={reducedMotion}
+            audio={audio}
+            onStatus={setStatus}
+          />
+        )}
         <div className="bay-scrim" />
         <div className="bay-flight-label mono">
           <span className="bay-live-dot" /> H.A / BOEING 787–9{' '}
@@ -181,6 +230,17 @@ export default function ScrollDeparture({
             </button>
           ))}
         </nav>
+        {annotation && (
+          <aside
+            className="bay-annotation"
+            aria-label="Departure scene annotation"
+          >
+            <p className="eyebrow">SCENE DATA / CINEMATIC DEPARTURE</p>
+            <h2>{annotation.title}</h2>
+            <p>{annotation.note}</p>
+            <small>Authored scene · not real flight data</small>
+          </aside>
+        )}
         <div className="bay-bottom">
           <div className="bay-scroll-cue">
             <span className="bay-scroll-track">

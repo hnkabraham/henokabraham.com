@@ -62,15 +62,16 @@ export function buildPageTables(
   levels: number,
   atlasTiles: number,
   resident: Map<number, number>,
+  reuse?: Uint8Array[],
 ) {
-  const chain: Uint8Array[] = [];
   let size = pages;
   const dims: number[] = [];
   while (size >= 1) {
     dims.push(size);
     size >>= 1;
   }
-  const tables = dims.map((d) => new Uint8Array(d * d * 4));
+  const tables = reuse ?? dims.map((d) => new Uint8Array(d * d * 4));
+  tables.forEach((table) => table.fill(0));
   for (let level = dims.length - 1; level >= 0; level--) {
     const d = dims[level];
     const table = tables[level];
@@ -78,7 +79,8 @@ export function buildPageTables(
     for (let y = 0; y < d; y++)
       for (let x = 0; x < d; x++) {
         const o = (y * d + x) * 4;
-        const slot = level < levels ? resident.get(tileId(level, x, y)) : undefined;
+        const slot =
+          level < levels ? resident.get(tileId(level, x, y)) : undefined;
         if (slot !== undefined) {
           table[o] = slot % atlasTiles;
           table[o + 1] = Math.floor(slot / atlasTiles);
@@ -92,36 +94,97 @@ export function buildPageTables(
           table[o + 3] = parent[po + 3];
         }
       }
-    chain.push(table);
   }
   return { tables, dims };
+}
+
+export type TileOptions = {
+  minLevel?: number;
+  atlasTiles?: number;
+  lookahead?: number;
+  concurrency?: number;
+  uploadBudget?: number;
+  retryDelayMs?: number;
+  base?: string;
+};
+
+/** Derive a floor and detail level that fit every bucket on this GPU. */
+export function tileLayout(
+  manifest: TileManifest,
+  maxTextureSize: number,
+  options: TileOptions = {},
+) {
+  const cell = manifest.tile + 2 * manifest.border;
+  const atlasTiles = Math.min(
+    options.atlasTiles ?? 24,
+    Math.floor(maxTextureSize / cell),
+  );
+  const capacity = atlasTiles * atlasTiles - 4;
+  let minLevel = options.minLevel ?? 0;
+  const coarse = [
+    ...new Set([...(manifest.floor ?? []), ...manifest.buckets.flat()]),
+  ].filter((id) => tileLevel(id) === manifest.levels - 1);
+  let floor = minLevel > 0 ? coarse : (manifest.floor ?? coarse);
+  const fits = () =>
+    manifest.buckets.every(
+      (bucket) =>
+        new Set([...floor, ...bucket.filter((id) => tileLevel(id) >= minLevel)])
+          .size <= capacity,
+    );
+  if (!fits()) floor = coarse;
+  // A sub-4096 GPU may not fit even the regional floor. Whole-image layers
+  // cover the distance there; reserve the atlas for its current view instead.
+  if (floor.length > capacity) floor = [];
+  // Very small texture limits must reduce detail, never truncate an opening
+  // bucket. The manifest already includes the ancestors of each fine page.
+  while (!fits() && minLevel < manifest.levels - 1) minLevel++;
+  if (!fits()) throw new Error('Texture limit cannot hold the tile floor');
+  return { atlasTiles, capacity, minLevel, floor };
+}
+
+/** Current coverage is mandatory; the airport and lookahead use spare slots. */
+export function wantedTiles(
+  manifest: TileManifest,
+  layout: ReturnType<typeof tileLayout>,
+  bucket: number,
+  lookahead = 10,
+  direction = 1,
+) {
+  const order = new Set<number>();
+  const add = (ids: number[] = []) => {
+    for (const id of ids)
+      if (tileLevel(id) >= layout.minLevel && order.size < layout.capacity)
+        order.add(id);
+  };
+  add(manifest.buckets[bucket]);
+  add(layout.floor);
+  if (bucket <= Math.round((manifest.airport?.until ?? -1) / manifest.step))
+    add(manifest.airport?.tiles);
+  for (let k = 1; k <= lookahead; k++) {
+    add(manifest.buckets[bucket + direction * k]);
+    if (k <= 2) add(manifest.buckets[bucket - direction * k]);
+  }
+  return [...order];
 }
 
 export function createTileStreamer(
   renderer: WebGLRenderer,
   manifest: TileManifest,
-  options: {
-    /** Skip levels finer than this (1 halves the bytes on phones). */
-    minLevel?: number;
-    /** Tiles per atlas edge; 24 gives 576 resident tiles in a 6336² texture. */
-    atlasTiles?: number;
-    /** Buckets to keep ahead of the scroll. */
-    lookahead?: number;
-    concurrency?: number;
-    base?: string;
-  } = {},
+  options: TileOptions = {},
 ) {
   const { pages, tile, border, levels } = manifest;
-  const minLevel = options.minLevel ?? 0;
-  const atlasTiles = options.atlasTiles ?? 24;
-  const lookahead = options.lookahead ?? 10;
-  const concurrency = options.concurrency ?? 6;
+  const layout = tileLayout(
+    manifest,
+    renderer.capabilities.maxTextureSize,
+    options,
+  );
+  const { minLevel, atlasTiles } = layout;
+  const concurrency = Math.max(1, options.concurrency ?? 6);
+  const uploadBudget = Math.max(1, options.uploadBudget ?? 4);
+  const retryDelayMs = options.retryDelayMs ?? 2000;
   const base = options.base ?? '/tiles/';
   const cell = tile + 2 * border;
   const atlasSize = atlasTiles * cell;
-
-  // A render target allocates the atlas on the GPU without a CPU buffer;
-  // tiles are copied into it with texSubImage2D.
   const atlasTarget = new WebGLRenderTarget(atlasSize, atlasSize, {
     format: RGBAFormat,
     type: UnsignedByteType,
@@ -136,11 +199,20 @@ export function createTileStreamer(
   atlas.flipY = true;
   atlas.name = 'bay-tile-atlas';
   renderer.initRenderTarget(atlasTarget);
-
   const resident = new Map<number, number>();
   const { tables, dims } = buildPageTables(pages, levels, atlasTiles, resident);
-  const pageTable = new DataTexture(tables[0], pages, pages, RGBAFormat, UnsignedByteType);
-  pageTable.mipmaps = tables.map((data, i) => ({ data, width: dims[i], height: dims[i] }));
+  const pageTable = new DataTexture(
+    tables[0],
+    pages,
+    pages,
+    RGBAFormat,
+    UnsignedByteType,
+  );
+  pageTable.mipmaps = tables.map((data, i) => ({
+    data,
+    width: dims[i],
+    height: dims[i],
+  }));
   pageTable.colorSpace = NoColorSpace;
   pageTable.flipY = false;
   pageTable.generateMipmaps = false;
@@ -148,10 +220,7 @@ export function createTileStreamer(
   pageTable.magFilter = NearestFilter;
   pageTable.name = 'bay-tile-pages';
   pageTable.needsUpdate = true;
-
-  // Slot bookkeeping: which tile sits in each slot, and when it was last wanted.
   const slotTile = new Int32Array(atlasTiles * atlasTiles).fill(-1);
-
   const layer: SurfaceLayer = {
     bounds: manifest.bounds,
     feather: 0,
@@ -166,142 +235,96 @@ export function createTileStreamer(
       lodBias: manifest.lodBias,
     },
   };
-
   const lastWanted = new Map<number, number>();
   const pending = new Map<number, AbortController>();
-  const failed = new Set<number>();
+  const decoded = new Map<
+    number,
+    { bitmap: ImageBitmap; request: AbortController }
+  >();
+  const failed = new Map<number, number>();
   let wanted: number[] = [];
   let wantedSet = new Set<number>();
-  /** Tiles kept from eviction: the current bucket and its near future. */
-  let protect = new Set<number>();
-  /** Set when the atlas had no slot for a wanted tile; cleared on change. */
-  let starved = false;
-  let generation = 0;
-  let dirty = false;
   let disposed = false;
+  let active = true;
   let inflight = 0;
   let loaded = 0;
   let bytes = 0;
+  let publications = 0;
   let lastBucket = -1;
-  let lastUpdate = -Infinity;
+  let direction = 1;
   let primed: { bucket: number; resolve: () => void } | null = null;
   const position = new Vector2();
-
-  // The coarsest levels over the whole region are cheap and make a floor
-  // under everything, wanted from the start and never evicted; the airport
-  // square at 2.4 m joins them while the aircraft is low.
-  const floor = new Set<number>(manifest.floor ?? []);
-  if (!manifest.floor)
-    for (const bucket of manifest.buckets)
-      for (const id of bucket) if (tileLevel(id) === levels - 1) floor.add(id);
-  const airport = manifest.airport ?? { until: 0, tiles: [] };
-  const airportUntil = Math.round(airport.until / manifest.step);
-
   const bucketOf = (progress: number) =>
-    Math.max(0, Math.min(manifest.buckets.length - 1, Math.round(progress / manifest.step)));
+    Math.max(
+      0,
+      Math.min(
+        manifest.buckets.length - 1,
+        Math.round(progress / manifest.step),
+      ),
+    );
 
-  function wantedFor(bucket: number) {
-    const order: number[] = [];
-    const seen = new Set<number>();
-    const near = new Set<number>();
-    const add = (id: number, keep: boolean) => {
-      if (tileLevel(id) < minLevel) return;
-      if (keep) near.add(id);
-      if (seen.has(id)) return;
-      seen.add(id);
-      order.push(id);
-    };
-    for (const id of floor) add(id, true);
-    for (const id of manifest.buckets[bucket]) add(id, true);
-    if (bucket <= airportUntil) for (const id of airport.tiles) add(id, true);
-    for (let k = 1; k <= lookahead; k++) {
-      const ahead = manifest.buckets[bucket + k];
-      if (ahead) for (const id of ahead) add(id, k <= 4);
-      if (k <= 2) {
-        const behind = manifest.buckets[bucket - k];
-        if (behind) for (const id of behind) add(id, false);
-      }
-    }
-    // Never want more than the atlas can hold, or tiles would be fetched,
-    // evicted for other wanted tiles and fetched again. Priority order
-    // means the floor, the current bucket and the near future always fit.
-    const capacity = slotTile.length - 4;
-    const fitted = order.length > capacity ? order.slice(0, capacity) : order;
-    protect = new Set(fitted);
-    for (const id of near) if (!protect.has(id)) near.delete(id);
-    return fitted;
+  function settlePrime() {
+    const current = primed;
+    primed = null;
+    current?.resolve();
   }
-
-  function freeSlot(protect: Set<number>) {
+  function checkPrime() {
+    if (
+      primed &&
+      manifest.buckets[primed.bucket].every(
+        (id) => tileLevel(id) < minLevel || resident.has(id),
+      )
+    )
+      settlePrime();
+  }
+  function freeSlot() {
     for (let s = 0; s < slotTile.length; s++) if (slotTile[s] < 0) return s;
-    // Evict the resident tile least recently wanted that nobody needs now.
     let victim = -1;
     let oldest = Infinity;
     for (let s = 0; s < slotTile.length; s++) {
       const id = slotTile[s];
-      if (protect.has(id) || floor.has(id)) continue;
+      if (wantedSet.has(id)) continue;
       const when = lastWanted.get(id) ?? -Infinity;
       if (when < oldest) {
         oldest = when;
         victim = s;
       }
     }
-    if (victim < 0) return -1;
-    resident.delete(slotTile[victim]);
-    slotTile[victim] = -1;
+    if (victim >= 0) {
+      // Slot ownership is checked even though placement is idempotent.
+      if (resident.get(slotTile[victim]) === victim)
+        resident.delete(slotTile[victim]);
+      slotTile[victim] = -1;
+    }
     return victim;
   }
-
-  function place(id: number, bitmap: ImageBitmap) {
-    const slot = freeSlot(protect);
-    if (slot < 0) {
-      // Full of tiles that are still needed: stop fetching until the
-      // scroll moves on and frees some.
-      starved = true;
-      bitmap.close();
-      return;
-    }
-    const source = new Texture(bitmap);
-    source.colorSpace = SRGBColorSpace;
-    source.flipY = true;
-    position.set((slot % atlasTiles) * cell, Math.floor(slot / atlasTiles) * cell);
-    renderer.copyTextureToTexture(source, atlas, null, position);
-    source.dispose();
-    bitmap.close();
-    slotTile[slot] = id;
-    resident.set(id, slot);
-    dirty = true;
-  }
-
-  function publish() {
-    if (!dirty) return;
-    dirty = false;
-    const built = buildPageTables(pages, levels, atlasTiles, resident);
-    pageTable.image.data = built.tables[0];
-    pageTable.mipmaps = built.tables.map((data, i) => ({ data, width: built.dims[i], height: built.dims[i] }));
-    pageTable.needsUpdate = true;
-    if (primed && manifest.buckets[primed.bucket].every((id) => tileLevel(id) < minLevel || resident.has(id) || failed.has(id))) {
-      primed.resolve();
-      primed = null;
-    }
-  }
-
-  function pump() {
-    if (disposed || starved) return;
+  function pump(now = performance.now()) {
+    if (disposed || !active) return;
     for (const id of wanted) {
-      if (inflight >= concurrency) break;
-      if (resident.has(id) || pending.has(id) || failed.has(id)) continue;
-      const controller = new AbortController();
-      pending.set(id, controller);
+      // Bound decoded CPU memory as well as simultaneous fetch/decode work.
+      if (inflight + decoded.size >= concurrency) break;
+      if (
+        resident.has(id) ||
+        pending.has(id) ||
+        decoded.has(id) ||
+        (failed.get(id) ?? -Infinity) > now
+      )
+        continue;
+      const request = new AbortController();
+      pending.set(id, request);
       inflight++;
-      const url = `${base}${tileLevel(id)}-${tileX(id)}-${tileY(id)}.webp`;
-      const started = generation;
-      void fetch(url, { signal: controller.signal })
+      const valid = () =>
+        !disposed && !request.signal.aborted && pending.get(id) === request;
+      void fetch(`${base}${tileLevel(id)}-${tileX(id)}-${tileY(id)}.webp`, {
+        signal: request.signal,
+      })
         .then((response) => {
-          if (!response.ok) throw new Error(`${response.status}`);
+          if (!valid() || !response.ok)
+            throw new Error('Tile request unavailable');
           return response.blob();
         })
         .then((blob) => {
+          if (!valid()) throw new Error('Tile request cancelled');
           bytes += blob.size;
           return createImageBitmap(blob, {
             premultiplyAlpha: 'none',
@@ -309,96 +332,164 @@ export function createTileStreamer(
           });
         })
         .then((bitmap) => {
-          if (disposed) {
+          if (
+            !valid() ||
+            !wantedSet.has(id) ||
+            resident.has(id) ||
+            decoded.has(id)
+          ) {
             bitmap.close();
             return;
           }
+          failed.delete(id);
           loaded++;
-          // Still wanted, or at least still recent: place it.
-          if (wantedSet.has(id) || started === generation) place(id, bitmap);
-          else bitmap.close();
+          decoded.set(id, { bitmap, request });
         })
         .catch(() => {
-          if (!controller.signal.aborted) failed.add(id);
+          if (valid()) failed.set(id, performance.now() + retryDelayMs);
         })
         .finally(() => {
-          pending.delete(id);
+          // Aborted decodes can outlive a newer request for the same tile.
+          if (pending.get(id) === request) pending.delete(id);
           inflight--;
-          publish();
           pump();
         });
     }
-    publish();
   }
-
   function update(progress: number, now = performance.now()) {
-    if (disposed) return;
+    if (disposed || !active) return;
     const bucket = bucketOf(progress);
-    if (bucket === lastBucket && now - lastUpdate < 150) return;
-    lastBucket = bucket;
-    lastUpdate = now;
-    generation++;
-    starved = false;
-    wanted = wantedFor(bucket);
-    wantedSet = new Set(wanted);
-    for (const id of wanted) lastWanted.set(id, now);
-    // Drop fetches nobody wants any more.
-    for (const [id, controller] of pending)
-      if (!wantedSet.has(id)) {
-        controller.abort();
-        pending.delete(id);
+    if (bucket !== lastBucket) {
+      if (lastBucket >= 0) direction = Math.sign(bucket - lastBucket);
+      lastBucket = bucket;
+      wanted = wantedTiles(
+        manifest,
+        layout,
+        bucket,
+        options.lookahead ?? 10,
+        direction,
+      );
+      wantedSet = new Set(wanted);
+      for (const id of wanted) lastWanted.set(id, now);
+      for (const [id, request] of pending) {
+        if (wantedSet.has(id)) continue;
+        request.abort();
+        if (pending.get(id) === request) pending.delete(id);
       }
-    pump();
+      for (const [id, entry] of decoded) {
+        if (wantedSet.has(id)) continue;
+        entry.bitmap.close();
+        decoded.delete(id);
+      }
+    }
+    pump(now);
+    checkPrime();
   }
-
+  /** Upload and publish together before drawing; completion callbacks do no GPU work. */
+  function flush(now = performance.now()) {
+    if (disposed || !active) return false;
+    let uploads = 0;
+    let dirty = false;
+    for (const id of wanted) {
+      if (uploads >= uploadBudget) break;
+      const entry = decoded.get(id);
+      if (!entry) continue;
+      const { bitmap, request } = entry;
+      if (request.signal.aborted || resident.has(id)) {
+        bitmap.close();
+        decoded.delete(id);
+        continue;
+      }
+      const slot = freeSlot();
+      if (slot < 0) break;
+      const source = new Texture(bitmap);
+      source.colorSpace = SRGBColorSpace;
+      source.flipY = true;
+      position.set(
+        (slot % atlasTiles) * cell,
+        Math.floor(slot / atlasTiles) * cell,
+      );
+      dirty = true;
+      try {
+        renderer.copyTextureToTexture(source, atlas, null, position);
+        slotTile[slot] = id;
+        resident.set(id, slot);
+      } catch {
+        failed.set(id, now + retryDelayMs);
+      } finally {
+        source.dispose();
+        bitmap.close();
+        decoded.delete(id);
+      }
+      uploads++;
+    }
+    if (dirty) {
+      buildPageTables(pages, levels, atlasTiles, resident, tables);
+      pageTable.needsUpdate = true;
+      publications++;
+    }
+    checkPrime();
+    pump(now);
+    return dirty;
+  }
   return {
     layer,
     pageTable,
     atlas,
     update,
-    /** Resolves once every tile of the bucket at `progress` is resident, or after `timeoutMs`. */
+    flush,
+    setActive(value: boolean) {
+      active = value;
+    },
+    /** Failures retry; only coverage, disposal or the twelve-second cap settles priming. */
     prime(progress: number, timeoutMs = 12000) {
-      const bucket = bucketOf(progress);
+      settlePrime();
+      if (disposed) return Promise.resolve();
       return new Promise<void>((resolve) => {
-        const timer = setTimeout(() => {
-          primed = null;
-          resolve();
-        }, timeoutMs);
+        const timer = setTimeout(settlePrime, Math.min(timeoutMs, 12000));
         primed = {
-          bucket,
+          bucket: bucketOf(progress),
           resolve: () => {
             clearTimeout(timer);
             resolve();
           },
         };
-        update(progress, performance.now() + 1000);
-        publish();
+        update(progress);
+        checkPrime();
       });
     },
-    /** Development probes: slot contents and the atlas target for read-back. */
     debug() {
       return {
         atlasTarget,
         cell,
         atlasTiles,
+        minLevel,
+        floor: layout.floor,
+        wanted,
         slotTile: Array.from(slotTile),
         resident: Array.from(resident.entries()),
+        publications,
       };
     },
     stats() {
       return {
         resident: resident.size,
         pending: pending.size,
+        decoded: decoded.size,
         loaded,
         failed: failed.size,
         bytes,
-        slots: atlasTiles * atlasTiles,
+        slots: slotTile.length,
       };
     },
     dispose() {
+      if (disposed) return;
       disposed = true;
-      for (const controller of pending.values()) controller.abort();
+      settlePrime();
+      for (const request of pending.values()) request.abort();
       pending.clear();
+      for (const { bitmap } of decoded.values()) bitmap.close();
+      decoded.clear();
       atlasTarget.dispose();
       pageTable.dispose();
     },

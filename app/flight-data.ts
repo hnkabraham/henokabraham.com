@@ -17,6 +17,28 @@ export type Flight = {
 };
 export const flights: Flight[] = [
   {
+    id: 'bay-departure',
+    code: 'HA 006',
+    name: 'Departure over the Bay',
+    destination: 'FEATURED ENGINEERING',
+    category: 'WebGL / fixed-path streaming',
+    gate: 'SFO',
+    status: 'LIVE',
+    open: true,
+    summary: 'A flight through the Bay. A study in rendering budgets.',
+    story:
+      'The opening scene follows a fixed camera path, so an offline schedule can predict the ground tiles each scroll chapter needs. That trades a general-purpose map viewer and GPU feedback pass for a small manifest, bounded residency, and two texture samplers. The same imagery is draped over terrain and building roofs.',
+    stack: ['TypeScript', 'Three.js', 'GLSL', 'Python'],
+    url: '?project=bay-departure&chapter=preflight',
+    linkLabel: 'Return to the departure',
+    features: [
+      '1,671 shipped tiles: 16,150,728 compressed bytes (about 16 MB) scheduled across the scroll; actual transfer depends on the device, cache and revisits.',
+      'Desktop atlas: up to 6,336 × 6,336 px, 576 slots, 153.1 MiB RGBA8. Phones: up to 3,960 × 3,960 px, 225 slots, 59.8 MiB. Both respect the GPU texture limit.',
+      'The desktop terrain uses 15 of the 16 fragment samplers in the baseline budget. A mip-less atlas and an ancestor page table keep streamed detail to two samplers.',
+      'Current coverage comes first; uploads are batched per frame, with a smaller permanent floor on phones.',
+    ],
+  },
+  {
     id: 'flight-tracker',
     code: 'HA 001',
     name: 'United Flight Tracker',

@@ -1,3 +1,4 @@
+import { checkBayLifecycle } from './check-bay-lifecycle.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { transpileModule, ModuleKind } from 'typescript';
@@ -15,13 +16,13 @@ import {
   ToneMappingMode,
 } from 'postprocessing';
 
-const compile = async (name) => {
+const compile = async (name, links = {}) => {
   const js = transpileModule(
     await fs.readFile(new URL(`../lib/${name}.ts`, import.meta.url), 'utf8'),
     { compilerOptions: { module: ModuleKind.ESNext } },
   ).outputText.replace(
     /from '([^']+)'/g,
-    (_, id) => `from '${import.meta.resolve(id)}'`,
+    (_, id) => `from '${links[id] ?? import.meta.resolve(id)}'`,
   );
   return import(
     `data:text/javascript;base64,${Buffer.from(js).toString('base64')}`
@@ -116,7 +117,9 @@ const sunColor = getSunLightColor(
   sunDirection,
 );
 assert.ok(
-  [sunColor.r, sunColor.g, sunColor.b].every((v) => Number.isFinite(v) && v > 0.5),
+  [sunColor.r, sunColor.g, sunColor.b].every(
+    (v) => Number.isFinite(v) && v > 0.5,
+  ),
   'Sun colour from the transmittance table must be a bright, finite daylight',
 );
 assert.ok(
@@ -170,3 +173,40 @@ finish.dispose();
 console.log(
   `Passed: 1,001 floating-origin transforms; ${totalBytes.toLocaleString()} bytes of valid atmosphere LUTs; sun colour ${[sunColor.r, sunColor.g, sunColor.b].map((v) => v.toFixed(2)).join('/')}; atmospheric depth, sky and HDR shader assembly.`,
 );
+
+const atmosphereSource = transpileModule(
+  await fs.readFile(
+    new URL('../lib/bay-atmosphere.ts', import.meta.url),
+    'utf8',
+  ),
+  { compilerOptions: { module: ModuleKind.ESNext } },
+).outputText.replace(
+  /from '([^']+)'/g,
+  (_, id) => `from '${import.meta.resolve(id)}'`,
+);
+const atmosphereURL = `data:text/javascript;base64,${Buffer.from(atmosphereSource).toString('base64')}`;
+const { skyEnvironmentMoved } = await compile('bay-rendering', {
+  './bay-atmosphere': atmosphereURL,
+});
+assert.equal(
+  skyEnvironmentMoved(new T.Vector3(), new T.Vector3()),
+  false,
+  'Stationary sky never refreshes',
+);
+assert.equal(
+  skyEnvironmentMoved(new T.Vector3(149, 0, 0), new T.Vector3()),
+  false,
+);
+assert.equal(
+  skyEnvironmentMoved(new T.Vector3(150, 0, 0), new T.Vector3()),
+  true,
+);
+assert.equal(
+  skyEnvironmentMoved(
+    new T.Vector3(),
+    new T.Vector3(Infinity, Infinity, Infinity),
+  ),
+  true,
+  'First environment refreshes',
+);
+await checkBayLifecycle();

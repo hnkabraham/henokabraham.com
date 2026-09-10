@@ -56,7 +56,10 @@ export function addWingFlex(material: Material, amount: { value: number }) {
 export function addSkinDetail(material: Material) {
   addShaderPatch(material, 'skin-detail-v1', (shader) => {
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vSkinPoint;')
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vSkinPoint;',
+      )
       .replace(
         '#include <begin_vertex>',
         '#include <begin_vertex>\nvSkinPoint = position;',
@@ -98,7 +101,7 @@ export function addSkinDetail(material: Material) {
           + skinOutline(vec2(p.x - 8.5, p.y - 0.15), vec2(0.53, 0.95), 0.02)
           + skinOutline(vec2(p.x - 21.5, p.y - 0.15), vec2(0.53, 0.95), 0.02));
         // Operational grime gathers under the belly and streaks aft.
-        float belly = smoothstep(0.3, -2.4, section.x) * (1.0 - smoothstep(-30.0, -24.0, -p.x));
+        float belly = (1.0 - smoothstep(-2.4, 0.3, section.x)) * (1.0 - smoothstep(-30.0, -24.0, -p.x));
         float streaks = 0.75 + 0.25 * sin(arc * 9.0 + p.x * 0.35) * sin(p.x * 2.3 + arc * 1.7);
         float grime = fuselage * belly * streaks * 0.16;
         // Sparse chordwise wing panel lines outboard of the root fairing.
@@ -121,7 +124,10 @@ export function addCloudShade(material: Material, cloud: { value: number }) {
   addShaderPatch(material, 'cloud-shade-v1', (shader) => {
     shader.uniforms.skinCloud = cloud;
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float skinCloud;')
+      .replace(
+        '#include <common>',
+        '#include <common>\nuniform float skinCloud;',
+      )
       .replace(
         '#include <lights_fragment_begin>',
         ShaderChunk.lights_fragment_begin.replace(

@@ -15,6 +15,9 @@ import {
 import { useAirspaceDepth } from './use-airspace-depth';
 import ScrollDeparture from './scroll-departure';
 import { flights, openSource } from './flight-data';
+import { readFlightLink, replaceFlightLink } from '@/lib/flight-links';
+import type { BayPhase } from '@/lib/bay-flight';
+import AviationLogbook from './aviation-logbook';
 import {
   Dialog,
   DialogContent,
@@ -47,16 +50,36 @@ export default function TerminalExperience() {
   const flight = flights[selected];
   const root = useRef<HTMLDivElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [entry, setEntry] = useState<{ chapter: BayPhase | null } | null>(null);
   useAirspaceDepth(root, !reducedMotion);
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setReducedMotion(preference.matches);
     update();
     preference.addEventListener('change', update);
-    return () => preference.removeEventListener('change', update);
+    const restore = () => {
+      const link = readFlightLink(
+        new URL(location.href),
+        flights.map((item) => item.id),
+      );
+      setSelected(
+        Math.max(
+          0,
+          flights.findIndex((item) => item.id === link.project),
+        ),
+      );
+      setEntry({ chapter: link.chapter });
+    };
+    restore();
+    addEventListener('popstate', restore);
+    return () => {
+      preference.removeEventListener('change', update);
+      removeEventListener('popstate', restore);
+    };
   }, []);
   const selectFlight = (index: number) => {
     setSelected(index);
+    replaceFlightLink({ project: flights[index].id });
   };
 
   return (
@@ -91,7 +114,7 @@ export default function TerminalExperience() {
         <StationClock />
       </header>
       <main>
-        <ScrollDeparture reducedMotion={reducedMotion} />
+        <ScrollDeparture reducedMotion={reducedMotion} entry={entry} />
         <section
           className="terminal-section"
           id="departures"
@@ -121,7 +144,7 @@ export default function TerminalExperience() {
                 <span>
                   <PlaneTakeoff size={20} /> PROJECT DEPARTURES
                 </span>
-                <span className="mono">5 DESTINATIONS</span>
+                <span className="mono">{flights.length} DESTINATIONS</span>
               </div>
               <div className="board-columns mono" aria-hidden="true">
                 <span>FLIGHT</span>
@@ -262,8 +285,16 @@ export default function TerminalExperience() {
                       <a
                         className="briefing-link"
                         href={flight.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        target={
+                          flight.url.startsWith('https://')
+                            ? '_blank'
+                            : undefined
+                        }
+                        rel={
+                          flight.url.startsWith('https://')
+                            ? 'noopener noreferrer'
+                            : undefined
+                        }
                       >
                         {flight.linkLabel}
                         <ArrowUpRight size={18} />
@@ -297,6 +328,14 @@ export default function TerminalExperience() {
             </Dialog>
           </div>
         </section>
+        <AviationLogbook
+          onProject={(id) => {
+            const index = flights.findIndex((item) => item.id === id);
+            if (index < 0) return;
+            selectFlight(index);
+            setProjectOpen(true);
+          }}
+        />
         <section
           className="open-hangar"
           data-reveal

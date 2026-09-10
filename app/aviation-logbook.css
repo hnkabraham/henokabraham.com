@@ -1,0 +1,99 @@
+.aviation-logbook {
+  border-top: 1px solid var(--border);
+}
+.aviation-logbook h2 {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  margin: 8px 0 0;
+  letter-spacing: -0.04em;
+}
+.logbook-entries {
+  border-top: 1px solid var(--border);
+}
+.logbook-entry {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.65fr) minmax(0, 2fr) minmax(
+      80px,
+      0.5fr
+    );
+  gap: 28px;
+  padding: 30px 0;
+  border-bottom: 1px solid var(--border);
+}
+.logbook-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.logbook-meta span:first-child {
+  color: var(--primary);
+}
+.logbook-note h3 {
+  font-size: 1.35rem;
+  margin: 0 0 16px;
+}
+.logbook-note dl {
+  margin: 0 0 18px;
+  font-size: 0.875rem;
+}
+.logbook-note dl div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  margin: 5px 0;
+}
+.logbook-note dt,
+.logbook-note small,
+.logbook-photo-empty {
+  color: var(--muted-foreground);
+}
+.logbook-note dd {
+  margin: 0;
+}
+.logbook-note p {
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+.logbook-note small {
+  font-size: 0.75rem;
+}
+.logbook-project {
+  display: block;
+  color: var(--primary);
+  font-size: 0.875rem;
+  min-height: 44px;
+  margin-top: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.logbook-project:hover {
+  text-decoration: underline;
+}
+.logbook-photo-empty {
+  font-size: 0.75rem;
+}
+.logbook-photos figure {
+  margin: 0 0 16px;
+}
+.logbook-photos img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.logbook-photos figcaption {
+  font-size: 0.75rem;
+  margin-top: 6px;
+}
+@media (max-width: 800px) {
+  .logbook-entry {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .logbook-meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+}

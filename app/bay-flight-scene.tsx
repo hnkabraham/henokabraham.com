@@ -13,11 +13,7 @@ import {
   createAirportBuildings,
   type AirportBuildings,
 } from '@/lib/sfo-buildings';
-import {
-  addCloudShade,
-  addSkinDetail,
-  addWingFlex,
-} from '@/lib/airframe-flex';
+import { addCloudShade, addSkinDetail, addWingFlex } from '@/lib/airframe-flex';
 import {
   buildCityGeometry,
   createCityMesh,
@@ -73,7 +69,8 @@ async function loadElevation(url: string, signal: AbortSignal) {
     colorSpaceConversion: 'none',
   });
   const size = bitmap.width;
-  if (size !== bitmap.height || size < 2) throw new Error('Invalid terrain grid');
+  if (size !== bitmap.height || size < 2)
+    throw new Error('Invalid terrain grid');
   const canvas =
     typeof OffscreenCanvas === 'undefined'
       ? Object.assign(document.createElement('canvas'), {
@@ -97,7 +94,12 @@ async function loadElevation(url: string, signal: AbortSignal) {
 /** Tileable value-noise normal map: skin waviness on paint, wind ripples on water. */
 function createNoiseNormal(
   T: typeof import('three'),
-  options: { size: number; octaves: [number, number][]; slope: number; seed: number },
+  options: {
+    size: number;
+    octaves: [number, number][];
+    slope: number;
+    seed: number;
+  },
 ) {
   const { size, slope } = options;
   const height = new Float32Array(size * size);
@@ -194,8 +196,8 @@ function createCloudField(T: typeof import('three'), size = 256, seed = 11) {
   texture.generateMipmaps = true;
   texture.needsUpdate = true;
   const sample = (u: number, v: number) => {
-    const fx = ((u % 1) + 1) % 1 * size,
-      fy = ((v % 1) + 1) % 1 * size;
+    const fx = (((u % 1) + 1) % 1) * size,
+      fy = (((v % 1) + 1) % 1) * size;
     const x0 = Math.floor(fx),
       y0 = Math.floor(fy);
     const tx = fx - x0,
@@ -292,6 +294,10 @@ export default function BayFlightScene(props: Props) {
       const geometries = new Set<InstanceType<typeof T.BufferGeometry>>();
       const materials = new Set<Material>();
       const textures = new Set<Texture>();
+      const instances = new Set<InstanceType<typeof T.InstancedMesh>>();
+      let tiles: ReturnType<typeof createTileStreamer> | null = null;
+      let lazyTimer: ReturnType<typeof setTimeout> | undefined = undefined;
+      let renderDirty = true;
       let environment: InstanceType<typeof T.WebGLRenderTarget> | undefined;
       const eggs: { stop?: () => void } = {};
       let frame = 0,
@@ -314,6 +320,7 @@ export default function BayFlightScene(props: Props) {
         object.traverse((node) => {
           const mesh = node as Mesh;
           if (!mesh.isMesh) return;
+          if (node instanceof T.InstancedMesh) instances.add(node);
           geometries.add(mesh.geometry);
           const list = Array.isArray(mesh.material)
             ? mesh.material
@@ -329,16 +336,21 @@ export default function BayFlightScene(props: Props) {
       const observer = new IntersectionObserver(
         ([entry]) => {
           visible = entry.isIntersecting;
+          tiles?.setActive(visible && !document.hidden);
+          renderDirty = true;
           if (!visible) latest.current.audio.current?.update(currentP, false);
         },
         { threshold: 0 },
       );
       observer.observe(container);
-      const visibilityChange = () =>
+      const visibilityChange = () => {
+        tiles?.setActive(visible && !document.hidden);
+        renderDirty = true;
         latest.current.audio.current?.update(
           currentP,
           visible && !document.hidden && ready,
         );
+      };
       document.addEventListener('visibilitychange', visibilityChange);
       const resize = () => {
         width = Math.max(1, container.clientWidth);
@@ -355,6 +367,7 @@ export default function BayFlightScene(props: Props) {
         rendering?.resize(width, height);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        renderDirty = true;
         previousP = -1;
       };
       const sizeObserver = new ResizeObserver(resize);
@@ -384,6 +397,7 @@ export default function BayFlightScene(props: Props) {
         );
         disposeObject(scene);
         rendering?.dispose();
+        instances.forEach((mesh) => mesh.dispose());
         geometries.forEach((g) => g.dispose());
         materials.forEach((m) => m.dispose());
         textures.forEach((t) => t.dispose());
@@ -497,6 +511,7 @@ export default function BayFlightScene(props: Props) {
           latest.current.onStatus('unavailable');
           cleanup?.();
         } else {
+          instances.forEach((mesh) => mesh.dispose());
           geometries.forEach((g) => g.dispose());
           materials.forEach((m) => m.dispose());
           textures.forEach((t) => t.dispose());
@@ -550,13 +565,15 @@ export default function BayFlightScene(props: Props) {
         );
         return texture;
       };
-      const tiles =
+      tiles =
         tilesResult.status === 'fulfilled'
           ? createTileStreamer(renderer, tilesResult.value, {
               minLevel: mobile ? 1 : 0,
-              atlasTiles: mobile ? 16 : 24,
+              atlasTiles: mobile ? 15 : 24,
+              uploadBudget: mobile ? 2 : 4,
             })
           : null;
+      tiles?.setActive(visible && !document.hidden);
       // Coarse to fine. The corridor layers, the desktop-only climb layer and
       // every baked shadow map arrive after the first frame.
       const layers: SurfaceLayer[] = [
@@ -564,7 +581,9 @@ export default function BayFlightScene(props: Props) {
         { bounds: NORTH_BOUNDS, texture: null, feather: 0.05, shade: null },
         // No baked shade of its own: the north corridor's covers it, and the
         // terrain shader is already near the 16 texture-unit limit.
-        ...(mobile ? [] : [{ bounds: CLIMB_BOUNDS, texture: null, feather: 0.04 }]),
+        ...(mobile
+          ? []
+          : [{ bounds: CLIMB_BOUNDS, texture: null, feather: 0.04 }]),
         // The airport's baked shade keeps its box; the imagery under it and
         // the runway now stream as tiles scheduled along the scroll path.
         { bounds: SFO_BOUNDS, shade: null },
@@ -656,8 +675,18 @@ export default function BayFlightScene(props: Props) {
       } = {};
       if (process.env.NODE_ENV !== 'production')
         Object.assign(
-          (window as unknown as { __bayDebug: Record<string, unknown> }).__bayDebug,
-          { surface, clouds, camera, world, debugView, aircraft, heatHaze, tiles },
+          (window as unknown as { __bayDebug: Record<string, unknown> })
+            .__bayDebug,
+          {
+            surface,
+            clouds,
+            camera,
+            world,
+            debugView,
+            aircraft,
+            heatHaze,
+            tiles,
+          },
         );
       const shadeTexture = (texture: Texture) => {
         texture.colorSpace = T.NoColorSpace;
@@ -951,12 +980,16 @@ export default function BayFlightScene(props: Props) {
         surface.time.value = reduced ? 0 : now * 0.001;
         for (const index of fadingLayers) {
           const control = surface.layers[index];
-          control.ready.value = Math.min(1, control.ready.value + dt / 1.2);
+          control.ready.value = reduced
+            ? 1
+            : Math.min(1, control.ready.value + dt / 1.2);
           if (control.ready.value >= 1) fadingLayers.delete(index);
         }
         for (const index of fadingShades) {
           const control = surface.layers[index];
-          control.shadeReady.value = Math.min(1, control.shadeReady.value + dt / 1.5);
+          control.shadeReady.value = reduced
+            ? 1
+            : Math.min(1, control.shadeReady.value + dt / 1.5);
           if (control.shadeReady.value >= 1) fadingShades.delete(index);
         }
         if (city && city.rise.value < 1) {
@@ -978,7 +1011,8 @@ export default function BayFlightScene(props: Props) {
           else if (stunt.kind === 'roll') {
             // A full aileron roll that starts and stops smoothly, with a
             // little pitch-up on entry and the wings loading through it.
-            stuntRoll = 2 * Math.PI * (t - Math.sin(2 * Math.PI * t) / (2 * Math.PI));
+            stuntRoll =
+              2 * Math.PI * (t - Math.sin(2 * Math.PI * t) / (2 * Math.PI));
             stuntPitch = 0.07 * Math.sin(Math.PI * t);
             wingFlex.value += 0.9 * Math.sin(Math.PI * t);
           } else {
@@ -1003,9 +1037,14 @@ export default function BayFlightScene(props: Props) {
         if (chaseCar) {
           // Drag-racing the Dreamliner down 28R from the runway shoulder:
           // ahead off the line, then steadily dropped as the jet accelerates.
-          const forward = [-Math.sin(RUNWAY_HEADING), -Math.cos(RUNWAY_HEADING)];
-          const along = shot.position[0] * forward[0] + shot.position[2] * forward[1];
-          const carAlong = 32 + along * (1 - 0.25 * smooth((along - 300) / 2400));
+          const forward = [
+            -Math.sin(RUNWAY_HEADING),
+            -Math.cos(RUNWAY_HEADING),
+          ];
+          const along =
+            shot.position[0] * forward[0] + shot.position[2] * forward[1];
+          const carAlong =
+            32 + along * (1 - 0.25 * smooth((along - 300) / 2400));
           chaseCar.group.visible = chaseOn && currentP < 0.46;
           chaseCar.group.position.set(
             forward[0] * carAlong + forward[1] * 46,
@@ -1013,7 +1052,8 @@ export default function BayFlightScene(props: Props) {
             forward[1] * carAlong - forward[0] * 46,
           );
           chaseCar.group.rotation.y = RUNWAY_HEADING;
-          for (const wheel of chaseCar.wheels) wheel.rotation.x = -carAlong / 0.34;
+          for (const wheel of chaseCar.wheels)
+            wheel.rotation.x = -carAlong / 0.34;
         }
         airfield?.update(now);
         if (gateFog) {
@@ -1021,7 +1061,9 @@ export default function BayFlightScene(props: Props) {
           const value = gateFog.opacity.value;
           gateFog.opacity.value = reduced
             ? target
-            : value + Math.sign(target - value) * Math.min(Math.abs(target - value), dt / 2.5);
+            : value +
+              Math.sign(target - value) *
+                Math.min(Math.abs(target - value), dt / 2.5);
           gateFog.time.value = surface.time.value;
           gateFog.group.visible = gateFog.opacity.value > 0.001;
         }
@@ -1086,8 +1128,7 @@ export default function BayFlightScene(props: Props) {
           reduced ? 0 : Math.max(vortexSetting(currentP), stunt ? 1 : 0),
           now * 0.001,
         );
-              if (traffic && !reduced) traffic.update(now);
-        tiles?.update(currentP, now);
+        if (traffic && !reduced) traffic.update(now);
       }
       function draw(dt: number) {
         if (rendering) rendering.render(planePosition, dt);
@@ -1095,13 +1136,28 @@ export default function BayFlightScene(props: Props) {
       }
       // Compile every program and draw one frame while the canvas is still
       // transparent, so the fade-in never shows a shader-compilation stall.
-      update(performance.now(), 0);
-      // The opening frame waits for its own ground tiles, briefly.
-      if (tiles) await tiles.prime(currentP, 12000);
+      if (visible && !document.hidden) update(performance.now(), 0);
+      // Priming uses the same bounded frame uploads, including before the
+      // first draw. Cleanup owns this RAF even if unmount happens mid-prime.
+      const opening = tiles?.prime(currentP, 12000);
+      const primeFrame = (now: number) => {
+        if (disposed) return;
+        if (visible && !document.hidden) {
+          tiles?.update(currentP, now);
+          tiles?.flush(now);
+        }
+        frame = requestAnimationFrame(primeFrame);
+      };
+      frame = requestAnimationFrame(primeFrame);
+      await opening;
+      cancelAnimationFrame(frame);
       if (disposed) return;
       await renderer.compileAsync(scene, camera);
       if (disposed) return;
-      draw(0);
+      if (visible && !document.hidden) {
+        update(performance.now(), 0);
+        draw(0);
+      }
       ready = true;
       latest.current.onStatus('ready');
       renderer.domElement.classList.add('is-ready');
@@ -1118,7 +1174,10 @@ export default function BayFlightScene(props: Props) {
         built.materials.forEach((material) => materials.add(material));
         chaseCar = built;
         void renderer.compileAsync(built.group, camera, scene).then(() => {
-          if (!disposed) world.add(built.group);
+          if (!disposed) {
+            world.add(built.group);
+            renderDirty = true;
+          }
         });
       };
       const enableFog = () => {
@@ -1128,7 +1187,10 @@ export default function BayFlightScene(props: Props) {
         built.materials.forEach((material) => materials.add(material));
         gateFog = built;
         void renderer.compileAsync(built.group, camera, scene).then(() => {
-          if (!disposed) world.add(built.group);
+          if (!disposed) {
+            world.add(built.group);
+            renderDirty = true;
+          }
         });
       };
       if (chaseOn) enableChase();
@@ -1160,11 +1222,13 @@ export default function BayFlightScene(props: Props) {
             chaseOn = !chaseOn;
             remember('bay-egg-chase', chaseOn);
             if (chaseOn) enableChase();
+            renderDirty = true;
             announce(egg, chaseOn);
           } else {
             fogOn = !fogOn;
             remember('bay-egg-fog', fogOn);
             if (fogOn) enableFog();
+            renderDirty = true;
             announce(egg, fogOn);
           }
         },
@@ -1172,7 +1236,8 @@ export default function BayFlightScene(props: Props) {
       eggs.stop = stopEggs;
       if (process.env.NODE_ENV !== 'production')
         Object.assign(
-          (window as unknown as { __bayDebug: Record<string, unknown> }).__bayDebug,
+          (window as unknown as { __bayDebug: Record<string, unknown> })
+            .__bayDebug,
           { egg: (name: EasterEgg) => announce(name) },
         );
       console.log(
@@ -1199,6 +1264,7 @@ export default function BayFlightScene(props: Props) {
               return;
             }
             assign(prepare(ownTexture(texture)));
+            renderDirty = true;
           },
           () => {},
         );
@@ -1231,6 +1297,7 @@ export default function BayFlightScene(props: Props) {
             geometries.add(built.geometry);
             materials.add(built.material);
             world.add(built.mesh);
+            renderDirty = true;
             traffic = built;
           })
           .catch(() => {
@@ -1242,7 +1309,10 @@ export default function BayFlightScene(props: Props) {
             fadingShades.add(index);
           });
         const detail = capable ? '' : '-mobile';
-        void loadCityBuildings(`/scenery/bay-buildings${detail}.bin.gz`, abort.signal)
+        void loadCityBuildings(
+          `/scenery/bay-buildings${detail}.bin.gz`,
+          abort.signal,
+        )
           .then(async (buildings) => {
             if (disposed) return;
             const geometry = await buildCityGeometry(
@@ -1258,6 +1328,7 @@ export default function BayFlightScene(props: Props) {
             city = createCityMesh(geometry, layers, surface);
             materials.add(city.material);
             world.add(city.mesh);
+            renderDirty = true;
           })
           .catch(() => {});
         // The Golden Gate is procedural: no download, one compile.
@@ -1272,6 +1343,7 @@ export default function BayFlightScene(props: Props) {
           if (built.texture) ownTexture(built.texture);
           void renderer.compileAsync(built.group, camera, scene).then(() => {
             if (disposed) return;
+            renderDirty = true;
             bridge = built;
             world.add(built.group);
             if (fogOn) enableFog();
@@ -1279,7 +1351,10 @@ export default function BayFlightScene(props: Props) {
         } catch {
           // A malformed elevation grid only costs the bridge.
         }
-        void loadTreeCanopies(`/scenery/bay-trees${detail}.bin.gz`, abort.signal)
+        void loadTreeCanopies(
+          `/scenery/bay-trees${detail}.bin.gz`,
+          abort.signal,
+        )
           .then(async (canopies) => {
             if (disposed) return;
             const built = await createTreeMesh(
@@ -1290,6 +1365,7 @@ export default function BayFlightScene(props: Props) {
               yieldNow,
             );
             if (disposed) {
+              built.mesh.dispose();
               built.geometry.dispose();
               built.material.dispose();
               return;
@@ -1298,11 +1374,17 @@ export default function BayFlightScene(props: Props) {
             materials.add(built.material);
             trees = built;
             world.add(built.mesh);
+            renderDirty = true;
           })
           .catch(() => {});
       }
-      // Hidden tabs never measure; assume a desktop can cope after a while.
-      const lazyTimer = setTimeout(() => startLazyLoads(!mobile), 8000);
+      // A tab hidden through the measurement window starts its lazy loads
+      // once visible again.
+      let lazyDue = false;
+      lazyTimer = setTimeout(() => {
+        lazyDue = true;
+        renderDirty = true;
+      }, 8000);
       function animate(now: number) {
         if (disposed) return;
         frame = requestAnimationFrame(animate);
@@ -1310,10 +1392,21 @@ export default function BayFlightScene(props: Props) {
         lastTime = now;
         const isVisible = visible && !document.hidden;
         const reduced = latest.current.reducedMotion;
+        if (!isVisible) return;
+        // A tab hidden through the measurement window gets the desktop
+        // variants only where the texture limit allows them, as measured
+        // desktops do; the phone variants stay the phone default.
+        if (lazyDue && !lazyStarted)
+          startLazyLoads(
+            !mobile && renderer.capabilities.maxTextureSize >= 8192,
+          );
+        tiles?.update(currentP, now);
+        if (tiles?.flush(now)) renderDirty = true;
+        if (reduced && previousP === currentP && !renderDirty) return;
         update(now, dt);
-        latest.current.audio.current?.update(currentP, isVisible && ready);
-        if (!isVisible || (reduced && previousP === currentP)) return;
+        latest.current.audio.current?.update(currentP, ready);
         previousP = currentP;
+        renderDirty = false;
         draw(dt);
         if (ready && !lazyStarted) {
           frameSamples.push(dt);

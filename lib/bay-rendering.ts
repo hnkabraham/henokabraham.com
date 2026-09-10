@@ -42,6 +42,10 @@ import { BAY_TO_ECEF, updateAtmosphereOrigin } from './bay-atmosphere';
  */
 export const ATMOSPHERE_EXPOSURE = 2.1;
 
+/** Sky lighting changes slowly over distance and never needs a stationary refresh. */
+export const skyEnvironmentMoved = (position: Vector3, previous: Vector3) =>
+  position.distanceToSquared(previous) >= 150 * 150;
+
 export function createBayRendering(
   renderer: WebGLRenderer,
   scene: Scene,
@@ -140,7 +144,6 @@ export function createBayRendering(
   const skyCamera = new CubeCamera(1, 1e6, skyTarget);
   const pmrem = new PMREMGenerator(renderer);
   let environment: WebGLRenderTarget | null = null;
-  let environmentAge = Infinity;
   let environmentFrozen = false;
   const environmentPosition = new Vector3(Infinity, Infinity, Infinity);
   const sunColor = new Color();
@@ -174,8 +177,9 @@ export function createBayRendering(
     );
   });
   const scratch = new Vector3();
+  const observerPosition = new Vector3();
 
-  function updateLighting(localPosition: Vector3, dt: number) {
+  function updateLighting(localPosition: Vector3) {
     if (!atmospherePass.enabled) return;
     sunPosition.setFromMatrixPosition(atmosphere.worldToECEFMatrix);
     getSunLightColor(
@@ -186,20 +190,18 @@ export function createBayRendering(
     );
     sun.color.copy(sunColor);
     sun.intensity = 1;
-    environmentAge += dt;
-    // Altitude changes the sky slowly: refresh the cubemap a few times a
-    // second, or as soon as a fast scroll has moved the aircraft far enough
-    // that the previous sky would visibly pop.
     if (
       environment &&
       (environmentFrozen ||
-        (environmentAge < 0.4 &&
-          localPosition.distanceTo(environmentPosition) < 150))
+        !skyEnvironmentMoved(localPosition, environmentPosition))
     )
       return;
-    environmentAge = 0;
     environmentPosition.copy(localPosition);
-    skyMaterial.worldToECEFMatrix.copy(atmosphere.worldToECEFMatrix);
+    updateAtmosphereOrigin(
+      skyMaterial.worldToECEFMatrix,
+      localPosition,
+      scratch,
+    );
     skyCamera.updateMatrixWorld(true);
     skyCamera.update(renderer, skyScene);
     environment = pmrem.fromCubemap(skyTarget.texture, environment);
@@ -230,7 +232,8 @@ export function createBayRendering(
         localPosition,
         scratch,
       );
-      updateLighting(localPosition, dt);
+      observerPosition.copy(localPosition).add(camera.position);
+      updateLighting(observerPosition);
       composer.render(dt);
     },
     dispose() {

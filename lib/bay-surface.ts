@@ -23,9 +23,7 @@ export const NORTH_BOUNDS = [
  * takes the slot once planned for a northern-city layer, whose USGS export
  * timed out on every attempt; the corridor layers still cover the north.
  */
-export const CLIMB_BOUNDS = [
-  -13632500, 4526800, -13623500, 4535800,
-] as const;
+export const CLIMB_BOUNDS = [-13632500, 4526800, -13623500, 4535800] as const;
 /** False only if `scripts/prepare-naip-layers.py climb` has not produced the file. */
 export const CLIMB_IMAGERY_READY = true;
 /** Web Mercator coordinates are stored relative to this corner for float precision. */
@@ -194,12 +192,12 @@ function virtualDeclarations(layer: VirtualLayer, i: number) {
         vec2 local = fract(uv * pagesAtLevel);
         vec2 slot = floor(entry.rg * 255.0 + 0.5);
         vec2 atlasUv = (slot * ${cell.toFixed(1)} + ${border.toFixed(1)} + local * ${tile.toFixed(1)}) / ${(atlasTiles * cell).toFixed(1)};
-        return vec4(texture2D(layerAtlas${i}, atlasUv).rgb, 1.0);
+        return vec4(textureLod(layerAtlas${i}, atlasUv, 0.0).rgb, 1.0);
       }
       vec3 bayVirtual${i}(vec3 fallback) {
         vec2 uv = (baySampleAt - layerBounds${i}.xy) / (layerBounds${i}.zw - layerBounds${i}.xy);
-        vec2 texels = uv * ${(pages * tile).toFixed(1)};
-        vec2 ddx = dFdx(texels), ddy = dFdy(texels);
+        vec2 scale = vec2(${(pages * tile).toFixed(1)}) / (layerBounds${i}.zw - layerBounds${i}.xy);
+        vec2 ddx = baySampleDx * scale, ddy = baySampleDy * scale;
         if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return fallback;
         float rawLod = 0.5 * log2(max(dot(ddx, ddx), dot(ddy, ddy)) + 1e-8) + ${lodBias.toFixed(3)};
         // Past the coarsest level the atlas has no mips to minify with; the
@@ -238,6 +236,7 @@ function layerDeclarations(layers: SurfaceLayer[]) {
       varying vec2 vMercator;
       // Where the layers are read; normally the fragment's own position.
       vec2 baySampleAt = vec2(0.0);
+      vec2 baySampleDx = vec2(0.0), baySampleDy = vec2(0.0);
       float bayDirectShade = 1.0;
       float baySkyShade = 1.0;
       float bayLayerWeight(vec4 bounds, float feather, float ready) {
@@ -251,7 +250,7 @@ function layerDeclarations(layers: SurfaceLayer[]) {
       vec3 bayImagery(sampler2D map, vec4 bounds, float feather, float ready, vec3 fallback) {
         float weight = bayLayerWeight(bounds, feather, ready);
         if (weight <= 0.0) return fallback;
-        vec3 color = texture2D(map, bayLayerUv(bounds)).rgb;
+        vec3 color = textureGrad(map, bayLayerUv(bounds), baySampleDx / (bounds.zw - bounds.xy), baySampleDy / (bounds.zw - bounds.xy)).rgb;
         // NAIP's overcast exposure is gently balanced against the wider satellite
         // scene; as albedo under the physical sun it would otherwise read too bright.
         color = max(vec3(0.0), (color - vec3(.16)) * 1.16 + vec3(.16)) * mix(1.0, 0.78, bayLit);
@@ -261,7 +260,7 @@ function layerDeclarations(layers: SurfaceLayer[]) {
       vec2 bayShade(sampler2D map, vec4 bounds, float feather, float ready, vec2 fallback) {
         float weight = bayLayerWeight(bounds, feather, ready);
         if (weight <= 0.0) return fallback;
-        return mix(fallback, texture2D(map, bayLayerUv(bounds)).rg, weight);
+        return mix(fallback, textureGrad(map, bayLayerUv(bounds), baySampleDx / (bounds.zw - bounds.xy), baySampleDy / (bounds.zw - bounds.xy)).rg, weight);
       }
       // Sparse, soft cloud shadows drifting across the whole scene.
       float bayCloud() {
@@ -269,7 +268,9 @@ function layerDeclarations(layers: SurfaceLayer[]) {
         return smoothstep(0.56, 0.82, noise);
       }
       ${layers
-        .map((layer, i) => (layer.virtual ? virtualDeclarations(layer.virtual, i) : ''))
+        .map((layer, i) =>
+          layer.virtual ? virtualDeclarations(layer.virtual, i) : '',
+        )
         .join('\n')}`;
 }
 
@@ -277,9 +278,15 @@ function layerDeclarations(layers: SurfaceLayer[]) {
  * Samples the layers coarse to fine into `target`, starting from its value,
  * at the fragment's position or at `at` (Mercator, relative to the origin).
  */
-function layerSampling(layers: SurfaceLayer[], target: string, at = 'vMercator') {
+function layerSampling(
+  layers: SurfaceLayer[],
+  target: string,
+  at = 'vMercator',
+  dx = `dFdx(${at})`,
+  dy = `dFdy(${at})`,
+) {
   return (
-    `baySampleAt = ${at};\n` +
+    `baySampleAt = ${at}; baySampleDx = ${dx}; baySampleDy = ${dy};\n` +
     layers
       .map((layer, i) =>
         layer.virtual
@@ -295,6 +302,7 @@ function layerSampling(layers: SurfaceLayer[], target: string, at = 'vMercator')
 /** Resolves the baked and cloud shading factors for the current fragment. */
 function shadeSampling(layers: SurfaceLayer[]) {
   return `baySampleAt = vMercator;
+      baySampleDx = dFdx(vMercator); baySampleDy = dFdy(vMercator);
       vec2 bayShadeFactors = vec2(1.0);
       ${layers
         .map((layer, i) =>
@@ -424,10 +432,13 @@ export function addBaySurface(
       // The orthophoto shows the Golden Gate's deck displaced east of the
       // 3D deck (relief displacement of a 70 m high structure). Over the
       // strait, the photographed strip is replaced by the water beside it.
+      // Gradients must be evaluated by all fragments, before the mask diverges.
+      vec2 bayBridgeAt = bayBridgeWater();
+      vec2 bayBridgeDx = dFdx(bayBridgeAt), bayBridgeDy = dFdy(bayBridgeAt);
       float bayBridge = bayBridgeBand();
       if (bayBridge > 0.0) {
         vec3 bayUnder = bayBase;
-        ${layerSampling(layers, 'bayUnder', 'bayBridgeWater()')}
+        ${layerSampling(layers, 'bayUnder', 'bayBridgeAt', 'bayBridgeDx', 'bayBridgeDy')}
         diffuseColor.rgb = mix(diffuseColor.rgb, bayUnder, bayBridge);
       }
       ${shadeSampling(layers)}
@@ -445,10 +456,11 @@ export function addBaySurface(
           ? `
       // Two scales of photographed pavement grain, fading out with distance.
       bayDetail = (1.0 - smoothstep(40.0, 900.0, length(vViewPosition))) * (1.0 - water);
+      vec2 bayGrainDx = dFdx(vTerrainPoint.xz), bayGrainDy = dFdy(vTerrainPoint.xz);
       if (bayDetail > 0.001) {
         vec2 grainUv = vTerrainPoint.xz;
-        vec3 grain1 = texture2D(bayDetailMap, grainUv * 0.21).rgb;
-        vec3 grain2 = texture2D(bayDetailMap, grainUv * 0.043 + vec2(.37, .61)).rgb;
+        vec3 grain1 = textureGrad(bayDetailMap, grainUv * 0.21, bayGrainDx * 0.21, bayGrainDy * 0.21).rgb;
+        vec3 grain2 = textureGrad(bayDetailMap, grainUv * 0.043 + vec2(.37, .61), bayGrainDx * 0.043, bayGrainDy * 0.043).rgb;
         float grain = dot(mix(grain1, grain2, 0.5), vec3(0.3333)) * 9.5;
         diffuseColor.rgb *= mix(1.0, clamp(grain, 0.45, 1.7), 0.55 * bayDetail);
       }`
@@ -467,8 +479,8 @@ export function addBaySurface(
         detail
           ? `
       if (bayDetail > 0.001) {
-        vec3 grainNormal1 = texture2D(bayDetailNormalMap, vTerrainPoint.xz * 0.21).xyz * 2.0 - 1.0;
-        vec3 grainNormal2 = texture2D(bayDetailNormalMap, vTerrainPoint.xz * 0.043 + vec2(.37, .61)).xyz * 2.0 - 1.0;
+        vec3 grainNormal1 = textureGrad(bayDetailNormalMap, vTerrainPoint.xz * 0.21, bayGrainDx * 0.21, bayGrainDy * 0.21).xyz * 2.0 - 1.0;
+        vec3 grainNormal2 = textureGrad(bayDetailNormalMap, vTerrainPoint.xz * 0.043 + vec2(.37, .61), bayGrainDx * 0.043, bayGrainDy * 0.043).xyz * 2.0 - 1.0;
         vec2 tilt = (grainNormal1.xy * 0.7 + grainNormal2.xy * 0.5) * bayDetail;
         normal = normalize(normal + (viewMatrix * vec4(tilt.x, 0.0, -tilt.y, 0.0)).xyz);
       }
@@ -499,7 +511,7 @@ export function addBaySurface(
     applyShadeToLights(shader);
   };
   material.customProgramCacheKey = () =>
-    `bay-layers${layerKey(layers)}-${detail ? 'grain' : 'flat'}-v11`;
+    `bay-layers${layerKey(layers)}-${detail ? 'grain' : 'flat'}-v12`;
   return controls;
 }
 
@@ -522,9 +534,15 @@ export function addCityImagery(
   const [ex, ey] = mercator(BAY_ORIGIN[0] + 1, BAY_ORIGIN[1]);
   const [sx, sy] = mercator(BAY_ORIGIN[0], BAY_ORIGIN[1] + 1);
   const localToMercator = [
-    (ex - ox) / 10, (ey - oy) / 10, 0,
-    (sx - ox) / 10, (sy - oy) / 10, 0,
-    ox - MERCATOR_ORIGIN[0], oy - MERCATOR_ORIGIN[1], 1,
+    (ex - ox) / 10,
+    (ey - oy) / 10,
+    0,
+    (sx - ox) / 10,
+    (sy - oy) / 10,
+    0,
+    ox - MERCATOR_ORIGIN[0],
+    oy - MERCATOR_ORIGIN[1],
+    1,
   ];
   material.onBeforeCompile = (shader) => {
     bindLayerUniforms(shader, layers, surface);
@@ -606,9 +624,15 @@ export function addGroundShade(
   const [ex, ey] = mercator(BAY_ORIGIN[0] + 1, BAY_ORIGIN[1]);
   const [sx, sy] = mercator(BAY_ORIGIN[0], BAY_ORIGIN[1] + 1);
   const localToMercator = [
-    (ex - ox) / 10, (ey - oy) / 10, 0,
-    (sx - ox) / 10, (sy - oy) / 10, 0,
-    ox - MERCATOR_ORIGIN[0], oy - MERCATOR_ORIGIN[1], 1,
+    (ex - ox) / 10,
+    (ey - oy) / 10,
+    0,
+    (sx - ox) / 10,
+    (sy - oy) / 10,
+    0,
+    ox - MERCATOR_ORIGIN[0],
+    oy - MERCATOR_ORIGIN[1],
+    1,
   ];
   material.onBeforeCompile = (shader) => {
     bindLayerUniforms(shader, layers, surface);
@@ -635,7 +659,10 @@ export function addGroundShade(
       ${vertexPatch?.glsl ?? ''}`,
       );
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\n${layerDeclarations(layers)}`)
+      .replace(
+        '#include <common>',
+        `#include <common>\n${layerDeclarations(layers)}`,
+      )
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
