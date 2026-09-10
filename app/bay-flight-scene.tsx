@@ -66,10 +66,12 @@ type Props = {
 async function loadElevation(url: string, signal: AbortSignal) {
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error('Terrain unavailable');
-  const bitmap = await createImageBitmap(await response.blob(), {
-    premultiplyAlpha: 'none',
-    colorSpaceConversion: 'none',
-  });
+  // Read as an ArrayBuffer: Chromium fails Response.blob() on slow or
+  // preload-matched bodies with a bare "Failed to fetch".
+  const bitmap = await createImageBitmap(
+    new Blob([await response.arrayBuffer()]),
+    { premultiplyAlpha: 'none', colorSpaceConversion: 'none' },
+  );
   const size = bitmap.width;
   if (size !== bitmap.height || size < 2)
     throw new Error('Invalid terrain grid');
@@ -519,6 +521,14 @@ export default function BayFlightScene(props: Props) {
         void daylight.then((texture) => texture?.dispose());
         terrainGeometry.dispose();
         if (!disposed) {
+          // The fallback hides the cause; name it for whoever is debugging.
+          for (const [name, result] of [
+            ['model', modelResult],
+            ['base map', mapResult],
+            ['elevation', elevationResult],
+          ] as const)
+            if (result.status === 'rejected')
+              console.warn(`Bay opening asset failed: ${name}`, result.reason);
           latest.current.onStatus('unavailable');
           cleanup?.();
         } else {
@@ -1275,10 +1285,10 @@ export default function BayFlightScene(props: Props) {
         void fetch(url, { signal: abort.signal })
           .then((response) => {
             if (!response.ok) throw new Error('Texture unavailable');
-            return response.blob();
+            return response.arrayBuffer();
           })
-          .then((blob) =>
-            createImageBitmap(blob, {
+          .then((buffer) =>
+            createImageBitmap(new Blob([buffer]), {
               premultiplyAlpha: 'none',
               colorSpaceConversion: 'none',
             }),

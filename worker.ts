@@ -5,12 +5,13 @@ import { refreshLiveData } from './server/live';
 import { pruneMetrics } from './server/metrics';
 import { sceneAsset } from './lib/scene-assets';
 
-// The two small fetches that gate the opening's CPU work (terrain build and
-// tile priming) are announced on the document response, so browsers start
-// them before the body arrives and Cloudflare can repeat them as 103 Early
-// Hints ahead of the Worker on later requests. Larger assets stay in the
-// document's low-priority preloads so they cannot delay the scripts.
-const EARLY_HINTS = ['/scenery/bay-elevation.webp', '/tiles/manifest.json']
+// The tile manifest, the small fetch that gates tile priming, is announced
+// on the document response, so browsers start it before the body arrives
+// and Cloudflare can repeat it as a 103 Early Hint ahead of the Worker on
+// later requests. Everything larger stays in the document's low-priority
+// preloads (a Link header cannot carry a priority) so nothing delays the
+// module scripts.
+const EARLY_HINTS = ['/tiles/manifest.json']
   .map(
     (path) =>
       `<${sceneAsset(path)}>; rel=preload; as=fetch; crossorigin=anonymous`,

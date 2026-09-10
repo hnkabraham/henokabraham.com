@@ -410,12 +410,14 @@ export function createTileStreamer(
         .then((response) => {
           if (!valid() || !response.ok)
             throw new Error('Tile request unavailable');
-          return response.blob();
+          // ArrayBuffer rather than Blob: Chromium fails Response.blob() on
+          // slow or preload-matched bodies with a bare "Failed to fetch".
+          return response.arrayBuffer();
         })
-        .then((blob) => {
+        .then((buffer) => {
           if (!valid()) throw new Error('Tile request cancelled');
-          bytes += blob.size;
-          return createImageBitmap(blob, {
+          bytes += buffer.byteLength;
+          return createImageBitmap(new Blob([buffer]), {
             premultiplyAlpha: 'none',
             colorSpaceConversion: 'none',
           });

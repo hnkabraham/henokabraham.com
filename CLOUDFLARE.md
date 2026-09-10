@@ -63,7 +63,7 @@ References:
 
 - **Bot Fight Mode and JavaScript Detections: off.** With them on, Cloudflare injects `/cdn-cgi/challenge-platform/scripts/jsd/main.js` into every page; on 2026-09-10 it was the largest main-thread cost before the scene appeared (340 ms of 1.4 s) and it can challenge visitors that look automated. The AI-crawler block injects nothing and stays on.
 - **Smart Tiered Cache: on**, so the first visitor at a Cloudflare location is served from an upper-tier cache rather than storage.
-- **Early Hints: on.** `worker.ts` adds `Link: rel=preload` headers for the elevation grid and tile manifest to the document response; Cloudflare replays them as 103 responses on later requests for the same URL.
+- **Early Hints: on.** `worker.ts` adds a `Link: rel=preload` header for the tile manifest to the document response; Cloudflare replays them as 103 responses on later requests for the same URL.
 
 `node scripts/cloudflare-zone.mjs` prints these settings and `node scripts/cloudflare-zone.mjs --apply` sets them, using the credentials in `.env.cloudflare.local` (the Global API Key, or a token with Bot Management, Cache Settings and Zone Settings edit permissions). The same switches are in the dashboard under Security → Bots, Caching → Tiered Cache and Speed → Optimization.
 

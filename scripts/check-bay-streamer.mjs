@@ -54,7 +54,10 @@ export async function checkTileStreamer({ createTileStreamer, tileId }) {
     return streamer;
   };
   const respond = async (call, ok = true) => {
-    call.resolve({ ok, blob: async () => ({ size: 10, url: call.url }) });
+    call.resolve({
+      ok,
+      arrayBuffer: async () => new Uint8Array(10).buffer,
+    });
     await tick();
   };
   const decode = async (entry) => {
