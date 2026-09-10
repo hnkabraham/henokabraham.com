@@ -52,7 +52,8 @@ const { HeatHazeEffect, createWingtipVortices, thrustSetting, vortexSetting, NOZ
   await moduleURL('bay-thrust', { postprocessing: import.meta.resolve('postprocessing') })
 );
 const { createTraffic } = await import(await moduleURL('bay-traffic', { './bay-city': cityURL }));
-const { CLIMB_BOUNDS, CLIMB_IMAGERY_READY, COUNTY_IMAGERY_READY } = await import(surfaceURL);
+const { buildPageTables, tileId, tileLevel, tileX, tileY } = await import(await moduleURL('bay-tiles', { './bay-surface': surfaceURL }));
+const { CLIMB_BOUNDS, CLIMB_IMAGERY_READY } = await import(surfaceURL);
 const { sampleBayFlight } = await import(flightURL);
 const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
@@ -501,8 +502,6 @@ console.log(
   }
   if (CLIMB_IMAGERY_READY)
     assert.ok((await fs.stat(new URL('../public/scenery/naip-climb.webp', import.meta.url))).size > 1e6, 'Climb imagery shipped');
-  if (COUNTY_IMAGERY_READY)
-    assert.ok((await fs.stat(new URL('../public/scenery/county-runway.webp', import.meta.url))).size > 1e6, 'County runway imagery shipped');
   const roads = JSON.parse(await fs.readFile(new URL('../public/scenery/bay-roads.json', import.meta.url)));
   assert.ok(roads.ways.length > 300 && roads.ways.every((way) => way.points.length >= 2 && way.lanes >= 1), 'Carriageways packed');
   const traffic = createTraffic(roads, { grid: elevations, size: 1025 });
@@ -519,4 +518,36 @@ console.log(
   }
   assert.ok(moved > traffic.count * 0.9, 'Vehicles advanced along their carriageways');
   console.log(`traffic check: ${traffic.count} vehicles on ${traffic.kilometres.toFixed(1)} km of carriageway, ${moved} moved`);
+}
+
+// Streamed tiles: the manifest covers the whole scroll, every scheduled tile
+// exists on disk, the coarsest level is small enough to stay resident, and
+// the page tables inherit coarser pages where finer ones are missing.
+{
+  const manifest = JSON.parse(await fs.readFile(new URL('../public/tiles/manifest.json', import.meta.url)));
+  assert.equal(manifest.buckets.length, Math.round(1 / manifest.step) + 1, 'One bucket per scroll step, inclusive');
+  assert.ok(manifest.tiles > 500 && manifest.buckets.slice(0, 120).every((bucket) => bucket.length > 0), 'Every bucket through the climb has tiles');
+  const ids = new Set([...manifest.buckets.flat(), ...(manifest.floor ?? []), ...(manifest.airport?.tiles ?? [])]);
+  assert.equal(ids.size, manifest.tiles, 'Manifest tile count matches the buckets');
+  const coarsest = (manifest.floor ?? []).length;
+  assert.ok(coarsest > 0 && coarsest < 200 && manifest.floor.every((id) => ids.has(id)), `Floor stays resident (${coarsest} tiles)`);
+  assert.ok(manifest.airport.tiles.length > 100 && manifest.airport.tiles.every((id) => ids.has(id)), 'Airport square scheduled');
+  // Open-water tiles at the coarsest level compress to under 200 bytes.
+  const sample = [...ids].filter((_, i) => i % 97 === 0);
+  for (const id of sample)
+    assert.ok((await fs.stat(new URL(`../public/tiles/${tileLevel(id)}-${tileX(id)}-${tileY(id)}.webp`, import.meta.url))).size > 100, `Tile ${id} shipped`);
+  for (const bucket of manifest.buckets)
+    for (const id of bucket)
+      if (tileLevel(id) < manifest.levels - 1)
+        assert.ok(ids.has(tileId(tileLevel(id) + 1, tileX(id) >> 1, tileY(id) >> 1)), 'Ancestors scheduled');
+  const resident = new Map([[tileId(3, 1, 1), 5], [tileId(1, 4, 4), 9]]);
+  const { tables, dims } = buildPageTables(256, 4, 20, resident);
+  assert.equal(dims.length, 9, 'Full mip chain to 1 × 1');
+  const at = (level, x, y) => { const d = dims[level]; const o = (y * d + x) * 4; return Array.from(tables[level].slice(o, o + 4)); };
+  assert.deepEqual(at(3, 1, 1), [5, 0, 3, 255], 'Coarse page resident');
+  assert.deepEqual(at(0, 10, 10), [5, 0, 3, 255], 'Fine lookup inherits the coarse page');
+  assert.deepEqual(at(1, 4, 4), [9, 0, 1, 255], 'Finer page overrides where resident');
+  assert.deepEqual(at(0, 8, 9), [9, 0, 1, 255], 'Its children inherit it');
+  assert.deepEqual(at(0, 200, 200), [0, 0, 0, 0], 'Nothing resident elsewhere');
+  console.log(`tile check: ${manifest.tiles} tiles in ${manifest.buckets.length} buckets, ${coarsest} at the coarsest level, ${(manifest.bytes ?? 0) / 1e6 | 0} MB`);
 }

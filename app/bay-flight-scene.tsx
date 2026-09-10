@@ -35,6 +35,7 @@ import { createGateFog } from '@/lib/bay-fog';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import { createAirfield, type Airfield } from '@/lib/sfo-airfield';
 import { createTraffic, type RoadNetwork } from '@/lib/bay-traffic';
+import { createTileStreamer, type TileManifest } from '@/lib/bay-tiles';
 import {
   HeatHazeEffect,
   createWingtipVortices,
@@ -45,10 +46,8 @@ import { createTreeMesh, loadTreeCanopies } from '@/lib/bay-trees';
 import {
   CLIMB_BOUNDS,
   CLIMB_IMAGERY_READY,
-  COUNTY_IMAGERY_READY,
   MERCATOR_ORIGIN,
   NORTH_BOUNDS,
-  RUNWAY_BOUNDS,
   SFO_BOUNDS,
   SOUTH_BOUNDS,
   addBaySurface,
@@ -390,6 +389,7 @@ export default function BayFlightScene(props: Props) {
         textures.forEach((t) => t.dispose());
         environment?.dispose();
         sun.shadow.dispose();
+        tiles?.dispose();
         renderer.dispose();
         renderer.domElement.remove();
       };
@@ -447,16 +447,11 @@ export default function BayFlightScene(props: Props) {
         // shows in the far distance, so one 2048² version serves every device.
         textureLoader.loadAsync('/scenery/sf-bay-mobile.webp'),
         loadElevation('/scenery/bay-elevation.webp', abort.signal),
-        textureLoader.loadAsync(
-          mobile
-            ? '/scenery/sfo-detail-mobile.webp'
-            : '/scenery/sfo-detail.webp',
-        ),
-        textureLoader.loadAsync(
-          mobile
-            ? '/scenery/naip-runway-mobile.webp'
-            : '/scenery/naip-runway.webp',
-        ),
+        // The airport and the climb-out stream as tiles along the scroll path.
+        fetch('/tiles/manifest.json', { signal: abort.signal }).then((r) => {
+          if (!r.ok) throw new Error('Tile manifest unavailable');
+          return r.json() as Promise<TileManifest>;
+        }),
         textureLoader.loadAsync('/scenery/runway-color.webp'),
         textureLoader.loadAsync('/scenery/runway-normal.webp'),
         textureLoader.loadAsync('/scenery/runway-roughness.webp'),
@@ -477,21 +472,14 @@ export default function BayFlightScene(props: Props) {
         modelResult,
         mapResult,
         elevationResult,
-        airportResult,
-        runwayAreaResult,
+        tilesResult,
         asphaltResult,
         normalResult,
         roughnessResult,
         buildingsResult,
         airfieldResult,
       ] = resources;
-      for (const result of [
-        airportResult,
-        runwayAreaResult,
-        asphaltResult,
-        normalResult,
-        roughnessResult,
-      ])
+      for (const result of [asphaltResult, normalResult, roughnessResult])
         if (result.status === 'fulfilled') ownTexture(result.value);
       // GLTF and texture loaders can finish after React unmounts.
       if (
@@ -562,7 +550,14 @@ export default function BayFlightScene(props: Props) {
         );
         return texture;
       };
-      // Coarse to fine. The corridor layers, the desktop-only city layer and
+      const tiles =
+        tilesResult.status === 'fulfilled'
+          ? createTileStreamer(renderer, tilesResult.value, {
+              minLevel: mobile ? 1 : 0,
+              atlasTiles: mobile ? 16 : 24,
+            })
+          : null;
+      // Coarse to fine. The corridor layers, the desktop-only climb layer and
       // every baked shadow map arrive after the first frame.
       const layers: SurfaceLayer[] = [
         { bounds: SOUTH_BOUNDS, texture: null, feather: 0.05, shade: null },
@@ -570,22 +565,10 @@ export default function BayFlightScene(props: Props) {
         // No baked shade of its own: the north corridor's covers it, and the
         // terrain shader is already near the 16 texture-unit limit.
         ...(mobile ? [] : [{ bounds: CLIMB_BOUNDS, texture: null, feather: 0.04 }]),
-        {
-          bounds: SFO_BOUNDS,
-          texture:
-            airportResult.status === 'fulfilled'
-              ? imagery(airportResult.value)
-              : null,
-          shade: null,
-        },
-        {
-          bounds: RUNWAY_BOUNDS,
-          texture:
-            runwayAreaResult.status === 'fulfilled'
-              ? imagery(runwayAreaResult.value)
-              : null,
-          feather: 0.06,
-        },
+        // The airport's baked shade keeps its box; the imagery under it and
+        // the runway now stream as tiles scheduled along the scroll path.
+        { bounds: SFO_BOUNDS, shade: null },
+        ...(tiles ? [tiles.layer] : []),
       ];
       const variant = mobile ? '-mobile' : '';
       const lazyLayers: [number, string][] = [
@@ -674,7 +657,7 @@ export default function BayFlightScene(props: Props) {
       if (process.env.NODE_ENV !== 'production')
         Object.assign(
           (window as unknown as { __bayDebug: Record<string, unknown> }).__bayDebug,
-          { surface, clouds, camera, world, debugView, aircraft, heatHaze },
+          { surface, clouds, camera, world, debugView, aircraft, heatHaze, tiles },
         );
       const shadeTexture = (texture: Texture) => {
         texture.colorSpace = T.NoColorSpace;
@@ -1104,6 +1087,7 @@ export default function BayFlightScene(props: Props) {
           now * 0.001,
         );
               if (traffic && !reduced) traffic.update(now);
+        tiles?.update(currentP, now);
       }
       function draw(dt: number) {
         if (rendering) rendering.render(planePosition, dt);
@@ -1112,6 +1096,9 @@ export default function BayFlightScene(props: Props) {
       // Compile every program and draw one frame while the canvas is still
       // transparent, so the fade-in never shows a shader-compilation stall.
       update(performance.now(), 0);
+      // The opening frame waits for its own ground tiles, briefly.
+      if (tiles) await tiles.prime(currentP, 12000);
+      if (disposed) return;
       await renderer.compileAsync(scene, camera);
       if (disposed) return;
       draw(0);
@@ -1227,21 +1214,6 @@ export default function BayFlightScene(props: Props) {
           loadLazyTexture('/scenery/naip-climb.webp', imagery, (texture) => {
             surface.layers[2].texture.value = texture;
             fadingLayers.add(2);
-          });
-        // The county's 0.32 m runway box replaces the 0.63 m NAIP one in the
-        // same slot once it arrives; the two are tone-matched at build time.
-        if (capable && COUNTY_IMAGERY_READY)
-          loadLazyTexture('/scenery/county-runway.webp', imagery, (texture) => {
-            const slot = surface.layers[surface.layers.length - 1];
-            const naip = slot.texture.value;
-            slot.texture.value = texture;
-            if (process.env.NODE_ENV !== 'production')
-              Object.assign(
-                (window as unknown as { __bayDebug: Record<string, unknown> })
-                  .__bayDebug,
-                { countyRunway: { naip, county: texture, slot } },
-              );
-            else naip?.dispose();
           });
         // Freeway traffic under the climb-out, from OpenStreetMap carriageways.
         void fetch('/scenery/bay-roads.json', { signal: abort.signal })

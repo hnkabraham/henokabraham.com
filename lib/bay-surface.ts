@@ -28,13 +28,6 @@ export const CLIMB_BOUNDS = [
 ] as const;
 /** False only if `scripts/prepare-naip-layers.py climb` has not produced the file. */
 export const CLIMB_IMAGERY_READY = true;
-/**
- * Desktop-only 0.32 m upgrade of the runway box from San Mateo County's 2022
- * orthoimagery (8192², colour-matched to NAIP, `scripts/prepare-county-layers.py`),
- * swapped into the runway slot after the first frame. Licence terms with the
- * county are still to be confirmed; see ASSETS.md.
- */
-export const COUNTY_IMAGERY_READY = true;
 /** Web Mercator coordinates are stored relative to this corner for float precision. */
 export const MERCATOR_ORIGIN = [SFO_BOUNDS[0], SFO_BOUNDS[1]] as const;
 
@@ -83,11 +76,32 @@ export function airportUV(sourceX: number, sourceY: number) {
   ] as const;
 }
 
+/**
+ * A streamed layer: a page table (one texel per page at level 0, with a
+ * mip per pyramid level) pointing into an atlas of resident tiles. See
+ * lib/bay-tiles.ts, which keeps both up to date along the scroll path.
+ */
+export type VirtualLayer = {
+  pageTable: Texture;
+  atlas: Texture;
+  pages: number;
+  tile: number;
+  border: number;
+  atlasTiles: number;
+  levels: number;
+  lodBias: number;
+};
+
 export type SurfaceLayer = {
   /** Absolute EPSG:3857 bounds: west, south, east, north. */
   bounds: readonly [number, number, number, number];
-  /** May be null while a layer is still downloading. */
-  texture: Texture | null;
+  /**
+   * Whole-texture imagery; null while it is still downloading, absent for
+   * a layer that only carries baked shade or streams its imagery.
+   */
+  texture?: Texture | null;
+  /** Streamed imagery over the bounds, instead of one texture. */
+  virtual?: VirtualLayer;
   /** Feathered border, as a fraction of the layer's extent. */
   feather?: number;
   /**
@@ -130,7 +144,11 @@ function bindLayerUniforms(
   shader.uniforms.bayTime = surface.time;
   shader.uniforms.bayCloudMap = surface.cloud;
   layers.forEach((layer, i) => {
-    shader.uniforms[`layerMap${i}`] = surface.layers[i].texture;
+    if (layer.virtual) {
+      shader.uniforms[`layerPages${i}`] = { value: layer.virtual.pageTable };
+      shader.uniforms[`layerAtlas${i}`] = { value: layer.virtual.atlas };
+    } else if (hasMap(layer))
+      shader.uniforms[`layerMap${i}`] = surface.layers[i].texture;
     shader.uniforms[`layerReady${i}`] = surface.layers[i].ready;
     shader.uniforms[`layerShade${i}`] = surface.layers[i].shade;
     shader.uniforms[`layerShadeReady${i}`] = surface.layers[i].shadeReady;
@@ -146,6 +164,61 @@ function bindLayerUniforms(
 }
 
 const hasShade = (layer: SurfaceLayer) => layer.shade !== undefined;
+const hasMap = (layer: SurfaceLayer) =>
+  layer.texture !== undefined && !layer.virtual;
+/** Per-layer program key: virtual, mapped or shade-only, with or without shade. */
+const layerKey = (layers: SurfaceLayer[]) =>
+  layers
+    .map(
+      (layer) =>
+        (layer.virtual ? 'v' : hasMap(layer) ? 'm' : 'x') +
+        (hasShade(layer) ? 's' : 'p'),
+    )
+    .join('');
+
+/**
+ * Streamed imagery: pick the pyramid level from the screen-space footprint
+ * of one level-0 texel, read the page table at that mip for the best
+ * resident page (finer lookups inherit coarser pages), and sample its tile
+ * in the atlas inside the filtering border.
+ */
+function virtualDeclarations(layer: VirtualLayer, i: number) {
+  const { pages, tile, border, atlasTiles, levels, lodBias } = layer;
+  const cell = tile + 2 * border;
+  return `uniform sampler2D layerPages${i}; uniform sampler2D layerAtlas${i};
+      // The best resident page at one level, or alpha 0 when none covers it.
+      vec4 bayVirtualPage${i}(vec2 uv, float level) {
+        vec4 entry = textureLod(layerPages${i}, uv, level);
+        if (entry.a < 0.5) return vec4(0.0);
+        float pagesAtLevel = ${pages.toFixed(1)} / exp2(floor(entry.b * 255.0 + 0.5));
+        vec2 local = fract(uv * pagesAtLevel);
+        vec2 slot = floor(entry.rg * 255.0 + 0.5);
+        vec2 atlasUv = (slot * ${cell.toFixed(1)} + ${border.toFixed(1)} + local * ${tile.toFixed(1)}) / ${(atlasTiles * cell).toFixed(1)};
+        return vec4(texture2D(layerAtlas${i}, atlasUv).rgb, 1.0);
+      }
+      vec3 bayVirtual${i}(vec3 fallback) {
+        vec2 uv = (baySampleAt - layerBounds${i}.xy) / (layerBounds${i}.zw - layerBounds${i}.xy);
+        vec2 texels = uv * ${(pages * tile).toFixed(1)};
+        vec2 ddx = dFdx(texels), ddy = dFdy(texels);
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return fallback;
+        float rawLod = 0.5 * log2(max(dot(ddx, ddx), dot(ddy, ddy)) + 1e-8) + ${lodBias.toFixed(3)};
+        // Past the coarsest level the atlas has no mips to minify with; the
+        // whole-texture layers underneath take over.
+        float reach = 1.0 - smoothstep(${(levels - 1).toFixed(1)}, ${levels.toFixed(1)}, rawLod);
+        if (reach <= 0.0) return fallback;
+        float lod = clamp(rawLod, 0.0, ${(levels - 1).toFixed(1)});
+        // Blend the two nearest levels so neither detail nor a page's
+        // source changes at a hard line.
+        vec4 near = bayVirtualPage${i}(uv, floor(lod));
+        vec4 far = bayVirtualPage${i}(uv, min(floor(lod) + 1.0, ${(levels - 1).toFixed(1)}));
+        float mixLevels = fract(lod);
+        vec4 picked = near.a < 0.5 ? far : far.a < 0.5 ? near : mix(near, far, mixLevels);
+        if (picked.a < 0.5) return fallback;
+        vec3 color = picked.rgb;
+        color = max(vec3(0.0), (color - vec3(.16)) * 1.16 + vec3(.16)) * mix(1.0, 0.78, bayLit);
+        return mix(fallback, color, layerReady${i} * reach);
+      }`;
+}
 
 /** Fragment declarations shared by every material draped in the imagery. */
 function layerDeclarations(layers: SurfaceLayer[]) {
@@ -155,7 +228,8 @@ function layerDeclarations(layers: SurfaceLayer[]) {
       ${layers
         .map(
           (layer, i) =>
-            `uniform sampler2D layerMap${i}; uniform float layerReady${i}; uniform vec4 layerBounds${i};` +
+            (hasMap(layer) ? `uniform sampler2D layerMap${i}; ` : '') +
+            `uniform float layerReady${i}; uniform vec4 layerBounds${i};` +
             (hasShade(layer)
               ? ` uniform sampler2D layerShade${i}; uniform float layerShadeReady${i};`
               : ''),
@@ -193,7 +267,10 @@ function layerDeclarations(layers: SurfaceLayer[]) {
       float bayCloud() {
         float noise = texture2D(bayCloudMap, vMercator * 0.00028 + bayTime * vec2(0.0018, 0.0011)).r;
         return smoothstep(0.56, 0.82, noise);
-      }`;
+      }
+      ${layers
+        .map((layer, i) => (layer.virtual ? virtualDeclarations(layer.virtual, i) : ''))
+        .join('\n')}`;
 }
 
 /**
@@ -204,9 +281,12 @@ function layerSampling(layers: SurfaceLayer[], target: string, at = 'vMercator')
   return (
     `baySampleAt = ${at};\n` +
     layers
-      .map(
-        (layer, i) =>
-          `${target} = bayImagery(layerMap${i}, layerBounds${i}, ${(layer.feather ?? 0.075).toFixed(4)}, layerReady${i}, ${target});`,
+      .map((layer, i) =>
+        layer.virtual
+          ? `${target} = bayVirtual${i}(${target});`
+          : hasMap(layer)
+            ? `${target} = bayImagery(layerMap${i}, layerBounds${i}, ${(layer.feather ?? 0.075).toFixed(4)}, layerReady${i}, ${target});`
+            : '',
       )
       .join('\n')
   );
@@ -300,8 +380,8 @@ export function addBaySurface(
   const lit = { value: 0 };
   const cloud = { value: null as Texture | null };
   const layerControls = layers.map((layer) => ({
-    texture: { value: layer.texture },
-    ready: { value: layer.texture ? 1 : 0 },
+    texture: { value: layer.texture ?? null },
+    ready: { value: layer.virtual || layer.texture ? 1 : 0 },
     shade: { value: layer.shade ?? null },
     shadeReady: { value: layer.shade ? 1 : 0 },
   }));
@@ -353,9 +433,13 @@ export function addBaySurface(
       ${shadeSampling(layers)}
       // The fallback sky keeps the photograph's light, so darken it directly.
       diffuseColor.rgb *= mix(1.0, 0.55 + 0.45 * bayDirectShade, 1.0 - bayLit);
+      // Water is told from the finest imagery's colour at low elevation:
+      // south of the runways the corridor layers stop short of the fill,
+      // and only the streamed tiles (or the 23 m base map) draw the shore.
+      vec3 bayClass = diffuseColor.rgb;
       float water = (1.0-smoothstep(.25, 1.4, vTerrainPoint.y))
-        * smoothstep(1.04, 1.2, diffuseColor.g / max(.001, diffuseColor.r))
-        * smoothstep(.75, .95, diffuseColor.b / max(.001, diffuseColor.r));
+        * smoothstep(1.04, 1.2, bayClass.g / max(.001, bayClass.r))
+        * smoothstep(.75, .95, bayClass.b / max(.001, bayClass.r));
       ${
         detail
           ? `
@@ -415,7 +499,7 @@ export function addBaySurface(
     applyShadeToLights(shader);
   };
   material.customProgramCacheKey = () =>
-    `bay-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-${detail ? 'grain' : 'flat'}-v6`;
+    `bay-layers${layerKey(layers)}-${detail ? 'grain' : 'flat'}-v11`;
   return controls;
 }
 
@@ -503,7 +587,7 @@ export function addCityImagery(
     applyShadeToLights(shader);
   };
   material.customProgramCacheKey = () =>
-    `bay-city-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-v3`;
+    `bay-city-layers${layerKey(layers)}-v5`;
 }
 
 /**
@@ -560,7 +644,7 @@ export function addGroundShade(
     applyShadeToLights(shader);
   };
   material.customProgramCacheKey = () =>
-    `bay-ground-shade-layers${layers.map((layer) => (hasShade(layer) ? 's' : 'p')).join('')}-v2${vertexPatch ? `|${vertexPatch.key}` : ''}`;
+    `bay-ground-shade-layers${layerKey(layers)}-v5${vertexPatch ? `|${vertexPatch.key}` : ''}`;
 }
 
 /**
