@@ -60,6 +60,9 @@ const utc = (date: string) =>
     minute: '2-digit',
     timeZone: 'UTC',
   }) + ' UTC';
+// METAR reports temperature in Celsius the world over; the page reads in
+// Fahrenheit, like every other unit it shows.
+const fahrenheit = (celsius: number) => Math.round((celsius * 9) / 5 + 32);
 const calendar = (date: string) =>
   new Date(date).toLocaleDateString('en-US', {
     month: 'short',
@@ -93,7 +96,7 @@ export function LiveAtSfo({
               <dd>
                 {weather.temperatureC === null
                   ? '—'
-                  : `${Math.round(weather.temperatureC)}°C`}
+                  : `${fahrenheit(weather.temperatureC)}°F`}
               </dd>
             </div>
             <div>

@@ -34,7 +34,7 @@ export const flights: Flight[] = [
     features: [
       '1,671 shipped tiles: 16,150,728 compressed bytes (about 16 MB) scheduled across the scroll; actual transfer depends on the device, cache and revisits.',
       'Desktop atlas: up to 6,336 × 6,336 px, 576 slots, 153.1 MiB RGBA8. Phones: up to 3,960 × 3,960 px, 225 slots, 59.8 MiB. Both respect the GPU texture limit.',
-      'The desktop terrain uses 15 of the 16 fragment samplers in the baseline budget. A mip-less atlas and an ancestor page table keep streamed detail to two samplers.',
+      'The desktop terrain uses all 16 fragment samplers of the baseline budget, and a seventeenth fails to link rather than degrade. A mip-less atlas and an ancestor page table keep streamed detail to two samplers.',
       'Current coverage comes first; uploads are batched per frame, with a smaller permanent floor on phones.',
     ],
   },
