@@ -11,7 +11,7 @@
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt",
-    "build:cloudflare": "DEPLOY_TARGET=cloudflare vinext build",
+    "build:cloudflare": "DEPLOY_TARGET=cloudflare vinext build && node scripts/scene-assets.mjs",
     "check:cloudflare": "node scripts/deploy-cloudflare.mjs --dry-run",
     "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs"
   },

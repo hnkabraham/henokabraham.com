@@ -1,3 +1,5 @@
+import { recordFlightMetric } from '@/lib/flight-metrics';
+import { sceneAsset } from '@/lib/scene-assets';
 import {
   DataTexture,
   LinearFilter,
@@ -182,7 +184,7 @@ export function createTileStreamer(
   const concurrency = Math.max(1, options.concurrency ?? 6);
   const uploadBudget = Math.max(1, options.uploadBudget ?? 4);
   const retryDelayMs = options.retryDelayMs ?? 2000;
-  const base = options.base ?? '/tiles/';
+  const base = options.base ?? sceneAsset('/tiles/');
   const cell = tile + 2 * border;
   const atlasSize = atlasTiles * cell;
   const atlasTarget = new WebGLRenderTarget(atlasSize, atlasSize, {
@@ -346,7 +348,10 @@ export function createTileStreamer(
           decoded.set(id, { bitmap, request });
         })
         .catch(() => {
-          if (valid()) failed.set(id, performance.now() + retryDelayMs);
+          if (valid()) {
+            failed.set(id, performance.now() + retryDelayMs);
+            recordFlightMetric('scene_asset_failure', 1);
+          }
         })
         .finally(() => {
           // Aborted decodes can outlive a newer request for the same tile.

@@ -1,4 +1,6 @@
 'use client';
+import { sceneAsset } from '@/lib/scene-assets';
+import { recordFlightMetric } from '@/lib/flight-metrics';
 
 import { useEffect, useRef, type RefObject } from 'react';
 import type { Material, Mesh, Texture, Group } from 'three';
@@ -430,7 +432,7 @@ export default function BayFlightScene(props: Props) {
       const daylight = atmosphereReady.then((enabled) =>
         enabled || disposed
           ? null
-          : new HDRLoader().loadAsync('/scenery/daylight.hdr'),
+          : new HDRLoader().loadAsync(sceneAsset('/scenery/daylight.hdr')),
       );
 
       // Actual terrain, registered to the satellite texture, in meter-scale space.
@@ -456,31 +458,33 @@ export default function BayFlightScene(props: Props) {
       world.add(sea);
       const textureLoader = new T.TextureLoader();
       const resources = await Promise.allSettled([
-        new GLTFLoader().loadAsync('/models/boeing-787-9.glb'),
+        new GLTFLoader().loadAsync(sceneAsset('/models/boeing-787-9.glb')),
         // The corridors carry the detail; the wide satellite image only
         // shows in the far distance, so one 2048² version serves every device.
-        textureLoader.loadAsync('/scenery/sf-bay-mobile.webp'),
-        loadElevation('/scenery/bay-elevation.webp', abort.signal),
+        textureLoader.loadAsync(sceneAsset('/scenery/sf-bay-mobile.webp')),
+        loadElevation(sceneAsset('/scenery/bay-elevation.webp'), abort.signal),
         // The airport and the climb-out stream as tiles along the scroll path.
-        fetch('/tiles/manifest.json', { signal: abort.signal }).then((r) => {
+        fetch(sceneAsset('/tiles/manifest.json'), {
+          signal: abort.signal,
+        }).then((r) => {
           if (!r.ok) throw new Error('Tile manifest unavailable');
           return r.json() as Promise<TileManifest>;
         }),
-        textureLoader.loadAsync('/scenery/runway-color.webp'),
-        textureLoader.loadAsync('/scenery/runway-normal.webp'),
-        textureLoader.loadAsync('/scenery/runway-roughness.webp'),
-        fetch('/scenery/sfo-buildings.json', { signal: abort.signal }).then(
-          (r) => {
-            if (!r.ok) throw new Error('Buildings unavailable');
-            return r.json() as Promise<AirportBuildings>;
-          },
-        ),
-        fetch('/scenery/sfo-airfield.json', { signal: abort.signal }).then(
-          (r) => {
-            if (!r.ok) throw new Error('Airfield unavailable');
-            return r.json() as Promise<Airfield>;
-          },
-        ),
+        textureLoader.loadAsync(sceneAsset('/scenery/runway-color.webp')),
+        textureLoader.loadAsync(sceneAsset('/scenery/runway-normal.webp')),
+        textureLoader.loadAsync(sceneAsset('/scenery/runway-roughness.webp')),
+        fetch(sceneAsset('/scenery/sfo-buildings.json'), {
+          signal: abort.signal,
+        }).then((r) => {
+          if (!r.ok) throw new Error('Buildings unavailable');
+          return r.json() as Promise<AirportBuildings>;
+        }),
+        fetch(sceneAsset('/scenery/sfo-airfield.json'), {
+          signal: abort.signal,
+        }).then((r) => {
+          if (!r.ok) throw new Error('Airfield unavailable');
+          return r.json() as Promise<Airfield>;
+        }),
       ]);
       const [
         modelResult,
@@ -591,13 +595,13 @@ export default function BayFlightScene(props: Props) {
       ];
       const variant = mobile ? '-mobile' : '';
       const lazyLayers: [number, string][] = [
-        [0, `/scenery/naip-south${variant}.webp`],
-        [1, `/scenery/naip-north${variant}.webp`],
+        [0, sceneAsset(`/scenery/naip-south${variant}.webp`)],
+        [1, sceneAsset(`/scenery/naip-north${variant}.webp`)],
       ];
       const lazyShades: [number, string][] = [
-        [0, `/scenery/shade-south${variant}.webp`],
-        [1, `/scenery/shade-north${variant}.webp`],
-        [mobile ? 2 : 3, `/scenery/shade-sfo${variant}.webp`],
+        [0, sceneAsset(`/scenery/shade-south${variant}.webp`)],
+        [1, sceneAsset(`/scenery/shade-north${variant}.webp`)],
+        [mobile ? 2 : 3, sceneAsset(`/scenery/shade-sfo${variant}.webp`)],
       ];
       const pavementMaps = [asphaltResult, normalResult, roughnessResult].map(
         (result) => (result.status === 'fulfilled' ? result.value : null),
@@ -1250,6 +1254,8 @@ export default function BayFlightScene(props: Props) {
       // so a weaker GPU gets the phone-sized city and canopy instead.
       let lazyStarted = false;
       const frameSamples: number[] = [];
+      const measuredFrames: number[] = [];
+      let priorMeasuredFrame = 0;
       const yieldNow = () =>
         new Promise<void>((resolve) => setTimeout(resolve, 0));
       const loadLazyTexture = (
@@ -1266,7 +1272,9 @@ export default function BayFlightScene(props: Props) {
             assign(prepare(ownTexture(texture)));
             renderDirty = true;
           },
-          () => {},
+          () => {
+            if (!disposed) recordFlightMetric('scene_asset_failure', 1);
+          },
         );
       function startLazyLoads(capable: boolean) {
         if (lazyStarted || disposed) return;
@@ -1277,12 +1285,18 @@ export default function BayFlightScene(props: Props) {
             fadingLayers.add(index);
           });
         if (capable && CLIMB_IMAGERY_READY)
-          loadLazyTexture('/scenery/naip-climb.webp', imagery, (texture) => {
-            surface.layers[2].texture.value = texture;
-            fadingLayers.add(2);
-          });
+          loadLazyTexture(
+            sceneAsset('/scenery/naip-climb.webp'),
+            imagery,
+            (texture) => {
+              surface.layers[2].texture.value = texture;
+              fadingLayers.add(2);
+            },
+          );
         // Freeway traffic under the climb-out, from OpenStreetMap carriageways.
-        void fetch('/scenery/bay-roads.json', { signal: abort.signal })
+        void fetch(sceneAsset('/scenery/bay-roads.json'), {
+          signal: abort.signal,
+        })
           .then((response) => {
             if (!response.ok) throw new Error('Roads unavailable');
             return response.json() as Promise<RoadNetwork>;
@@ -1310,7 +1324,7 @@ export default function BayFlightScene(props: Props) {
           });
         const detail = capable ? '' : '-mobile';
         void loadCityBuildings(
-          `/scenery/bay-buildings${detail}.bin.gz`,
+          sceneAsset(`/scenery/bay-buildings${detail}.bin.gz`),
           abort.signal,
         )
           .then(async (buildings) => {
@@ -1330,7 +1344,9 @@ export default function BayFlightScene(props: Props) {
             world.add(city.mesh);
             renderDirty = true;
           })
-          .catch(() => {});
+          .catch(() => {
+            if (!disposed) recordFlightMetric('scene_asset_failure', 1);
+          });
         // The Golden Gate is procedural: no download, one compile.
         try {
           const built = createGoldenGateBridge(
@@ -1352,7 +1368,7 @@ export default function BayFlightScene(props: Props) {
           // A malformed elevation grid only costs the bridge.
         }
         void loadTreeCanopies(
-          `/scenery/bay-trees${detail}.bin.gz`,
+          sceneAsset(`/scenery/bay-trees${detail}.bin.gz`),
           abort.signal,
         )
           .then(async (canopies) => {
@@ -1376,7 +1392,9 @@ export default function BayFlightScene(props: Props) {
             world.add(built.mesh);
             renderDirty = true;
           })
-          .catch(() => {});
+          .catch(() => {
+            if (!disposed) recordFlightMetric('scene_asset_failure', 1);
+          });
       }
       // A tab hidden through the measurement window starts its lazy loads
       // once visible again.
@@ -1392,6 +1410,7 @@ export default function BayFlightScene(props: Props) {
         lastTime = now;
         const isVisible = visible && !document.hidden;
         const reduced = latest.current.reducedMotion;
+        if (!isVisible || reduced) priorMeasuredFrame = 0;
         if (!isVisible) return;
         // A tab hidden through the measurement window gets the desktop
         // variants only where the texture limit allows them, as measured
@@ -1408,6 +1427,17 @@ export default function BayFlightScene(props: Props) {
         previousP = currentP;
         renderDirty = false;
         draw(dt);
+        if (ready && !reduced && measuredFrames.length < 180) {
+          if (priorMeasuredFrame && now > priorMeasuredFrame)
+            measuredFrames.push(now - priorMeasuredFrame);
+          priorMeasuredFrame = now;
+          if (measuredFrames.length === 180)
+            recordFlightMetric(
+              'scene_fps',
+              (1000 * measuredFrames.length) /
+                measuredFrames.reduce((a, b) => a + b, 0),
+            );
+        }
         if (ready && !lazyStarted) {
           frameSamples.push(dt);
           if (frameSamples.length >= 45) {

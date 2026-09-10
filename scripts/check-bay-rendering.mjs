@@ -187,6 +187,7 @@ const atmosphereSource = transpileModule(
 const atmosphereURL = `data:text/javascript;base64,${Buffer.from(atmosphereSource).toString('base64')}`;
 const { skyEnvironmentMoved } = await compile('bay-rendering', {
   './bay-atmosphere': atmosphereURL,
+  '@/lib/scene-assets': `data:text/javascript;base64,${Buffer.from(transpileModule(await fs.readFile(new URL('../lib/scene-assets.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ModuleKind.ESNext } }).outputText).toString('base64')}`,
 });
 assert.equal(
   skyEnvironmentMoved(new T.Vector3(), new T.Vector3()),

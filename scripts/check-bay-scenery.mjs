@@ -18,7 +18,12 @@ const url = (js) =>
 const flightURL = url(await compile('bay-flight'));
 const moduleURL = async (name, links = {}) =>
   url(
-    Object.entries({ './bay-flight': flightURL, ...links }).reduce(
+    Object.entries({
+      './bay-flight': flightURL,
+      '@/lib/scene-assets': url(await compile('scene-assets')),
+      '@/lib/flight-metrics': url(await compile('flight-metrics')),
+      ...links,
+    }).reduce(
       (js, [from, to]) => js.replaceAll(`from '${from}'`, `from '${to}'`),
       (await compile(name)).replaceAll(
         "from 'three'",

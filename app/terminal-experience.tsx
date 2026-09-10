@@ -19,6 +19,15 @@ import { readFlightLink, replaceFlightLink } from '@/lib/flight-links';
 import type { BayPhase } from '@/lib/bay-flight';
 import AviationLogbook from './aviation-logbook';
 import {
+  useAirportLive,
+  LiveAtSfo,
+  ProjectUpdate,
+  SourceUpdate,
+  ContactTower,
+  FlightMeasurements,
+} from './airport-services';
+import { recordFlightMetric } from '@/lib/flight-metrics';
+import {
   Dialog,
   DialogContent,
   DialogTitle,
@@ -45,6 +54,7 @@ function StationClock() {
 }
 
 export default function TerminalExperience() {
+  const live = useAirportLive();
   const [selected, setSelected] = useState(0);
   const [projectOpen, setProjectOpen] = useState(false);
   const flight = flights[selected];
@@ -79,6 +89,7 @@ export default function TerminalExperience() {
   }, []);
   const selectFlight = (index: number) => {
     setSelected(index);
+    recordFlightMetric('project_open', 1);
     replaceFlightLink({ project: flights[index].id });
   };
 
@@ -113,8 +124,10 @@ export default function TerminalExperience() {
         </nav>
         <StationClock />
       </header>
+      <FlightMeasurements />
       <main>
         <ScrollDeparture reducedMotion={reducedMotion} entry={entry} />
+        <LiveAtSfo {...live} />
         <section
           className="terminal-section"
           id="departures"
@@ -228,6 +241,12 @@ export default function TerminalExperience() {
                       <strong>{flight.gate}</strong>
                     </div>
                   </div>
+                  <ProjectUpdate
+                    item={live.data?.projects?.projects.find(
+                      (item) => item.id === flight.id,
+                    )}
+                    now={live.now}
+                  />
                   <DialogTrigger className="ticket-button">
                     Explore this project <ArrowRight size={16} />
                   </DialogTrigger>
@@ -372,6 +391,11 @@ export default function TerminalExperience() {
                   <h3>{repo.name}</h3>
                   <p>{repo.detail}</p>
                   <span className="source-stack mono">{repo.stack}</span>
+                  <SourceUpdate
+                    item={live.data?.projects?.projects.find(
+                      (item) => item.repo === repo.repo,
+                    )}
+                  />
                 </div>
                 <ArrowUpRight size={21} strokeWidth={1.4} />
               </a>
@@ -447,23 +471,26 @@ export default function TerminalExperience() {
             <span>OPEN FREQUENCY</span>
           </div>
           <div className="contact-main">
-            <h2 id="contact-title">
-              The next great thing
-              <br />
-              starts with a <em>hello.</em>
-            </h2>
-            <a
-              className="contact-link"
-              href="https://github.com/hnkabraham"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <CodeXml size={20} />
-              <span>
-                Find me on GitHub<small>@hnkabraham</small>
-              </span>
-              <ArrowUpRight size={24} />
-            </a>
+            <div className="contact-intro">
+              <h2 id="contact-title">
+                The next great thing
+                <br />
+                starts with a <em>hello.</em>
+              </h2>
+              <a
+                className="contact-link"
+                href="https://github.com/hnkabraham"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <CodeXml size={20} />
+                <span>
+                  Find me on GitHub<small>@hnkabraham</small>
+                </span>
+                <ArrowUpRight size={24} />
+              </a>
+            </div>
+            <ContactTower />
           </div>
           <div className="contact-bottom mono">
             <span>THANK YOU FOR FLYING THROUGH.</span>
@@ -474,6 +501,30 @@ export default function TerminalExperience() {
       <footer className="site-footer mono">
         <span>© {new Date().getFullYear()} HENOK ABRAHAM</span>
         <span>HENOKABRAHAM.COM</span>
+        <Dialog>
+          <DialogTrigger className="credits-link">
+            Privacy &amp; performance
+          </DialogTrigger>
+          <DialogContent className="credits-dialog">
+            <DialogTitle>Privacy &amp; performance</DialogTitle>
+            <DialogDescription>
+              Cloudflare Web Analytics measures page performance. A few
+              anonymous measurements help improve the 3D departure: loading
+              time, frame rate, scenery failures, and project selections. Custom
+              measurements contain no visitor identifier, IP address, or message
+              text. These measurements respect Do Not Track and Global Privacy
+              Control. Contact details are sent only to Henok’s inbox; Turnstile
+              checks submissions for spam.
+            </DialogDescription>
+            <a
+              href="https://www.cloudflare.com/privacypolicy/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Cloudflare’s privacy policy <ArrowUpRight size={14} />
+            </a>
+          </DialogContent>
+        </Dialog>
         <Dialog>
           <DialogTrigger className="credits-link">Scene credits</DialogTrigger>
           <DialogContent className="credits-dialog">

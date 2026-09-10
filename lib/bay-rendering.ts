@@ -1,3 +1,4 @@
+import { sceneAsset } from '@/lib/scene-assets';
 import {
   AerialPerspectiveEffect,
   PrecomputedTexturesLoader,
@@ -157,7 +158,7 @@ export function createBayRendering(
       type: HalfFloatType,
       higherOrderScattering: false,
     }).load(
-      '/scenery/atmosphere',
+      sceneAsset('/scenery/atmosphere'),
       () => {
         if (disposed) {
           Object.values(lookupTextures).forEach((texture) =>

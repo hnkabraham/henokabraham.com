@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
 import hostingConfig from './.openai/hosting.json';
+import { sceneVersion } from './scripts/scene-assets.mjs';
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   '00000000-0000-4000-8000-000000000000';
@@ -15,7 +16,7 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
 
 const localBindingConfig = {
   name: 'henokabraham-com',
-  main: 'vinext/server/fetch-handler',
+  main: directCloudflare ? './worker.ts' : 'vinext/server/fetch-handler',
   compatibility_flags: ['nodejs_compat'],
   d1_databases: d1
     ? [
@@ -36,7 +37,7 @@ const localBindingConfig = {
     : [],
 };
 
-export default defineConfig(async () => {
+export default defineConfig(async ({ command }) => {
   // Keep Wrangler and Miniflare state project-local. These are non-secret tool
   // settings; application environment belongs in ignored `.env*` files.
   process.env.WRANGLER_WRITE_LOGS ??= 'false';
@@ -47,6 +48,13 @@ export default defineConfig(async () => {
   const { cloudflare } = await import('@cloudflare/vite-plugin');
 
   return {
+    define: {
+      __SCENE_VERSION__: JSON.stringify(
+        directCloudflare && command === 'build'
+          ? await sceneVersion(process.cwd())
+          : '',
+      ),
+    },
     css: { postcss: { plugins: [tailwindcss()] } },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
@@ -61,6 +69,40 @@ export default defineConfig(async () => {
           ...(directCloudflare
             ? {
                 workers_dev: true,
+                kv_namespaces: [
+                  {
+                    binding: 'LIVE_DATA',
+                    id: '8936ecfe40dd4fc9a30d109c058baf60',
+                  },
+                ],
+                analytics_engine_datasets: [
+                  { binding: 'FLIGHT_METRICS', dataset: 'henokabraham_flight' },
+                ],
+                ratelimits: [
+                  {
+                    name: 'CONTACT_LIMITER',
+                    namespace_id: '78701',
+                    simple: { limit: 3, period: 60 },
+                  },
+                  {
+                    name: 'METRICS_LIMITER',
+                    namespace_id: '78702',
+                    simple: { limit: 30, period: 60 },
+                  },
+                ],
+                send_email: [
+                  {
+                    name: 'CONTACT_EMAIL',
+                    destination_address: 'REDACTED-EMAIL',
+                  },
+                ],
+                triggers: { crons: ['*/15 * * * *'] },
+                observability: { enabled: true, head_sampling_rate: 0.1 },
+                vars: {
+                  TURNSTILE_SITE_KEY: '0x4AAAAAAEulQFo5cYQJ5FfZ',
+                  WEB_ANALYTICS_TOKEN: '17fd51eeb5b141c09edde8089ecda2ca',
+                  CONTACT_TO: 'REDACTED-EMAIL',
+                },
                 preview_urls: false,
                 routes: [
                   {

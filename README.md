@@ -36,17 +36,16 @@ The open-source rendering pass adds Takram's physically computed atmosphere, N8A
 
 ## Deploy
 
-The build targets Cloudflare Workers: `dist/server` holds the Worker and `dist/client` the static assets, and the generated `dist/server/wrangler.json` names the Worker `henokabraham-com` (set in `vite.config.ts`). Static asset requests are unmetered on the free plan; only the HTML document runs the Worker.
+The build targets Cloudflare Workers: `dist/server` holds the Worker and `dist/client` the static assets, and the generated `dist/server/wrangler.json` names the Worker `henokabraham-com` (set in `vite.config.ts`). The HTML document, live-data APIs, contact handler and anonymous measurement endpoint run in the Worker; static assets use Cloudflare’s asset service.
 
 ```sh
-npm run build
-npx wrangler login   # once per machine
-npx wrangler deploy --config dist/server/wrangler.json
+npm run check:cloudflare
+npm run deploy:cloudflare
 ```
 
-`npm start` serves the same build locally in workerd for a production preview. Hashed files under `/_next/static/` are cached immutably by the generated `_headers`; tile and scenery files keep their plain names and revalidate by ETag, so a longer cache rule needs versioned paths first.
+`npm start` serves the same build locally in workerd. JavaScript and CSS under `/_next/static/` and versioned scenery under `/scene/<content-hash>/` use immutable browser caching. Original model/scenery/tile URLs remain available for existing links. The build computes the scenery version from all asset names and bytes; changes produce new URLs.
 
-Retain the existing Sites project ID in `.openai/hosting.json` when publishing there. This checkout does not manage custom-domain DNS configuration.
+Retain the existing Sites project ID in `.openai/hosting.json` when publishing there. `vite.config.ts` retains the direct Cloudflare custom domain for `henokabraham.com`.
 
 ## Shared chapters and aviation notes
 

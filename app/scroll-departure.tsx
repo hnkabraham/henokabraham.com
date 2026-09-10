@@ -15,6 +15,7 @@ import {
 } from '@/lib/bay-flight';
 import { createBayAudio } from '@/lib/bay-audio';
 import BayFlightScene from './bay-flight-scene';
+import { recordFlightMetric } from '@/lib/flight-metrics';
 import { replaceFlightLink } from '@/lib/flight-links';
 import {
   departureAnnotationAt,
@@ -189,7 +190,13 @@ export default function ScrollDeparture({
             progress={progress}
             reducedMotion={reducedMotion}
             audio={audio}
-            onStatus={setStatus}
+            onStatus={(value) => {
+              setStatus(value);
+              if (value === 'ready')
+                recordFlightMetric('scene_ready_ms', performance.now());
+              if (value === 'unavailable')
+                recordFlightMetric('scene_unavailable', 1);
+            }}
           />
         )}
         <div className="bay-scrim" />
