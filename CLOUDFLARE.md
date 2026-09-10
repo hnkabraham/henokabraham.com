@@ -54,8 +54,8 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `f8d02e53-6452-40a4-a1f2-5ffd7e8c57af`
-- Verification: the live homepage returns HTTP 200; sampled aircraft, terrain manifest, terrain tile, atmosphere lookup and compressed city assets match the local files.
+- Cloudflare version: `81624ffd-7c43-4f80-ae2c-6fe106e0e4ac`
+- Verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
 - Authentication for the initial upload was passed through process memory; the Global API Key was not written into the repository or credential file.
 
 
@@ -84,6 +84,7 @@ GROUP BY event, device;
 
 ```sh
 node --experimental-strip-types scripts/check-edge.mjs
+node --experimental-strip-types scripts/check-metric-storage.mjs
 node scripts/check-bay-rendering.mjs
 node scripts/check-bay-scenery.mjs
 npm run check:cloudflare
@@ -95,3 +96,12 @@ The scheduled check runs the built Worker directly in local workerd and writes o
 New bindings are configured only for `DEPLOY_TARGET=cloudflare`. The original Sites build stays available; live services gracefully report unavailable there unless equivalent bindings are configured.
 
 Analytics Engine activation was attempted in the dashboard, but the upload API continued rejecting the entitlement (10089). The final Worker uses D1 for its custom measurements, so it does not depend on that service. Web Analytics remains enabled separately.
+
+
+To initialize the same schema in a newly provisioned metrics database, first update the dedicated database ID in `vite.config.ts` and the deployment guard, build, then apply the idempotent schema:
+
+```sh
+npx wrangler d1 execute FLIGHT_STATS --remote --config dist/server/wrangler.json --file migrations/0001_flight_metrics.sql
+```
+
+The production schema was applied before the first D1-backed deployment. Do not run database initialization against an unrelated database.
