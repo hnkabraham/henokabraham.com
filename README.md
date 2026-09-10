@@ -55,3 +55,7 @@ Project selection and scroll chapters use replace-only query parameters, for exa
 `lib/bay-annotations.ts` schedules six sparse DOM annotations from scroll progress: brake release, rotation, gear retraction, wing flex, San Bruno Mountain and the Golden Gate. Each is labelled as cinematic scene data rather than real flight data. They appear only with a ready scene and are hidden at widths of 1100 px or less, heights of 700 px or less, and for reduced motion. Rapid scrolling can put these scroll-scheduled notes ahead of the rate-limited aircraft; inspect their timing in visual QA.
 
 `app/aviation-logbook-data.ts` is a typed local dataset rendered beneath the project terminal. The initial entries are explicitly site references: the featured 787-9/SFO scene and the existing United Flight Tracker/aviation biography. They assert no personal flights or dates. Add verified personal entries with `kind: 'personal-entry'`; mark demonstrations with `kind: 'sample'`, which visibly labels them as samples to replace. Keep unknown dates `null`. Photo arrays start empty; future local photos require alt text and intrinsic dimensions and load lazily. Related-project buttons open the corresponding briefing and update the selected project URL.
+
+## Deploy to your Cloudflare account
+
+See [CLOUDFLARE.md](CLOUDFLARE.md) for the scoped token, account ID, local dry run and direct deployment commands.
