@@ -23,7 +23,11 @@ const env = {
   CONTACT_TO: 'owner@example.com',
   CONTACT_LIMITER: { limit: async () => ({ success: true }) },
   METRICS_LIMITER: { limit: async () => ({ success: true }) },
-  FLIGHT_METRICS: { writeDataPoint: (point) => points.push(point) },
+  FLIGHT_STATS: {
+    prepare: () => ({
+      bind: (...values) => ({ run: async () => points.push(values) }),
+    }),
+  },
 };
 const services = { sendEmail: async (to, text) => sent.push({ to, text }) };
 try {
@@ -130,11 +134,8 @@ try {
     204,
   );
   assert.equal(points.length, 1);
-  assert.deepEqual(points[0], {
-    indexes: ['portfolio'],
-    blobs: ['scene_fps', 'phone', 'full'],
-    doubles: [58.6],
-  });
+  assert.deepEqual(points[0].slice(1), ['scene_fps', 'phone', 'full', 58.6]);
+  assert.match(points[0][0], /^\d{4}-\d{2}-\d{2}T\d{2}:00:00Z$/);
   assert.equal(
     (await handleApi(request('/api/metrics', metric, { 'Sec-GPC': '1' }), env))
       .status,

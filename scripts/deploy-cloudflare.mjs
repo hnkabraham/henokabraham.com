@@ -85,7 +85,13 @@ if (
 ) {
   throw new Error('Unexpected Worker build target. Deployment stopped.');
 }
-if (config.d1_databases?.length || config.r2_buckets?.length) {
+if (
+  config.d1_databases?.length !== 1 ||
+  config.d1_databases[0].database_id !==
+    '1ce8af41-87e5-4f67-b06f-76fc50cce697' ||
+  config.d1_databases[0].binding !== 'FLIGHT_STATS' ||
+  config.r2_buckets?.length
+) {
   throw new Error(
     'Unexpected database or object storage binding. Deployment stopped.',
   );

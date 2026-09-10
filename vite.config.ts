@@ -75,8 +75,12 @@ export default defineConfig(async ({ command }) => {
                     id: '8936ecfe40dd4fc9a30d109c058baf60',
                   },
                 ],
-                analytics_engine_datasets: [
-                  { binding: 'FLIGHT_METRICS', dataset: 'henokabraham_flight' },
+                d1_databases: [
+                  {
+                    binding: 'FLIGHT_STATS',
+                    database_name: 'henokabraham-flight-stats',
+                    database_id: '1ce8af41-87e5-4f67-b06f-76fc50cce697',
+                  },
                 ],
                 ratelimits: [
                   {

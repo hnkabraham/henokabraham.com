@@ -1,7 +1,8 @@
+import { writeMetric } from './metrics.ts';
 import type { LiveStore } from './live.ts';
 export interface EdgeEnv {
   LIVE_DATA?: LiveStore;
-  FLIGHT_METRICS?: AnalyticsEngineDataset;
+  FLIGHT_STATS?: D1Database;
   CONTACT_LIMITER?: RateLimit;
   METRICS_LIMITER?: RateLimit;
   TURNSTILE_SITE_KEY?: string;
@@ -92,7 +93,7 @@ export async function handleApi(
           ),
           turnstileSiteKey: env.TURNSTILE_SITE_KEY || null,
           analyticsToken: env.WEB_ANALYTICS_TOKEN || null,
-          metricsEnabled: Boolean(env.FLIGHT_METRICS && env.METRICS_LIMITER),
+          metricsEnabled: Boolean(env.FLIGHT_STATS && env.METRICS_LIMITER),
         },
         200,
         'public, max-age=60',
@@ -124,7 +125,7 @@ export async function handleApi(
     return reply({ error: 'Invalid submission' }, 400);
   }
   if (path === '/api/metrics') {
-    if (!env.FLIGHT_METRICS)
+    if (!env.FLIGHT_STATS)
       return reply({ error: 'Temporarily unavailable' }, 503);
     if (
       request.headers.get('DNT') === '1' ||
@@ -150,11 +151,13 @@ export async function handleApi(
     )
       return reply({ error: 'Invalid measurement' }, 400);
     // No IP, identifier, query string, contact text or raw user agent is stored.
-    env.FLIGHT_METRICS.writeDataPoint({
-      indexes: ['portfolio'],
-      blobs: [body.event, body.device, body.reduced ? 'reduced' : 'full'],
-      doubles: [body.value],
-    });
+    await writeMetric(
+      env.FLIGHT_STATS,
+      body.event,
+      body.device,
+      body.reduced,
+      body.value,
+    );
     return new Response(null, {
       status: 204,
       headers: { 'Cache-Control': 'no-store' },

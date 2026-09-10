@@ -2,6 +2,7 @@ import handler from 'vinext/server/fetch-handler';
 import { EmailMessage } from 'cloudflare:email';
 import { handleApi, type EdgeEnv } from './server/api';
 import { refreshLiveData } from './server/live';
+import { pruneMetrics } from './server/metrics';
 
 interface Env extends EdgeEnv {
   CONTACT_EMAIL?: SendEmail;
@@ -57,6 +58,11 @@ const worker = {
     ctx: ExecutionContext,
   ) {
     if (env.LIVE_DATA) ctx.waitUntil(refreshLiveData(env.LIVE_DATA));
+    if (
+      env.FLIGHT_STATS &&
+      new Date(_controller.scheduledTime).getUTCMinutes() === 0
+    )
+      ctx.waitUntil(pruneMetrics(env.FLIGHT_STATS));
   },
 };
 
