@@ -916,10 +916,23 @@ console.log(
     Math.round(1 / manifest.step) + 1,
     'One bucket per scroll step, inclusive',
   );
+  // The pyramid is a 15.6 km square around SFO. The flight crosses its
+  // northern edge at progress 0.745, and from there the schedule is empty by
+  // design: the corridor layers and the floor carry the ground. Assert both
+  // sides of that boundary so it cannot move unnoticed.
+  const pyramidUntil = 149;
   assert.ok(
     manifest.tiles > 500 &&
-      manifest.buckets.slice(0, 120).every((bucket) => bucket.length > 0),
-    'Every bucket through the climb has tiles',
+      manifest.buckets
+        .slice(0, pyramidUntil)
+        .every((bucket) => bucket.length > 0),
+    'Every bucket inside the tile pyramid has tiles',
+  );
+  assert.ok(
+    manifest.buckets
+      .slice(pyramidUntil)
+      .every((bucket) => bucket.length === 0),
+    'Past the pyramid the ground falls back to the corridor layers and floor',
   );
   const ids = new Set([
     ...manifest.buckets.flat(),
