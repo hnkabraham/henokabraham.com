@@ -100,8 +100,7 @@ const {
   tileLayout,
   wantedTiles,
 } = await import(await moduleURL('bay-tiles', { './bay-surface': surfaceURL }));
-const { CLIMB_BOUNDS, CLIMB_IMAGERY_READY } = await import(surfaceURL);
-const { sampleBayFlight } = await import(flightURL);
+const { MARIN_BOUNDS, NORTH_BOUNDS } = await import(surfaceURL);
 const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
   await fs.readFile(
@@ -832,32 +831,45 @@ console.log(
   );
 }
 
-// Climb-out imagery and traffic: the sharper layer covers the low part of the
-// climb, and the freeway vehicles stay on finite, moving positions.
+// North-bay imagery and traffic: the layer above the corridor abuts it without
+// a gap and covers what the climb's last quarter looks at, and the freeway
+// vehicles stay on finite, moving positions.
 {
-  for (const p of [0.42, 0.47, 0.52, 0.58]) {
-    const shot = sampleBayFlight(p);
-    const [mx, my] = mercator(
-      shot.position[0] / 10 + 5666.01015,
-      shot.position[2] / 10 + 8672.84973,
-    );
+  assert.equal(
+    MARIN_BOUNDS[1],
+    NORTH_BOUNDS[3],
+    'North-bay layer abuts the north corridor',
+  );
+  // Web Mercator, the same projection the layer bounds are stated in.
+  const R = 6378137;
+  for (const [name, lat, lon] of [
+    ['Angel Island', 37.8636, -122.4301],
+    ['Sausalito', 37.8591, -122.4853],
+    ['Tiburon', 37.8735, -122.4566],
+  ]) {
+    const x = R * ((lon * Math.PI) / 180);
+    const y = R * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
     assert.ok(
-      mx > CLIMB_BOUNDS[0] &&
-        mx < CLIMB_BOUNDS[2] &&
-        my > CLIMB_BOUNDS[1] &&
-        my < CLIMB_BOUNDS[3],
-      `Climb layer covers the track at ${p}`,
+      x > MARIN_BOUNDS[0] &&
+        x < MARIN_BOUNDS[2] &&
+        y > MARIN_BOUNDS[1] &&
+        y < MARIN_BOUNDS[3],
+      `North-bay layer covers ${name}`,
     );
   }
-  if (CLIMB_IMAGERY_READY)
-    assert.ok(
-      (
-        await fs.stat(
-          new URL('../public/scenery/naip-climb.webp', import.meta.url),
-        )
-      ).size > 1e6,
-      'Climb imagery shipped',
-    );
+  assert.ok(
+    (
+      await fs.stat(
+        new URL('../public/scenery/naip-marin.webp', import.meta.url),
+      )
+    ).size > 1e6,
+    'North-bay imagery shipped',
+  );
+  assert.ok(
+    (await fs.stat(new URL('../public/scenery/sf-bay.webp', import.meta.url)))
+      .size > 1e6,
+    'Desktop base map shipped',
+  );
   const roads = JSON.parse(
     await fs.readFile(
       new URL('../public/scenery/bay-roads.json', import.meta.url),

@@ -18,14 +18,25 @@ export const NORTH_BOUNDS = [
   -13636902.989, 4542449.687, -13620902.989, 4558449.687,
 ] as const;
 /**
- * Desktop-only 1.46 m layer over the climb-out (6144², lazy): South San
- * Francisco, San Bruno and the bay shore where the aircraft is lowest. It
- * takes the slot once planned for a northern-city layer, whose USGS export
- * timed out on every attempt; the corridor layers still cover the north.
+ * The 1.46 m layer that used to cover the climb-out: South San Francisco, San
+ * Bruno and the bay shore where the aircraft is lowest. Retired, because the
+ * tile pyramid covers the same footprint at about a texel per pixel and, as
+ * the last layer, overrode it wherever tiles were resident; blanking it moved
+ * the climb frames by well under one part in 255. Its texture unit went to
+ * MARIN_BOUNDS, and 16 is all the WebGL2 minimum allows. Kept for the day one
+ * is freed; see ASSETS.md for how to rebuild the imagery.
  */
 export const CLIMB_BOUNDS = [-13632500, 4526800, -13623500, 4535800] as const;
-/** False only if `scripts/prepare-naip-layers.py climb` has not produced the file. */
-export const CLIMB_IMAGERY_READY = true;
+/**
+ * 24 × 16 km at the north corridor's own 3.91 m/px, abutting its northern edge:
+ * Angel Island, Sausalito, Tiburon and the Marin hills, which the camera looks
+ * straight at from progress 0.8 and which were on the 23 m/px base map before.
+ */
+export const MARIN_BOUNDS = [
+  -13639400, 4558449.687, -13615400, 4574449.687,
+] as const;
+/** False while `scripts/prepare-naip-layers.py climb` has not produced the file. */
+export const CLIMB_IMAGERY_READY = false;
 /** Web Mercator coordinates are stored relative to this corner for float precision. */
 export const MERCATOR_ORIGIN = [SFO_BOUNDS[0], SFO_BOUNDS[1]] as const;
 

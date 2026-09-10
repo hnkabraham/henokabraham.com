@@ -16,15 +16,19 @@ import urllib.request
 from PIL import Image
 
 SERVICE = 'https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage'
-# name: (bounds, output size, tile size, grid). The climb layer is a 6 × 6
-# mosaic of 2048² tiles downsampled 2× to 6144² (1.46 m/px) over the
-# climb-out area where the aircraft is lowest.
+# name: (bounds, output size, tile size, grid, mobile size). Size and grid are
+# (x, y) when a layer is not square; a mobile size of None writes no phone
+# variant. The climb layer is a 6 × 6 mosaic of 2048² tiles downsampled 2× to
+# 6144² (1.46 m/px) over the climb-out area where the aircraft is lowest. The
+# marin layer is a 6 × 4 mosaic over the north bay directly above the north
+# corridor, 24 × 16 km at the corridor's own 3.91 m/px.
 LAYERS = {
-    'runway': ([-13623646.065, 4524879.257, -13621046.065, 4527479.257], 4096, 2048, 4),
-    'south': ([-13631947.74, 4525293.17, -13615947.74, 4541293.17], 4096, 2048, 4),
-    'north': ([-13636902.989, 4542449.687, -13620902.989, 4558449.687], 4096, 2048, 4),
-    'city': ([-13636000.0, 4545000.0, -13623712.0, 4557288.0], 8192, 2048, 4),
-    'climb': ([-13632500.0, 4526800.0, -13623500.0, 4535800.0], 6144, 2048, 6),
+    'runway': ([-13623646.065, 4524879.257, -13621046.065, 4527479.257], 4096, 2048, 4, 2048),
+    'south': ([-13631947.74, 4525293.17, -13615947.74, 4541293.17], 4096, 2048, 4, 2048),
+    'north': ([-13636902.989, 4542449.687, -13620902.989, 4558449.687], 4096, 2048, 4, 2048),
+    'city': ([-13636000.0, 4545000.0, -13623712.0, 4557288.0], 8192, 2048, 4, None),
+    'climb': ([-13632500.0, 4526800.0, -13623500.0, 4535800.0], 6144, 2048, 6, None),
+    'marin': ([-13639400.0, 4558449.687, -13615400.0, 4574449.687], (6144, 4096), 2048, (6, 4), (3072, 2048)),
 }
 only = set(sys.argv[2:])
 cache = pathlib.Path(sys.argv[1])
@@ -50,13 +54,15 @@ def fetch(bbox, path, tile):
             time.sleep(5 * (attempt + 1))
     raise SystemExit(f'failed {path}')
 
-for name, ((x0, y0, x1, y1), size, TILE, GRID) in LAYERS.items():
+for name, ((x0, y0, x1, y1), size, TILE, GRID, MOBILE) in LAYERS.items():
     if only and name not in only:
         continue
-    width, height = (x1 - x0) / GRID, (y1 - y0) / GRID
-    mosaic = Image.new('RGB', (TILE * GRID, TILE * GRID))
-    for row in range(GRID):
-        for column in range(GRID):
+    columns, rows = GRID if isinstance(GRID, tuple) else (GRID, GRID)
+    out_x, out_y = size if isinstance(size, tuple) else (size, size)
+    width, height = (x1 - x0) / columns, (y1 - y0) / rows
+    mosaic = Image.new('RGB', (TILE * columns, TILE * rows))
+    for row in range(rows):
+        for column in range(columns):
             bbox = [x0 + column * width, y1 - (row + 1) * height,
                     x0 + (column + 1) * width, y1 - row * height]
             path = cache / f'naip-{name}-{row}-{column}.png'
@@ -65,10 +71,11 @@ for name, ((x0, y0, x1, y1), size, TILE, GRID) in LAYERS.items():
             assert tile.size == (TILE, TILE), tile.size
             mosaic.paste(tile, (column * TILE, row * TILE))
             print(f'{name} tile {row},{column}', flush=True)
-    full = mosaic.resize((size, size), Image.LANCZOS)
-    full.save(target / f'naip-{name}.webp', 'WEBP', quality=80 if size > 4096 else 84, method=6)
-    if size <= 4096:
-        full.resize((2048, 2048), Image.LANCZOS).save(
+    full = mosaic.resize((out_x, out_y), Image.LANCZOS)
+    full.save(target / f'naip-{name}.webp', 'WEBP', quality=80 if out_x > 4096 else 84, method=6)
+    if MOBILE:
+        mobile = MOBILE if isinstance(MOBILE, tuple) else (MOBILE, MOBILE)
+        full.resize(mobile, Image.LANCZOS).save(
             target / f'naip-{name}-mobile.webp', 'WEBP', quality=82, method=6)
-    print(f'naip-{name}.webp: {(x1 - x0) / size:.2f} m/px, '
+    print(f'naip-{name}.webp: {(x1 - x0) / out_x:.2f} m/px, '
           f'{(target / f"naip-{name}.webp").stat().st_size:,} bytes', flush=True)

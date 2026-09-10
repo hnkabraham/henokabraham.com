@@ -42,8 +42,7 @@ import {
 } from '@/lib/bay-thrust';
 import { createTreeMesh, loadTreeCanopies } from '@/lib/bay-trees';
 import {
-  CLIMB_BOUNDS,
-  CLIMB_IMAGERY_READY,
+  MARIN_BOUNDS,
   MERCATOR_ORIGIN,
   NORTH_BOUNDS,
   SFO_BOUNDS,
@@ -595,30 +594,32 @@ export default function BayFlightScene(props: Props) {
             })
           : null;
       tiles?.setActive(visible && !document.hidden);
-      // Coarse to fine. The corridor layers, the desktop-only climb layer and
+      // Coarse to fine. The three corridor layers, the desktop base map and
       // every baked shadow map arrive after the first frame.
       const layers: SurfaceLayer[] = [
         { bounds: SOUTH_BOUNDS, texture: null, feather: 0.05, shade: null },
         { bounds: NORTH_BOUNDS, texture: null, feather: 0.05, shade: null },
-        // No baked shade of its own: the north corridor's covers it, and the
-        // terrain shader is already near the 16 texture-unit limit.
-        ...(mobile
-          ? []
-          : [{ bounds: CLIMB_BOUNDS, texture: null, feather: 0.04 }]),
+        // The north bay above the corridor's edge. No baked shade: it would
+        // want the seventeenth texture unit, one past the WebGL2 minimum.
+        { bounds: MARIN_BOUNDS, texture: null, feather: 0.05 },
         // The airport's baked shade keeps its box; the imagery under it and
         // the runway now stream as tiles scheduled along the scroll path.
         { bounds: SFO_BOUNDS, shade: null },
         ...(tiles ? [tiles.layer] : []),
       ];
+      // The tile layer is conditional, so read slots back rather than count.
+      const slotFor = (bounds: SurfaceLayer['bounds']) =>
+        layers.findIndex((layer) => layer.bounds === bounds);
       const variant = mobile ? '-mobile' : '';
       const lazyLayers: [number, string][] = [
-        [0, sceneAsset(`/scenery/naip-south${variant}.webp`)],
-        [1, sceneAsset(`/scenery/naip-north${variant}.webp`)],
+        [slotFor(SOUTH_BOUNDS), sceneAsset(`/scenery/naip-south${variant}.webp`)],
+        [slotFor(NORTH_BOUNDS), sceneAsset(`/scenery/naip-north${variant}.webp`)],
+        [slotFor(MARIN_BOUNDS), sceneAsset(`/scenery/naip-marin${variant}.webp`)],
       ];
       const lazyShades: [number, string][] = [
-        [0, sceneAsset(`/scenery/shade-south${variant}.webp`)],
-        [1, sceneAsset(`/scenery/shade-north${variant}.webp`)],
-        [mobile ? 2 : 3, sceneAsset(`/scenery/shade-sfo${variant}.webp`)],
+        [slotFor(SOUTH_BOUNDS), sceneAsset(`/scenery/shade-south${variant}.webp`)],
+        [slotFor(NORTH_BOUNDS), sceneAsset(`/scenery/shade-north${variant}.webp`)],
+        [slotFor(SFO_BOUNDS), sceneAsset(`/scenery/shade-sfo${variant}.webp`)],
       ];
       const pavementMaps = [asphaltResult, normalResult, roughnessResult].map(
         (result) => (result.status === 'fulfilled' ? result.value : null),
@@ -1324,13 +1325,17 @@ export default function BayFlightScene(props: Props) {
             surface.layers[index].texture.value = texture;
             fadingLayers.add(index);
           });
-        if (capable && CLIMB_IMAGERY_READY)
+        // The 4096² base map: 11.7 m/px under everything the corridors and
+        // tiles miss, which from progress 0.9 is most of the frame.
+        if (!mobile)
           loadLazyTexture(
-            sceneAsset('/scenery/naip-climb.webp'),
+            sceneAsset('/scenery/sf-bay.webp'),
             imagery,
             (texture) => {
-              surface.layers[2].texture.value = texture;
-              fadingLayers.add(2);
+              const previous = terrainMaterial.map;
+              terrainMaterial.map = texture;
+              previous?.dispose();
+              renderDirty = true;
             },
           );
         // Freeway traffic under the climb-out, from OpenStreetMap carriageways.
