@@ -185,3 +185,16 @@ assert.ok(
 console.log(
   `Passed: ${triangles.toLocaleString()} triangles, ${meshes} meshes; camera continuity and detail framing on five viewports; whole-aircraft wide shots; old chapter links; quality budgets; source credit archive.`,
 );
+
+const worker = await fs.readFile(
+  new URL('../worker.ts', import.meta.url),
+  'utf8',
+);
+assert.ok(
+  !worker.includes('/tiles/'),
+  'Early Hints must not preload old terrain',
+);
+assert.ok(
+  worker.includes('</images/cruise-sky.jpg>; rel=preload; as=image'),
+  'The universal sky is the early preload',
+);

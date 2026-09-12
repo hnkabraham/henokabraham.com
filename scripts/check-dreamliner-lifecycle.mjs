@@ -231,7 +231,10 @@ try {
     tick(200);
     progress.current = 0.12;
     tick(216);
-    assert.ok(frames.size > 0, 'The progress ref is picked up on the next frame');
+    assert.ok(
+      frames.size > 0,
+      'The progress ref is picked up on the next frame',
+    );
     tick(232);
     tick(248);
     assert.ok(draws > 0, 'The first scroll wakes a settled opening');

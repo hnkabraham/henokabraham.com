@@ -3,20 +3,10 @@ import { EmailMessage } from 'cloudflare:email';
 import { handleApi, type EdgeEnv } from './server/api';
 import { refreshLiveData } from './server/live';
 import { pruneMetrics } from './server/metrics';
-import { sceneAsset } from './lib/scene-assets';
-
-// The tile manifest, the small fetch that gates tile priming, is announced
-// on the document response, so browsers start it before the body arrives
-// and Cloudflare can repeat it as a 103 Early Hint ahead of the Worker on
-// later requests. Everything larger stays in the document's low-priority
-// preloads (a Link header cannot carry a priority) so nothing delays the
-// module scripts.
-const EARLY_HINTS = ['/tiles/manifest.json']
-  .map(
-    (path) =>
-      `<${sceneAsset(path)}>; rel=preload; as=fetch; crossorigin=anonymous`,
-  )
-  .join(', ');
+// The opening sky is useful for every visitor, including reduced motion.
+// Aircraft preloads stay in the document with their motion preference and
+// low priority; no terrain data is needed by the airborne tour.
+const EARLY_HINTS = '</images/cruise-sky.jpg>; rel=preload; as=image';
 
 interface Env extends EdgeEnv {
   CONTACT_EMAIL?: SendEmail;
