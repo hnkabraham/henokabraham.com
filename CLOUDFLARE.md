@@ -54,7 +54,7 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `72473c42-9bbe-445e-8da8-aaf344dcbe7a`
+- Cloudflare version: `0a807ca8-c983-40aa-9617-2857ae43603d`
 - Verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
@@ -126,3 +126,5 @@ Source commit `742f298` adds sustained frame-time quality adjustment, compact de
 ## Drifting blue-sky opening deployed
 
 Source commit `8ae9181` keeps the existing blue sky visible after the scene is ready, moves the photograph and two cloud layers gently, and reveals the flight over 180 px after the first 48 px of scrolling within the hero. The 3D animation and lazy scenery wait while covered. Desktop and 390 × 844 browser checks confirmed the sky at rest, moving cloud positions, the aircraft after scrolling, and the restored sky on return. TypeScript, performance/rendering/lifecycle checks and the Cloudflare build passed. Reduced-motion visitors keep a static sky.
+
+The cloud-motion enhancement (`e5cdd4d`) raises the moving layers into view, increases their contrast, and uses continuous 26/42-second drift loops with fading resets. The sky photo moves over 32 seconds. Desktop and 390 × 844 visual checks and the production build passed; the scroll reveal and motion/visibility safeguards are unchanged.
