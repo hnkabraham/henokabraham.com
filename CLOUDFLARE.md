@@ -54,8 +54,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `0a807ca8-c983-40aa-9617-2857ae43603d`
-- Verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
+- Cloudflare version: `7d8f3095-2824-4c91-be3d-576098a9fd1e`
+- Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
+- Current release: airborne Dreamliner tour, source `56b8012` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
+- Current validation: TypeScript, focused lint, actual-model/camera checks at five viewport sizes, lifecycle/first-scroll/hidden-document checks, performance checks and preserved scenery/flight checks passed. Desktop and 390 × 844 Chrome visual QA completed. Cloudflare confirmed deployment to both existing hostnames with the 15-minute schedule and service bindings preserved. Full-repository lint still has the previously documented unrelated UI findings.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
 
@@ -128,3 +130,10 @@ Source commit `742f298` adds sustained frame-time quality adjustment, compact de
 Source commit `8ae9181` keeps the existing blue sky visible after the scene is ready, moves the photograph and two cloud layers gently, and reveals the flight over 180 px after the first 48 px of scrolling within the hero. The 3D animation and lazy scenery wait while covered. Desktop and 390 × 844 browser checks confirmed the sky at rest, moving cloud positions, the aircraft after scrolling, and the restored sky on return. TypeScript, performance/rendering/lifecycle checks and the Cloudflare build passed. Reduced-motion visitors keep a static sky.
 
 The cloud-motion enhancement (`e5cdd4d`) raises the moving layers into view, increases their contrast, and uses continuous 26/42-second drift loops with fading resets. The sky photo moves over 32 seconds. Desktop and 390 × 844 visual checks and the production build passed; the scroll reveal and motion/visibility safeguards are unchanged.
+
+
+## Airborne Dreamliner showcase deployed
+
+Source `6a2e34e` replaces the ground departure with a moving-sky fly-in and engine, wing and tail close-ups. The credited FlightGear exterior has 4K fuselage/engine textures and 105,622 triangles merged into ten main material groups; it uses HDR reflections and a personal livery. The original terrain experiment remains in the repository and is absent from active scene imports. Source `56b8012` changes the HTTP Early Hint from the old tile manifest to the universal sky image. The aircraft remains a low-priority, motion-qualified HTML preload.
+
+The opening stays free of WebGL draws until scrolling, with a bounded wake-up that handles parent/renderer RAF ordering. WebGL, audio and clouds suspend offscreen/hidden; reduced motion keeps a static sky. New regression tests cover late fetch/parse completion and single disposal after unmount. A shader warm-up cleanup race found during development was fixed; final visual checks recorded no new console errors. Desktop spot checks reached about 120 fps on the test computer; phone-size checks verify composition, not physical-phone performance.
