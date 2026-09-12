@@ -10,15 +10,8 @@ import { sceneAsset } from '@/lib/scene-assets';
 // the module scripts leave rather than delaying them. Visitors who get the
 // static view (reduced motion) skip them through the media query.
 const OPENING_ASSETS: [string, 'fetch' | 'image'][] = [
-  ['/models/boeing-787-9.glb', 'fetch'],
-  ['/scenery/bay-elevation.webp', 'fetch'],
-  ['/tiles/manifest.json', 'fetch'],
-  ['/scenery/sfo-buildings.json', 'fetch'],
-  ['/scenery/sfo-airfield.json', 'fetch'],
-  ['/scenery/sf-bay-mobile.webp', 'image'],
-  ['/scenery/runway-color.webp', 'image'],
-  ['/scenery/runway-normal.webp', 'image'],
-  ['/scenery/runway-roughness.webp', 'image'],
+  ['/models/dreamliner-787-9.glb', 'fetch'],
+  ['/scenery/daylight.hdr', 'fetch'],
 ];
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({

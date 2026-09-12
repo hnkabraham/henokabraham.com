@@ -218,8 +218,12 @@ const linear = (hex: string) =>
  * port side and tail to nose on the starboard side, as on a real airframe;
  * cabin windows stay dark through the paint.
  */
-export function addLivery(material: Material, texture: Texture) {
-  addShaderPatch(material, 'livery-v5', (shader) => {
+export function addLivery(
+  material: Material,
+  texture: Texture,
+  offset: [number, number, number] = [0, 0, 0],
+) {
+  addShaderPatch(material, `livery-v6-${offset.join('-')}`, (shader) => {
     shader.uniforms.liveryMap = { value: texture };
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -228,7 +232,9 @@ export function addLivery(material: Material, texture: Texture) {
       )
       .replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>\nvLiveryPoint = position;',
+        offset.some((n) => n !== 0)
+          ? `#include <begin_vertex>\nvLiveryPoint = position - vec3(${offset.map((n) => n.toFixed(4)).join(', ')});`
+          : '#include <begin_vertex>\nvLiveryPoint = position;',
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(

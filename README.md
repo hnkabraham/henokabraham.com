@@ -1,8 +1,16 @@
 # Henok Abraham — Personal Airspace
 
-A personal portfolio opening with a scroll-controlled Boeing 787-9 departure from SFO. A single continuous camera follows preflight, runway acceleration, rotation, a climb over real San Francisco Bay imagery and terrain, and clear skies. The flight leads into the project departure board, project briefings, aviation logbook, public repositories, biography and GitHub contact.
+A personal portfolio opening with an airborne Boeing 787-9. The page begins with a moving blue sky; scrolling brings the aircraft into frame, then carries the camera past its engine, wing and tail before pulling back into open sky. The flight leads into the project departure board, project briefings, aviation logbook, public repositories, biography and contact form.
 
-Native scrolling works with wheel, trackpad, touch and keyboard; no scroll interception or timed launch is used. Five chapter buttons jump along the same path. Visitors can skip directly to projects, return to preflight, or enable synthesized jet ambience. Reduced-motion preferences show a static cruise view in a short opening section. Asset or WebGL failure keeps a sky fallback and direct access to the portfolio. Scene updates, tile scheduling/uploads, GPU drawing and audio pause when the scene is offscreen or the document is hidden. Reduced motion redraws when late assets arrive, without animating their reveal.
+Native scrolling works with wheel, trackpad, touch and keyboard. Five chapter buttons follow the same camera path. Visitors can skip directly to projects, return to the open sky, or enable synthesized jet ambience. Reduced motion and WebGL/asset failure show a static sky with direct access to the portfolio. The initial sky does not run a WebGL render loop; drawing and sound suspend offscreen or in a hidden document.
+
+## Airborne showcase
+
+- `app/dreamliner-scene.tsx`: transparent Three.js renderer, HDR illumination, self-shadows, turning fans, wing flex, adaptive resolution and deterministic resource cleanup.
+- `lib/dreamliner-tour.ts`: camera choreography and portrait framing. The original chapter IDs remain valid: `preflight` → Open sky, `roll` → Engine, `liftoff` → Wing, `bay` → Tail, `cruise` → Airspace.
+- `lib/dreamliner-annotations.ts`: short detail captions. `app/scroll-departure.tsx` connects the tour to native scroll and the portfolio.
+- `public/models/dreamliner-787-9.glb`: FlightGear 787-family exterior, 105,622 triangles in ten material groups, 4K fuselage and engine textures, 5,272,964 bytes. `scripts/prepare-dreamliner.py` reproduces it from a pinned upstream source. GPL-2.0 credits and the corresponding editable source are served at `/credits/dreamliner.html`.
+- The old SFO/Bay scenery is retained as a previous experiment, but its modules and terrain preloads are absent from the active tour. Current rendering resources are spent on the aircraft.
 
 ## Develop
 
@@ -16,6 +24,9 @@ npm run dev
 ```sh
 npx tsc --noEmit -p .
 npx oxlint app lib scripts
+node scripts/check-dreamliner-tour.mjs
+node scripts/check-dreamliner-lifecycle.mjs
+node scripts/check-bay-performance.mjs
 node scripts/check-bay-flight.mjs
 node scripts/check-bay-scenery.mjs
 node scripts/check-bay-rendering.mjs
@@ -23,6 +34,10 @@ npm run build
 ```
 
 Oxlint currently reports two known errors in `app/terminal-experience.tsx` (`prefer-tag-over-role` and `no-img-element`); changes must add none. The scene checks run offline and never fetch or modify tile imagery.
+
+## Earlier Bay terrain experiment
+
+The following notes document the preserved terrain implementation; it is no longer mounted by the home page.
 
 `app/scroll-departure.tsx` maps native scroll to chapter progress. `lib/bay-flight.ts` defines a continuous Hermite flight path in meters and its camera shots. `app/bay-flight-scene.tsx` loads the aircraft, terrain and HDR illumination, and renders a floating-origin scene with animated gear and fans. `app/bay-departure.css` controls the sticky journey and responsive composition. `lib/bay-audio.ts` creates optional ambience only inside a user gesture.
 
@@ -49,9 +64,9 @@ Retain the existing Sites project ID in `.openai/hosting.json` when publishing t
 
 ## Shared chapters and aviation notes
 
-Project selection and scroll chapters use replace-only query parameters, for example `/?project=flight-tracker&chapter=bay`. Project IDs come from `flight-data.ts`; chapters are `preflight`, `roll`, `liftoff`, `bay`, and `cruise`. `lib/flight-links.ts` validates incoming values, preserves unrelated parameters and history state, and does not add history entries. The chapter seeds the progress ref and scroll position before the scene mounts. Invalid values use the default selection/current scroll. Reduced motion keeps its static cruise view. Section anchors still work for native navigation; a valid shared chapter takes precedence on initial restoration. Changes to project/chapter remove redundant `#flight`/`#departures` anchors.
+Project selection and scroll chapters use replace-only query parameters, for example `/?project=flight-tracker&chapter=bay`. Project IDs come from `flight-data.ts`; chapters are `preflight`, `roll`, `liftoff`, `bay`, and `cruise`. `lib/flight-links.ts` validates incoming values, preserves unrelated parameters and history state, and does not add history entries. The chapter seeds the progress ref and scroll position before the scene mounts. Invalid values use the default selection/current scroll. Reduced motion keeps its static sky view. Section anchors still work for native navigation; a valid shared chapter takes precedence on initial restoration. Changes to project/chapter remove redundant `#flight`/`#departures` anchors.
 
-`lib/bay-annotations.ts` schedules six sparse DOM annotations from scroll progress: brake release, rotation, gear retraction, wing flex, San Bruno Mountain and the Golden Gate. Each is labelled as cinematic scene data rather than real flight data. They appear only with a ready scene and are hidden at widths of 1100 px or less, heights of 700 px or less, and for reduced motion. Rapid scrolling can put these scroll-scheduled notes ahead of the rate-limited aircraft; inspect their timing in visual QA.
+In the earlier terrain experiment, `lib/bay-annotations.ts` schedules six sparse DOM annotations from scroll progress: brake release, rotation, gear retraction, wing flex, San Bruno Mountain and the Golden Gate. Each is labelled as cinematic scene data rather than real flight data. They appear only with a ready scene and are hidden at widths of 1100 px or less, heights of 700 px or less, and for reduced motion. Rapid scrolling can put these scroll-scheduled notes ahead of the rate-limited aircraft; inspect their timing in visual QA.
 
 `app/aviation-logbook-data.ts` is a typed local dataset rendered beneath the project terminal. The initial entries are explicitly site references: the featured 787-9/SFO scene and the existing United Flight Tracker/aviation biography. They assert no personal flights or dates. Add verified personal entries with `kind: 'personal-entry'`; mark demonstrations with `kind: 'sample'`, which visibly labels them as samples to replace. Keep unknown dates `null`. Photo arrays start empty; future local photos require alt text and intrinsic dimensions and load lazily. Related-project buttons open the corresponding briefing and update the selected project URL.
 

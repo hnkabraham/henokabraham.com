@@ -7,42 +7,38 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import {
-  BAY_CHAPTERS,
-  clamp01,
-  sampleBayFlight,
-  type BayPhase,
-} from '@/lib/bay-flight';
+import { clamp01, type BayPhase } from '@/lib/bay-flight';
 import { createBayAudio } from '@/lib/bay-audio';
-import BayFlightScene from './bay-flight-scene';
+import DreamlinerScene from './dreamliner-scene';
+import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
 import { replaceFlightLink } from '@/lib/flight-links';
 import {
-  departureAnnotationAt,
-  type DepartureAnnotation,
-} from '@/lib/bay-annotations';
+  tourAnnotationAt,
+  type TourAnnotation,
+} from '@/lib/dreamliner-annotations';
 
 const copy: Record<BayPhase, [string, string, string]> = {
   preflight: [
-    'SFO / BEFORE DEPARTURE',
-    'Every idea\nneeds a runway.',
-    'I’m Henok. Developer, builder, and a little obsessed with what comes next.',
+    'PERSONAL AIRSPACE / HENOK ABRAHAM',
+    'A different\nperspective.',
+    'I’m Henok. I build apps, connect things, and follow the ideas that won’t leave me alone.',
   ],
   roll: [
-    '01 / CLEARED FOR TAKEOFF',
-    'From a little spark.\nTo forward motion.',
-    'Boeing 787-9 · San Francisco International',
+    '01 / FIND YOUR DRIVE',
+    'Small details.\nSerious momentum.',
+    'Understand how things work. Then see how much better they can be.',
   ],
   liftoff: [
-    '02 / LEAVING THE GROUND',
-    'A new perspective.',
-    'The runway falls away. The possibilities open up.',
+    '02 / ROOM TO EXPLORE',
+    'Let curiosity\nstretch its wings.',
+    'Code, hardware, and the interesting space in between.',
   ],
   bay: [
-    '03 / SAN FRANCISCO BAY',
-    'Room to explore.',
-    'The peninsula, the water, and a city full of ideas.',
+    '03 / LEAVE YOUR MARK',
+    'Make it\nyour own.',
+    'A little character in everything I build.',
   ],
   cruise: [
     '04 / ABOVE IT ALL',
@@ -84,13 +80,11 @@ export default function ScrollDeparture({
   const [sound, setSound] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
-  const [annotation, setAnnotation] = useState<DepartureAnnotation | null>(
-    null,
-  );
+  const [annotation, setAnnotation] = useState<TourAnnotation | null>(null);
   useLayoutEffect(() => {
     const section = root.current;
     if (!section || !entry) return;
-    const chapter = BAY_CHAPTERS.find((item) => item.phase === entry.chapter);
+    const chapter = TOUR_CHAPTERS.find((item) => item.phase === entry.chapter);
     if (chapter && !reducedMotion) {
       progress.current = chapter.at;
       const top = scrollY + section.getBoundingClientRect().top;
@@ -107,7 +101,7 @@ export default function ScrollDeparture({
           );
     }
     reveal.current = updateOpening(section, progress.current, reducedMotion);
-    setPhase(sampleBayFlight(progress.current).phase);
+    setPhase(tourPhase(progress.current));
     // Mount the renderer only after the shared chapter has seeded its ref.
     setSceneReady(true);
   }, [entry, reducedMotion]);
@@ -178,12 +172,12 @@ export default function ScrollDeparture({
         progress.current,
         reducedMotion || status === 'unavailable',
       );
-      const currentPhase = sampleBayFlight(progress.current).phase;
+      const currentPhase = tourPhase(progress.current);
       setPhase(currentPhase);
       setAnnotation(
         reducedMotion || status !== 'ready'
           ? null
-          : departureAnnotationAt(progress.current),
+          : tourAnnotationAt(progress.current),
       );
       if (
         !reducedMotion &&
@@ -218,19 +212,18 @@ export default function ScrollDeparture({
   const [eyebrow, heading, description] = copy[phase];
   return (
     <section
-      className="bay-journey"
+      className="bay-journey dreamliner-journey"
       ref={root}
       id="flight"
       data-phase={phase}
       data-reduced={reducedMotion}
       data-status={status}
-      aria-label="A 787 departure over San Francisco Bay, controlled by scrolling"
+      aria-label="An airborne Boeing 787 showcase, controlled by scrolling"
     >
       <div className="bay-sticky">
         {sceneReady && (
-          <BayFlightScene
+          <DreamlinerScene
             progress={progress}
-            reveal={reveal}
             reducedMotion={reducedMotion}
             audio={audio}
             onStatus={(value) => {
@@ -271,7 +264,7 @@ export default function ScrollDeparture({
           )}
         </div>
         <nav className="bay-chapters" aria-label="Flight chapters">
-          {BAY_CHAPTERS.map((chapter, index) => (
+          {TOUR_CHAPTERS.map((chapter, index) => (
             <button
               key={chapter.phase}
               className="mono"
@@ -286,14 +279,11 @@ export default function ScrollDeparture({
           ))}
         </nav>
         {annotation && (
-          <aside
-            className="bay-annotation"
-            aria-label="Departure scene annotation"
-          >
-            <p className="eyebrow">SCENE DATA / CINEMATIC DEPARTURE</p>
+          <aside className="bay-annotation" aria-label="Aircraft detail">
+            <p className="eyebrow">DREAMLINER / UP CLOSE</p>
             <h2>{annotation.title}</h2>
             <p>{annotation.note}</p>
-            <small>Authored scene · not real flight data</small>
+            <small>A study in the details</small>
           </aside>
         )}
         <div className="bay-bottom">
@@ -333,7 +323,7 @@ export default function ScrollDeparture({
               className="mono"
               disabled={reducedMotion || status === 'unavailable'}
               onClick={() => jump(0)}
-              aria-label="Return to preflight"
+              aria-label="Return to the open sky"
             >
               <RotateCcw size={15} />
             </button>
@@ -344,19 +334,11 @@ export default function ScrollDeparture({
         </output>
         <div className="bay-source-note">
           <a
-            href="/credits/scene-credits.html"
+            href="/credits/dreamliner.html"
             target="_blank"
             rel="noopener noreferrer"
           >
-            ESA · USGS/USDA
-          </a>
-          <span> · </span>
-          <a
-            href="https://www.openstreetmap.org/copyright"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            © OpenStreetMap
+            Aircraft & sky credits
           </a>
         </div>
         <div className="bay-progress" aria-hidden="true">

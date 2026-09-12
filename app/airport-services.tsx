@@ -151,12 +151,12 @@ export function LiveAtSfo({
       ) : (
         <output className="sfo-feed-note">
           {failed || data
-            ? 'Conditions are temporarily unavailable. The departure is ready to explore.'
+            ? 'Conditions are temporarily unavailable. The aircraft tour is ready to explore.'
             : 'Tuning in to the latest airport report…'}
         </output>
       )}
       <p className="sfo-scene-note">
-        The departure scene uses cinematic clear-sky conditions.
+        The aircraft showcase uses cinematic clear-sky conditions.
       </p>
     </section>
   );

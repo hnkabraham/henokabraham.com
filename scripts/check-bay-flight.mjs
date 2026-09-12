@@ -176,47 +176,27 @@ console.log(
   const { aviationLogbook } = await importSource(
     '../app/aviation-logbook-data.ts',
   );
+  const tourJS = transpileModule(
+    await fs.readFile(
+      new URL('../lib/dreamliner-tour.ts', import.meta.url),
+      'utf8',
+    ),
+    { compilerOptions: { module: ModuleKind.ESNext } },
+  ).outputText;
+  const tourURL = `data:text/javascript;base64,${Buffer.from(tourJS).toString('base64')}`;
   const { readFlightLink, flightLink, replaceFlightLink } = await importSource(
     '../lib/flight-links.ts',
-    { './bay-flight': flightURL },
+    { './bay-flight': flightURL, './dreamliner-tour': tourURL },
   );
   const { DEPARTURE_ANNOTATIONS, departureAnnotationAt } = await importSource(
     '../lib/bay-annotations.ts',
   );
   const ids = flights.map((item) => item.id);
   assert.equal(new Set(ids).size, flights.length);
-  const manifest = JSON.parse(
-    await fs.readFile(
-      new URL('../public/tiles/manifest.json', import.meta.url),
-    ),
-  );
   const featured = flights.find((item) => item.id === 'bay-departure');
-  assert.ok(
-    featured && !featured.image,
-    'The scene is featured without new imagery',
-  );
-  assert.ok(
-    featured.features
-      .join(' ')
-      .includes(manifest.tiles.toLocaleString('en-US')),
-  );
-  assert.ok(
-    featured.features
-      .join(' ')
-      .includes(manifest.bytes.toLocaleString('en-US')),
-  );
-  for (const slots of [24, 15]) {
-    const edge = slots * (manifest.tile + 2 * manifest.border);
-    assert.ok(
-      featured.features.join(' ').includes(edge.toLocaleString('en-US')),
-    );
-    assert.ok(
-      featured.features
-        .join(' ')
-        .includes(((edge * edge * 4) / 2 ** 20).toFixed(1)),
-    );
-  }
-  assert.match(featured.features.join(' '), /uses all 16 fragment samplers/);
+  assert.ok(featured && !featured.image);
+  assert.match(featured.story, /airborne 787/i);
+  assert.match(featured.story, /original Bay terrain experiment remains/i);
   for (const project of ids)
     for (const chapter of BAY_CHAPTERS) {
       const path = flightLink(new URL('https://example.test/?keep=1#flight'), {
@@ -343,6 +323,6 @@ console.log(
       ),
   );
   console.log(
-    'content check: measured project budgets, every project/chapter URL round trip, replace-only history, sparse scene annotations and honest logbook seeds',
+    'content check: current aircraft project, every project/chapter URL round trip, replace-only history, sparse scene annotations and honest logbook seeds',
   );
 }

@@ -1,8 +1,9 @@
-import { BAY_CHAPTERS, type BayPhase } from './bay-flight';
+import type { BayPhase } from './bay-flight';
+import { TOUR_CHAPTERS } from './dreamliner-tour';
 
 export function readFlightLink(url: URL, projectIds: string[]) {
   const project = url.searchParams.get('project');
-  const chapter = BAY_CHAPTERS.find(
+  const chapter = TOUR_CHAPTERS.find(
     (item) => item.phase === url.searchParams.get('chapter'),
   );
   return {

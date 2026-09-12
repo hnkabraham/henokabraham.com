@@ -494,7 +494,7 @@ export default function TerminalExperience() {
           </div>
           <div className="contact-bottom mono">
             <span>THANK YOU FOR FLYING THROUGH.</span>
-            <a href="#flight">BACK TO THE RUNWAY ↑</a>
+            <a href="#flight">BACK TO THE OPEN SKY ↑</a>
           </div>
         </section>
       </main>
@@ -509,8 +509,8 @@ export default function TerminalExperience() {
             <DialogTitle>Privacy &amp; performance</DialogTitle>
             <DialogDescription>
               Cloudflare Web Analytics measures page performance. A few
-              anonymous measurements help improve the 3D departure: loading
-              time, frame rate, scenery failures, and project selections. Custom
+              anonymous measurements help improve the 3D aircraft tour: loading
+              time, frame rate, asset failures, and project selections. Custom
               measurements contain no visitor identifier, IP address, or message
               text. These measurements respect Do Not Track and Global Privacy
               Control. Contact details are sent only to Henok’s inbox; Turnstile
@@ -530,14 +530,14 @@ export default function TerminalExperience() {
           <DialogContent className="credits-dialog">
             <DialogTitle>Scene credits</DialogTitle>
             <DialogDescription>
-              Boeing 787-9 by Nobilis2, CC BY 4.0. Optimized model with added
-              animated landing gear. Bay imagery contains modified Copernicus
-              Sentinel data (2019), processed by ESA, cropped and resized under
-              CC BY-SA 3.0 IGO. Elevation: Mapzen / USGS / NOAA. Daylight: Greg
-              Zaal and Jarod Guest, Poly Haven, CC0.
+              Boeing 787-9 and GEnx exterior adapted from the FlightGear
+              787-family project, GPL-2.0, with a personal livery. Editable
+              aircraft sources, conversion script and license are included.
+              Daylight reflections: Greg Zaal and Jarod Guest, Poly Haven, CC0.
+              Sky and cloud artwork generated for this portfolio.
             </DialogDescription>
             <a
-              href="/credits/scene-credits.html"
+              href="/credits/dreamliner.html"
               target="_blank"
               rel="noopener noreferrer"
             >

@@ -732,3 +732,203 @@
 .bay-journey[data-reduced='true'] .bay-annotation {
   display: none;
 }
+
+/* Airborne edition: the photographic sky stays behind a transparent renderer. */
+.dreamliner-journey .bay-opening-sky,
+.dreamliner-journey[data-status='ready'] .bay-opening-sky,
+.dreamliner-journey[data-status='ready'][data-opening='false']
+  .bay-opening-sky {
+  z-index: -2;
+  opacity: 1;
+  visibility: visible;
+  transition: none;
+}
+.dreamliner-journey .dreamliner-canvas {
+  z-index: -1;
+  background: transparent;
+}
+.dreamliner-journey[data-sky-active='true']:not([data-reduced='true'])
+  .bay-poster,
+.dreamliner-journey[data-sky-active='true']:not([data-reduced='true'])
+  .bay-opening-cloud {
+  animation-play-state: running;
+}
+.dreamliner-journey .bay-scrim::before,
+.dreamliner-journey .bay-scrim::after {
+  background: linear-gradient(90deg, #d8ecf638, transparent 44%);
+}
+.dreamliner-journey .bay-story {
+  top: 19%;
+  max-width: 43%;
+  text-shadow: 0 1px 25px #d9ecf570;
+}
+.dreamliner-journey:not([data-phase='preflight']):not([data-phase='cruise'])
+  .bay-story {
+  top: 23%;
+  max-width: 34%;
+}
+.dreamliner-journey:not([data-phase='preflight']):not([data-phase='cruise'])
+  .bay-story
+  h1 {
+  font-size: clamp(2.8rem, 4.4vw, 5rem);
+  letter-spacing: -0.065em;
+}
+.dreamliner-journey .bay-bottom {
+  color: #21465f;
+}
+.dreamliner-journey .bay-scroll-track {
+  border-color: #21465f88;
+}
+.dreamliner-journey .bay-scroll-track i {
+  background: #21465f;
+}
+.dreamliner-journey .bay-annotation {
+  top: auto;
+  left: 7%;
+  right: auto;
+  bottom: 17%;
+  max-width: 290px;
+  padding: 17px 21px;
+  color: #1a3c52;
+  background: #f4faffb8;
+  border: 1px solid #fff9;
+  border-radius: 3px;
+  box-shadow: 0 12px 38px #1c435713;
+  backdrop-filter: blur(12px);
+}
+.dreamliner-journey .bay-annotation h2 {
+  font-size: 1.1rem;
+}
+.dreamliner-journey .bay-annotation p {
+  color: #385568;
+}
+.dreamliner-journey .bay-annotation small {
+  color: #47677a;
+}
+@media (max-width: 800px) {
+  .dreamliner-journey {
+    height: 680svh;
+  }
+  .dreamliner-journey .bay-story,
+  .dreamliner-journey:not([data-phase='preflight']):not([data-phase='cruise'])
+    .bay-story,
+  .dreamliner-journey[data-phase='cruise'] .bay-story {
+    top: 13%;
+    bottom: auto;
+    max-width: 88%;
+  }
+  .dreamliner-journey .bay-story h1 {
+    font-size: clamp(2.8rem, 11vw, 4rem);
+  }
+  .dreamliner-journey:not([data-phase='preflight']):not([data-phase='cruise'])
+    .bay-story
+    h1 {
+    font-size: clamp(2.3rem, 8.5vw, 3.4rem);
+    margin-bottom: 12px;
+  }
+  .dreamliner-journey .bay-story .eyebrow {
+    margin-bottom: 14px;
+    font-size: 0.66rem;
+  }
+  .dreamliner-journey .bay-description {
+    font-size: 0.92rem;
+    line-height: 1.5;
+    max-width: 310px;
+  }
+  .dreamliner-journey .bay-annotation {
+    display: none;
+  }
+  .dreamliner-journey .bay-chapters {
+    bottom: 118px;
+  }
+  .dreamliner-journey .bay-chapters button span:nth-child(2) {
+    display: inline;
+    font-size: 0.62rem;
+  }
+  .dreamliner-journey .bay-chapters button span:first-child {
+    display: none;
+  }
+  .dreamliner-journey .bay-explore {
+    margin-top: 13px;
+  }
+}
+@media (max-height: 560px) and (min-width: 801px) {
+  .dreamliner-journey .bay-sticky {
+    min-height: 100svh;
+  }
+  .dreamliner-journey .bay-story {
+    top: 16%;
+  }
+  .dreamliner-journey .bay-story h1 {
+    font-size: 3rem;
+  }
+  .dreamliner-journey .bay-annotation {
+    display: none;
+  }
+}
+.dreamliner-journey[data-reduced='true'],
+.dreamliner-journey[data-status='unavailable'] {
+  height: 100svh;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dreamliner-journey {
+    height: 100svh;
+  }
+  .dreamliner-journey .bay-poster,
+  .dreamliner-journey .bay-opening-cloud {
+    animation: none;
+  }
+}
+/* Leave the right half of the frame clear for the aircraft. */
+@media (min-width: 801px) {
+  .dreamliner-journey .bay-chapters {
+    top: auto;
+    bottom: 30px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    flex-direction: row;
+    gap: 3px;
+    padding: 4px;
+  }
+  .dreamliner-journey .bay-chapters button {
+    gap: 8px;
+    padding: 11px 13px;
+  }
+  .dreamliner-journey .bay-chapters button i {
+    display: none;
+  }
+  .dreamliner-journey .bay-chapters button span:first-child {
+    font-size: 0.62rem;
+    opacity: 0.7;
+  }
+}
+@media (min-width: 801px) and (max-width: 1150px) {
+  .dreamliner-journey .bay-chapters button {
+    gap: 0;
+    padding: 10px;
+    font-size: 0.65rem;
+  }
+  .dreamliner-journey .bay-chapters button span:first-child {
+    display: none;
+  }
+  .dreamliner-journey .bay-scroll-cue > .mono {
+    font-size: 0.62rem;
+  }
+}
+
+.dreamliner-journey .bay-chapters {
+  z-index: 2;
+}
+@media (max-width: 800px) {
+  .dreamliner-journey[data-phase='roll'] .bay-scrim::after,
+  .dreamliner-journey[data-phase='liftoff'] .bay-scrim::after {
+    background: linear-gradient(
+      180deg,
+      #a7c7ebf2 0%,
+      #b9d7efee 30%,
+      #d6e8f373 35%,
+      transparent 41%
+    );
+  }
+}

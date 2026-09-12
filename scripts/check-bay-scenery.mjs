@@ -740,7 +740,7 @@ console.log(
       `Livery fragment carries ${needle}`,
     );
   assert.ok(
-    material.customProgramCacheKey().includes('livery-v5'),
+    material.customProgramCacheKey().includes('livery-v6'),
     'Livery patch keyed',
   );
   // The wave's edge is continuous with a matching slope where the fuselage
@@ -941,9 +941,7 @@ console.log(
     'Every bucket inside the tile pyramid has tiles',
   );
   assert.ok(
-    manifest.buckets
-      .slice(pyramidUntil)
-      .every((bucket) => bucket.length === 0),
+    manifest.buckets.slice(pyramidUntil).every((bucket) => bucket.length === 0),
     'Past the pyramid the ground falls back to the corridor layers and floor',
   );
   const ids = new Set([

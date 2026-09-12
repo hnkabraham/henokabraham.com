@@ -1,5 +1,17 @@
 # Scene assets
 
+
+## Current airborne Dreamliner showcase
+
+- `public/models/dreamliner-787-9.glb` (5,272,964 bytes, 105,622 triangles, ten material groups) derives from [FlightGear 787-family, commit 02626b5](https://github.com/IskenderWang/787-family/tree/02626b5b659d89b9399943ee167bbb0b46f0c871): `Models/787-9.ac`, `Models/GEnx.ac`, the matching 787-9 white paint map, GEnx texture and wing texture. **GPL-2.0**, authors as listed in upstream `Authors.md`; acknowledgements include Joshua W, Omega95, MSA-S23, Jonathan Redpath, Pilot2938 and the current maintainers.
+- `scripts/prepare-dreamliner.py --cache /path/to/source` fetches the pinned source if absent, preserves metre coordinates and AC3D crease normals/UVs, triangulates polygons, merges by material, removes deployed landing gear, duplicate fan blur discs and invisible compressor stacks, and encodes textures to WebP (maximum 4096²). The main fuselage map is resampled from its 8192² source. Both inlet fan assemblies retain 10,360 triangles each. Two fans rotate in the runtime; fuselage/wing finishes receive elastic flex and a fictional Henok Abraham livery. No flight-simulator code is executed.
+- `public/credits/dreamliner-source.zip` (9,919,754 bytes) contains the corresponding .blend/.ac editable source, original textures, author list, GPL-2.0 license and conversion script. `/credits/dreamliner.html` links it visibly from the active scene and footer; the aircraft derivative remains GPL-2.0.
+- The existing generated `cruise-sky.jpg` and `cloud-sprite.png` remain the background for the whole tour. Compositor animations pause offscreen and for reduced motion. The existing CC0 `scenery/daylight.hdr` supplies aircraft reflections. The active experience loads no terrain tiles or mapping service.
+
+## Preserved earlier scenery
+
+The sections below document assets retained from the SFO/Bay terrain implementation. They remain available for old source references but are not loaded by the airborne showcase.
+
 ## Boeing 787-9
 
 - Author: [Nobilis2](https://sketchfab.com/nobilishornet2).
