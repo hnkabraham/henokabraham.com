@@ -470,31 +470,33 @@
 }
 .bay-poster {
   position: absolute;
-  inset: -4%;
+  inset: -7%;
   background: url('/images/cruise-sky.jpg') center / cover;
-  animation: bay-sky-drift 60s ease-in-out infinite alternate;
+  animation: bay-sky-drift 32s linear infinite alternate;
+  animation-delay: -8s;
 }
 .bay-opening-cloud {
   position: absolute;
   background: url('/images/cloud-sprite.png') center / contain no-repeat;
-  animation: bay-cloud-drift 48s ease-in-out infinite alternate;
+  opacity: var(--cloud-opacity, 0.6);
+  animation: bay-cloud-drift 26s linear infinite;
 }
 .bay-opening-cloud-far {
-  width: clamp(330px, 48vw, 850px);
+  --cloud-opacity: 0.56;
+  width: clamp(360px, 48vw, 850px);
   aspect-ratio: 1.5;
-  left: -12%;
-  bottom: -12%;
-  opacity: 0.32;
-  animation-duration: 64s;
-  animation-delay: -24s;
+  left: -10%;
+  bottom: 7%;
+  animation-duration: 42s;
+  animation-delay: -22s;
 }
 .bay-opening-cloud-near {
-  width: clamp(420px, 58vw, 1100px);
+  --cloud-opacity: 0.82;
+  width: clamp(460px, 58vw, 1100px);
   aspect-ratio: 1.5;
   right: -16%;
-  bottom: -22%;
-  opacity: 0.48;
-  animation-delay: -10s;
+  bottom: -5%;
+  animation-delay: -8s;
 }
 .bay-poster,
 .bay-opening-cloud {
@@ -512,18 +514,32 @@
 }
 @keyframes bay-sky-drift {
   from {
-    transform: translate3d(-1.2%, 0.5%, 0);
+    transform: translate3d(-3%, 1%, 0);
   }
   to {
-    transform: translate3d(1.2%, -0.5%, 0);
+    transform: translate3d(3%, -1%, 0);
   }
 }
 @keyframes bay-cloud-drift {
-  from {
-    transform: translate3d(-4%, 1%, 0);
+  0% {
+    transform: translate3d(-28%, 4%, 0);
+    opacity: 0;
   }
-  to {
-    transform: translate3d(7%, -1.5%, 0);
+  12%,
+  88% {
+    opacity: var(--cloud-opacity);
+  }
+  100% {
+    transform: translate3d(30%, -4%, 0);
+    opacity: 0;
+  }
+}
+@media (max-width: 800px) {
+  .bay-opening-cloud-near {
+    bottom: 2%;
+  }
+  .bay-opening-cloud-far {
+    bottom: 15%;
   }
 }
 .bay-canvas canvas {
