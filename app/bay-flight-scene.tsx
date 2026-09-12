@@ -1,6 +1,12 @@
 'use client';
 import { sceneAsset } from '@/lib/scene-assets';
 import { recordFlightMetric } from '@/lib/flight-metrics';
+import {
+  createFlightPerformance,
+  createScrollPerformance,
+  flightPixelRatio,
+  followFlightProgress,
+} from '@/lib/bay-performance';
 
 import { useEffect, useRef, type RefObject } from 'react';
 import type { Material, Mesh, Texture, Group } from 'three';
@@ -242,16 +248,18 @@ export default function BayFlightScene(props: Props) {
       ]);
       if (disposed || !container) return;
       const mobile = container.clientWidth < 800;
+      const performanceControl = createFlightPerformance();
+      const scrollPerformance = createScrollPerformance();
       const renderer = new T.WebGLRenderer({
         antialias: true,
         powerPreference: 'high-performance',
       });
-      renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.4 : 1.7));
+      renderer.setPixelRatio(1);
       renderer.toneMapping = T.AgXToneMapping;
       renderer.toneMappingExposure = 0.94;
       renderer.outputColorSpace = T.SRGBColorSpace;
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = T.PCFSoftShadowMap;
+      renderer.shadowMap.type = T.PCFShadowMap;
       container.appendChild(renderer.domElement);
       const scene = new T.Scene();
       scene.background = new T.Color(0xb8d1e2);
@@ -271,7 +279,7 @@ export default function BayFlightScene(props: Props) {
       scene.add(skylight);
       const sun = new T.DirectionalLight(0xfff2df, 3.5);
       sun.castShadow = true;
-      sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
+      sun.shadow.mapSize.set(1024, 1024);
       Object.assign(sun.shadow.camera, {
         left: -65,
         right: 65,
@@ -366,10 +374,12 @@ export default function BayFlightScene(props: Props) {
         height = Math.max(1, container.clientHeight);
         // Bound HDR buffers on Retina/4K screens without changing composition.
         renderer.setPixelRatio(
-          Math.min(
+          flightPixelRatio(
+            width,
+            height,
             devicePixelRatio,
-            mobile ? 1.4 : 1.7,
-            Math.sqrt((mobile ? 1_250_000 : 4_000_000) / (width * height)),
+            mobile,
+            performanceControl.quality,
           ),
         );
         renderer.setSize(width, height);
@@ -444,7 +454,8 @@ export default function BayFlightScene(props: Props) {
       );
 
       // Actual terrain, registered to the satellite texture, in meter-scale space.
-      const segments = mobile ? 512 : 1024;
+      // A 94 m elevation mesh is sufficient beneath the high-resolution imagery.
+      const segments = 512;
       const terrainGeometry = new T.PlaneGeometry(
         48000,
         48000,
@@ -612,13 +623,28 @@ export default function BayFlightScene(props: Props) {
         layers.findIndex((layer) => layer.bounds === bounds);
       const variant = mobile ? '-mobile' : '';
       const lazyLayers: [number, string][] = [
-        [slotFor(SOUTH_BOUNDS), sceneAsset(`/scenery/naip-south${variant}.webp`)],
-        [slotFor(NORTH_BOUNDS), sceneAsset(`/scenery/naip-north${variant}.webp`)],
-        [slotFor(MARIN_BOUNDS), sceneAsset(`/scenery/naip-marin${variant}.webp`)],
+        [
+          slotFor(SOUTH_BOUNDS),
+          sceneAsset(`/scenery/naip-south${variant}.webp`),
+        ],
+        [
+          slotFor(NORTH_BOUNDS),
+          sceneAsset(`/scenery/naip-north${variant}.webp`),
+        ],
+        [
+          slotFor(MARIN_BOUNDS),
+          sceneAsset(`/scenery/naip-marin${variant}.webp`),
+        ],
       ];
       const lazyShades: [number, string][] = [
-        [slotFor(SOUTH_BOUNDS), sceneAsset(`/scenery/shade-south${variant}.webp`)],
-        [slotFor(NORTH_BOUNDS), sceneAsset(`/scenery/shade-north${variant}.webp`)],
+        [
+          slotFor(SOUTH_BOUNDS),
+          sceneAsset(`/scenery/shade-south${variant}.webp`),
+        ],
+        [
+          slotFor(NORTH_BOUNDS),
+          sceneAsset(`/scenery/shade-north${variant}.webp`),
+        ],
         [slotFor(SFO_BOUNDS), sceneAsset(`/scenery/shade-sfo${variant}.webp`)],
       ];
       const pavementMaps = [asphaltResult, normalResult, roughnessResult].map(
@@ -988,17 +1014,11 @@ export default function BayFlightScene(props: Props) {
       const cameraOffset = new T.Vector3();
       const target = new T.Vector3();
       const planePosition = new T.Vector3();
+      let lastTrafficUpdate = 0;
       function update(now: number, dt: number) {
         const reduced = latest.current.reducedMotion;
         const desired = reduced ? 1 : latest.current.progress.current;
-        // Follow the scroll with a short lag, but never faster than the flight
-        // can be watched: a flick through the page still flies for a few
-        // seconds, so ground detail, runway lights and the sky refresh never
-        // strobe past the camera.
-        const eased = currentP + (desired - currentP) * (1 - Math.exp(-dt * 8));
-        const step = Math.min(Math.abs(eased - currentP), dt * 0.22);
-        currentP = reduced ? 1 : currentP + Math.sign(eased - currentP) * step;
-        if (Math.abs(desired - currentP) < 0.000001) currentP = desired;
+        currentP = reduced ? 1 : followFlightProgress(currentP, desired, dt);
         surface.time.value = reduced ? 0 : now * 0.001;
         for (const index of fadingLayers) {
           const control = surface.layers[index];
@@ -1150,7 +1170,11 @@ export default function BayFlightScene(props: Props) {
           reduced ? 0 : Math.max(vortexSetting(currentP), stunt ? 1 : 0),
           now * 0.001,
         );
-        if (traffic && !reduced) traffic.update(now);
+        // Distant cars do not need thousands of matrix writes at display refresh rate.
+        if (traffic && !reduced && now - lastTrafficUpdate >= 1000 / 30) {
+          traffic.update(now);
+          lastTrafficUpdate = now;
+        }
       }
       function draw(dt: number) {
         if (rendering) rendering.render(planePosition, dt);
@@ -1267,11 +1291,10 @@ export default function BayFlightScene(props: Props) {
         'font-weight:700;color:#db4f24',
         'color:#47677a',
       );
-      // The corridor imagery, baked shadows, city and trees load after the
-      // first frame. Heavier variants wait for a short frame-time measurement
-      // so a weaker GPU gets the phone-sized city and canopy instead.
+      // The compact city keeps the skyline and large footprints; imagery
+      // supplies the smaller rooftops. Never enable 4.1M building triangles
+      // based on an opening measured before those buildings existed.
       let lazyStarted = false;
-      const frameSamples: number[] = [];
       const measuredFrames: number[] = [];
       let priorMeasuredFrame = 0;
       const yieldNow = () =>
@@ -1320,7 +1343,7 @@ export default function BayFlightScene(props: Props) {
         next.assign(next.texture);
         return true;
       }
-      function startLazyLoads(capable: boolean) {
+      function startLazyLoads() {
         if (lazyStarted || disposed) return;
         lazyStarted = true;
         for (const [index, url] of lazyLayers)
@@ -1354,7 +1377,7 @@ export default function BayFlightScene(props: Props) {
             const built = createTraffic(
               roads,
               { grid: elevation, size: gridSize },
-              { density: capable ? 1 : 0.45 },
+              { density: mobile ? 0.45 : 0.65 },
             );
             geometries.add(built.geometry);
             materials.add(built.material);
@@ -1370,7 +1393,7 @@ export default function BayFlightScene(props: Props) {
             surface.layers[index].shade.value = texture;
             fadingShades.add(index);
           });
-        const detail = capable ? '' : '-mobile';
+        const detail = '-mobile';
         void loadCityBuildings(
           sceneAsset(`/scenery/bay-buildings${detail}.bin.gz`),
           abort.signal,
@@ -1450,7 +1473,7 @@ export default function BayFlightScene(props: Props) {
       lazyTimer = setTimeout(() => {
         lazyDue = true;
         renderDirty = true;
-      }, 8000);
+      }, 500);
       function animate(now: number) {
         if (disposed) return;
         frame = requestAnimationFrame(animate);
@@ -1458,15 +1481,45 @@ export default function BayFlightScene(props: Props) {
         lastTime = now;
         const isVisible = visible && !document.hidden;
         const reduced = latest.current.reducedMotion;
-        if (!isVisible || reduced) priorMeasuredFrame = 0;
+        if (!isVisible || reduced) {
+          priorMeasuredFrame = 0;
+          performanceControl.reset();
+          scrollPerformance.reset();
+        }
         if (!isVisible) return;
-        // A tab hidden through the measurement window gets the desktop
-        // variants only where the texture limit allows them, as measured
-        // desktops do; the phone variants stay the phone default.
-        if (lazyDue && !lazyStarted)
-          startLazyLoads(
-            !mobile && renderer.capabilities.maxTextureSize >= 8192,
+        if (lazyDue && !lazyStarted) startLazyLoads();
+        if (ready && !reduced) {
+          const sample = performanceControl.sample(now);
+          if (sample?.changed) {
+            rendering?.setQuality(sample.quality);
+            const shadowSize = sample.quality === 0 ? 512 : 1024;
+            if (sun.shadow.mapSize.x !== shadowSize) {
+              sun.shadow.map?.dispose();
+              sun.shadow.map = null;
+              sun.shadow.mapSize.set(shadowSize, shadowSize);
+            }
+            resize();
+          }
+          if (sample && container && process.env.NODE_ENV !== 'production') {
+            container.dataset.flightPerformance = JSON.stringify({
+              ...sample,
+              progress: currentP,
+              pixelRatio: renderer.getPixelRatio(),
+              width: renderer.domElement.width,
+              height: renderer.domElement.height,
+            });
+          }
+          const scrollSample = scrollPerformance.sample(
+            now,
+            currentP,
+            Math.abs(latest.current.progress.current - currentP) > 0.0001,
           );
+          if (scrollSample) {
+            recordFlightMetric('scene_scroll_fps', scrollSample.fps);
+            recordFlightMetric('scene_scroll_p95_ms', scrollSample.p95);
+            recordFlightMetric('scene_scroll_jank_pct', scrollSample.jank);
+          }
+        }
         tiles?.update(currentP, now);
         if (tiles?.flush(now)) renderDirty = true;
         if (uploadPendingTexture()) renderDirty = true;
@@ -1486,18 +1539,6 @@ export default function BayFlightScene(props: Props) {
               (1000 * measuredFrames.length) /
                 measuredFrames.reduce((a, b) => a + b, 0),
             );
-        }
-        if (ready && !lazyStarted) {
-          frameSamples.push(dt);
-          if (frameSamples.length >= 45) {
-            const median = [...frameSamples].sort((a, b) => a - b)[22];
-            clearTimeout(lazyTimer);
-            startLazyLoads(
-              !mobile &&
-                median < 0.021 &&
-                renderer.capabilities.maxTextureSize >= 8192,
-            );
-          }
         }
       }
       frame = requestAnimationFrame(animate);

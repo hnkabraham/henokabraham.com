@@ -32,6 +32,9 @@ export function recordFlightMetric(
     | 'scene_ready_ms'
     | 'scene_unavailable'
     | 'scene_fps'
+    | 'scene_scroll_fps'
+    | 'scene_scroll_p95_ms'
+    | 'scene_scroll_jank_pct'
     | 'scene_asset_failure'
     | 'project_open',
   value: number,
@@ -40,7 +43,11 @@ export function recordFlightMetric(
   const count = counts.get(event) || 0;
   if (
     count >=
-    (event === 'scene_asset_failure' ? 3 : event === 'project_open' ? 10 : 1)
+    (event === 'scene_asset_failure' || event.startsWith('scene_scroll_')
+      ? 3
+      : event === 'project_open'
+        ? 10
+        : 1)
   )
     return;
   counts.set(event, count + 1);

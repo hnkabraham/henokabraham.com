@@ -136,6 +136,9 @@ export async function handleApi(
       'scene_ready_ms',
       'scene_unavailable',
       'scene_fps',
+      'scene_scroll_fps',
+      'scene_scroll_p95_ms',
+      'scene_scroll_jank_pct',
       'scene_asset_failure',
       'project_open',
     ];

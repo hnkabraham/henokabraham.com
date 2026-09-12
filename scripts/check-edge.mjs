@@ -142,6 +142,18 @@ try {
     204,
   );
   assert.equal(points.length, 1);
+  for (const event of [
+    'scene_scroll_fps',
+    'scene_scroll_p95_ms',
+    'scene_scroll_jank_pct',
+  ]) {
+    assert.equal(
+      (await handleApi(request('/api/metrics', { ...metric, event }), env))
+        .status,
+      204,
+    );
+    assert.equal(points.at(-1)[1], event);
+  }
   assert.equal(
     (
       await handleApi(

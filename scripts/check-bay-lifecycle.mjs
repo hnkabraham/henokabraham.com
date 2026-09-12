@@ -164,6 +164,8 @@ export async function checkBayLifecycle() {
     priorMeasuredFrame: 0,
     measuredFrames: [],
     recordFlightMetric() {},
+    performanceControl: { reset() {} },
+    scrollPerformance: { reset() {} },
     visible: false,
     document: { hidden: false },
     latest: { current: { reducedMotion: true, audio: { current: null } } },

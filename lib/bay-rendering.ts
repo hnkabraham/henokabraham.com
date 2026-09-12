@@ -1,4 +1,5 @@
 import { sceneAsset } from '@/lib/scene-assets';
+import type { FlightQuality } from './bay-performance';
 import {
   AerialPerspectiveEffect,
   PrecomputedTexturesGenerator,
@@ -176,20 +177,20 @@ export function createBayRendering(
   let disposed = false;
   const composer = new EffectComposer(renderer, {
     frameBufferType: HalfFloatType,
-    multisampling: Math.min(renderer.capabilities.maxSamples, mobile ? 2 : 4),
+    multisampling: Math.min(renderer.capabilities.maxSamples, 2),
   });
   renderer.toneMapping = NoToneMapping;
   composer.addPass(new RenderPass(scene, camera));
 
   const occlusion = new N8AOPostPass(scene, camera);
-  occlusion.setQualityMode(mobile ? 'Low' : 'Medium');
+  occlusion.setQualityMode('Low');
   Object.assign(occlusion.configuration, {
     aoRadius: 2.8,
     distanceFalloff: 1,
     intensity: 2,
     color: new Color(0x203345),
     gammaCorrection: false,
-    halfRes: mobile,
+    halfRes: true,
     depthAwareUpsampling: true,
     // Gear, fans and wings move even while the camera is stationary.
     accumulate: false,
@@ -201,7 +202,10 @@ export function createBayRendering(
   composer.addPass(occlusion);
   // Scene-space effects that distort the lit image (the engines' heat haze)
   // run before aerial perspective and bloom so the haze inherits both.
-  if (effects.length) composer.addPass(new EffectPass(camera, ...effects));
+  const detailPass = effects.length
+    ? new EffectPass(camera, ...effects)
+    : undefined;
+  if (detailPass) composer.addPass(detailPass);
 
   const sunDirection = sunlight.clone().transformDirection(BAY_TO_ECEF);
   const atmosphere = new AerialPerspectiveEffect(camera, {
@@ -268,6 +272,8 @@ export function createBayRendering(
   const pmrem = new PMREMGenerator(renderer);
   let environment: WebGLRenderTarget | null = null;
   let environmentFrozen = false;
+  let lightingElapsed = Infinity;
+  let quality: FlightQuality = 1;
   const environmentPosition = new Vector3(Infinity, Infinity, Infinity);
   const sunColor = new Color();
   const sunPosition = new Vector3();
@@ -402,9 +408,11 @@ export function createBayRendering(
     if (
       environment &&
       (environmentFrozen ||
+        lightingElapsed < (quality === 0 ? 1.5 : 0.75) ||
         !skyEnvironmentMoved(localPosition, environmentPosition))
     )
       return;
+    lightingElapsed = 0;
     environmentPosition.copy(localPosition);
     updateAtmosphereOrigin(
       skyMaterial.worldToECEFMatrix,
@@ -434,10 +442,22 @@ export function createBayRendering(
         environmentFrozen = frozen;
       },
     },
+    setQuality(next: FlightQuality) {
+      if (quality === next) return;
+      quality = next;
+      occlusion.enabled = next > 0;
+      if (detailPass) detailPass.enabled = next > 0;
+      // Preserve the atmosphere and colour grade at every quality level.
+      composer.multisampling = Math.min(
+        renderer.capabilities.maxSamples,
+        next === 0 ? 0 : 2,
+      );
+    },
     resize(width: number, height: number) {
       composer.setSize(width, height);
     },
     render(localPosition: Vector3, dt: number) {
+      lightingElapsed += dt;
       updateAtmosphereOrigin(
         atmosphere.worldToECEFMatrix,
         localPosition,
