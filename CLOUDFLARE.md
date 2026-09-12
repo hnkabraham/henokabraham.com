@@ -54,7 +54,7 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `3ce8dbb7-d85a-415e-970b-720377c68332`
+- Cloudflare version: `3c1e482b-afc1-4e78-8e7a-0691ecb8ff43`
 - Verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
@@ -118,3 +118,7 @@ The production schema was applied before the first D1-backed deployment. Do not 
 ## Review fixes deployed
 
 Source commit `3bbe137` fixes whole-image/shade bitmap orientation, gives chapter navigation an opaque high-contrast surface with visible focus and active states, restores the sampler-budget check, and makes self-monitoring use public routing. Desktop and 390 × 844 browser checks, TypeScript, rendering/scenery/flight checks, edge/metric checks, the deployment dry run, and the built scheduled handler passed. The public-routing flag was read back from the deployed Worker; a fresh public project check was published to KV to clear the older error immediately. No database schema or runtime secret changed.
+
+## Adaptive flight performance deployed
+
+Source commit `742f298` adds sustained frame-time quality adjustment, compact desktop scenery, half-resolution AO, bounded lighting refreshes, and faster scroll following. Desktop terrain/building triangles fall 76.5%; the tested full-route easing settles within 1.6 seconds at 30/60/120 Hz. TypeScript, lint, performance/rendering/lifecycle/scenery/flight checks, edge/metric checks, and the Cloudflare dry run passed. Local 1280 × 720 and 390 × 844 browser checks rendered without console warnings or errors, with roughly 120 FPS in sampled settled opening/climb/Bay windows on the test computer. Phone-sized viewport checks are not physical-phone benchmarks or a controlled before/after FPS comparison. The live homepage and APIs returned 200; both changed application/rendering chunks matched local SHA-256 hashes after deployment. New moving-frame telemetry uses the existing D1 schema.
