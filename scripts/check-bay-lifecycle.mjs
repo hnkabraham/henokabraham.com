@@ -168,7 +168,13 @@ export async function checkBayLifecycle() {
     scrollPerformance: { reset() {} },
     visible: false,
     document: { hidden: false },
-    latest: { current: { reducedMotion: true, audio: { current: null } } },
+    latest: {
+      current: {
+        reducedMotion: true,
+        reveal: { current: 1 },
+        audio: { current: null },
+      },
+    },
     renderDirty: true,
     previousP: 1,
     currentP: 1,
@@ -212,6 +218,14 @@ export async function checkBayLifecycle() {
     'Offscreen work is suspended',
   );
   context.visible = true;
+  context.latest.current.reveal.current = 0;
+  vm.runInContext('animate(1008)', context);
+  assert.deepEqual(
+    counts,
+    { update: 0, upload: 0, texture: 0, draw: 0, schedule: 0 },
+    'The sky opening does not render or upload the covered 3D scene',
+  );
+  context.latest.current.reveal.current = 1;
   vm.runInContext('animate(1016); animate(1032)', context);
   assert.equal(
     counts.draw,

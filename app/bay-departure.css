@@ -446,10 +446,85 @@
     animation: none;
   }
 }
-.bay-poster {
+/* A compositor-only opening: the same blue sky, with two depths of clouds. */
+.bay-opening-sky {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #82b9df;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.65s ease,
+    visibility 0s;
+}
+.bay-journey[data-status='ready'] .bay-opening-sky {
+  opacity: calc(1 - var(--flight-reveal, 0));
+}
+.bay-journey[data-status='ready'][data-opening='false'] .bay-opening-sky {
+  visibility: hidden;
+  transition:
+    opacity 0.65s ease,
+    visibility 0s 0.65s;
+}
+.bay-poster {
+  position: absolute;
+  inset: -4%;
   background: url('/images/cruise-sky.jpg') center / cover;
+  animation: bay-sky-drift 60s ease-in-out infinite alternate;
+}
+.bay-opening-cloud {
+  position: absolute;
+  background: url('/images/cloud-sprite.png') center / contain no-repeat;
+  animation: bay-cloud-drift 48s ease-in-out infinite alternate;
+}
+.bay-opening-cloud-far {
+  width: clamp(330px, 48vw, 850px);
+  aspect-ratio: 1.5;
+  left: -12%;
+  bottom: -12%;
+  opacity: 0.32;
+  animation-duration: 64s;
+  animation-delay: -24s;
+}
+.bay-opening-cloud-near {
+  width: clamp(420px, 58vw, 1100px);
+  aspect-ratio: 1.5;
+  right: -16%;
+  bottom: -22%;
+  opacity: 0.48;
+  animation-delay: -10s;
+}
+.bay-poster,
+.bay-opening-cloud {
+  animation-play-state: paused;
+}
+.bay-journey[data-sky-active='true']:not([data-opening='false']):not(
+    [data-reduced='true']
+  )
+  .bay-poster,
+.bay-journey[data-sky-active='true']:not([data-opening='false']):not(
+    [data-reduced='true']
+  )
+  .bay-opening-cloud {
+  animation-play-state: running;
+}
+@keyframes bay-sky-drift {
+  from {
+    transform: translate3d(-1.2%, 0.5%, 0);
+  }
+  to {
+    transform: translate3d(1.2%, -0.5%, 0);
+  }
+}
+@keyframes bay-cloud-drift {
+  from {
+    transform: translate3d(-4%, 1%, 0);
+  }
+  to {
+    transform: translate3d(7%, -1.5%, 0);
+  }
 }
 .bay-canvas canvas {
   position: absolute;

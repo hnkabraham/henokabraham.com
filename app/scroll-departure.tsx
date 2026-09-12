@@ -16,6 +16,7 @@ import {
 import { createBayAudio } from '@/lib/bay-audio';
 import BayFlightScene from './bay-flight-scene';
 import { recordFlightMetric } from '@/lib/flight-metrics';
+import { openingSkyReveal } from '@/lib/bay-performance';
 import { replaceFlightLink } from '@/lib/flight-links';
 import {
   departureAnnotationAt,
@@ -50,6 +51,21 @@ const copy: Record<BayPhase, [string, string, string]> = {
   ],
 };
 
+function updateOpening(
+  section: HTMLElement,
+  progress: number,
+  staticSky: boolean,
+) {
+  const reveal = staticSky
+    ? 0
+    : openingSkyReveal(
+        progress * Math.max(1, section.offsetHeight - innerHeight),
+      );
+  section.style.setProperty('--flight-reveal', String(reveal));
+  section.dataset.opening = String(reveal < 1);
+  return reveal;
+}
+
 export default function ScrollDeparture({
   reducedMotion,
   entry,
@@ -59,6 +75,7 @@ export default function ScrollDeparture({
 }) {
   const root = useRef<HTMLElement>(null);
   const progress = useRef(0);
+  const reveal = useRef(0);
   const audio = useRef<ReturnType<typeof createBayAudio> | null>(null);
   const [phase, setPhase] = useState<BayPhase>('preflight');
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>(
@@ -89,11 +106,31 @@ export default function ScrollDeparture({
               Math.max(1, section.offsetHeight - innerHeight),
           );
     }
+    reveal.current = updateOpening(section, progress.current, reducedMotion);
     setPhase(sampleBayFlight(progress.current).phase);
     // Mount the renderer only after the shared chapter has seeded its ref.
     setSceneReady(true);
   }, [entry, reducedMotion]);
   useEffect(() => () => audio.current?.dispose(), []);
+  useEffect(() => {
+    const section = root.current;
+    if (!section) return;
+    let visible = true;
+    const activity = () => {
+      section.dataset.skyActive = String(visible && !document.hidden);
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      activity();
+    });
+    observer.observe(section);
+    document.addEventListener('visibilitychange', activity);
+    activity();
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', activity);
+    };
+  }, []);
   // The scene announces found easter eggs; show each for a few seconds.
   useEffect(() => {
     let timer = 0;
@@ -136,6 +173,11 @@ export default function ScrollDeparture({
               -rect.top / Math.max(1, section.offsetHeight - innerHeight),
             );
       section.style.setProperty('--flight-progress', String(progress.current));
+      reveal.current = updateOpening(
+        section,
+        progress.current,
+        reducedMotion || status === 'unavailable',
+      );
       const currentPhase = sampleBayFlight(progress.current).phase;
       setPhase(currentPhase);
       setAnnotation(
@@ -188,6 +230,7 @@ export default function ScrollDeparture({
         {sceneReady && (
           <BayFlightScene
             progress={progress}
+            reveal={reveal}
             reducedMotion={reducedMotion}
             audio={audio}
             onStatus={(value) => {
@@ -199,6 +242,11 @@ export default function ScrollDeparture({
             }}
           />
         )}
+        <div className="bay-opening-sky" aria-hidden="true">
+          <div className="bay-poster" />
+          <div className="bay-opening-cloud bay-opening-cloud-far" />
+          <div className="bay-opening-cloud bay-opening-cloud-near" />
+        </div>
         <div className="bay-scrim" />
         <div className="bay-flight-label mono">
           <span className="bay-live-dot" /> H.A / BOEING 787–9{' '}

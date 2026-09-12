@@ -19,6 +19,12 @@ export function flightPixelRatio(
   );
 }
 
+/** Keep the first 48 px in the sky; reveal the runway over the next 180 px. */
+export function openingSkyReveal(scrollDistance: number) {
+  const t = Math.min(1, Math.max(0, (scrollDistance - 48) / 180));
+  return t * t * (3 - 2 * t);
+}
+
 /** A short, frame-rate-independent ease, with a 1.25 s full-route speed limit. */
 export function followFlightProgress(
   current: number,

@@ -62,6 +62,7 @@ import type { createBayAudio } from '@/lib/bay-audio';
 
 type Props = {
   progress: RefObject<number>;
+  reveal: RefObject<number>;
   reducedMotion: boolean;
   audio: RefObject<ReturnType<typeof createBayAudio> | null>;
   onStatus: (value: 'loading' | 'ready' | 'unavailable') => void;
@@ -1481,12 +1482,16 @@ export default function BayFlightScene(props: Props) {
         lastTime = now;
         const isVisible = visible && !document.hidden;
         const reduced = latest.current.reducedMotion;
-        if (!isVisible || reduced) {
+        const revealed = latest.current.reveal.current > 0;
+        if (!isVisible || reduced || !revealed) {
           priorMeasuredFrame = 0;
           performanceControl.reset();
           scrollPerformance.reset();
         }
-        if (!isVisible) return;
+        if (!isVisible || !revealed) {
+          if (!revealed) latest.current.audio.current?.update(currentP, false);
+          return;
+        }
         if (lazyDue && !lazyStarted) startLazyLoads();
         if (ready && !reduced) {
           const sample = performanceControl.sample(now);
@@ -1555,9 +1560,5 @@ export default function BayFlightScene(props: Props) {
       }
     };
   }, []);
-  return (
-    <div className="bay-canvas" ref={host} aria-hidden="true">
-      <div className="bay-poster" />
-    </div>
-  );
+  return <div className="bay-canvas" ref={host} aria-hidden="true" />;
 }
