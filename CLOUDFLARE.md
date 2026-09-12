@@ -54,9 +54,9 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `81624ffd-7c43-4f80-ae2c-6fe106e0e4ac`
+- Cloudflare version: `3ce8dbb7-d85a-415e-970b-720377c68332`
 - Verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Authentication for the initial upload was passed through process memory; the Global API Key was not written into the repository or credential file.
+- Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
 
 ## Zone settings that affect the opening
@@ -114,3 +114,7 @@ npx wrangler d1 execute FLIGHT_STATS --remote --config dist/server/wrangler.json
 ```
 
 The production schema was applied before the first D1-backed deployment. Do not run database initialization against an unrelated database.
+
+## Review fixes deployed
+
+Source commit `3bbe137` fixes whole-image/shade bitmap orientation, gives chapter navigation an opaque high-contrast surface with visible focus and active states, restores the sampler-budget check, and makes self-monitoring use public routing. Desktop and 390 × 844 browser checks, TypeScript, rendering/scenery/flight checks, edge/metric checks, the deployment dry run, and the built scheduled handler passed. The public-routing flag was read back from the deployed Worker; a fresh public project check was published to KV to clear the older error immediately. No database schema or runtime secret changed.
