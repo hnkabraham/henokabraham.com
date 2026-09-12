@@ -68,6 +68,12 @@ export default defineConfig(async ({ command }) => {
           ...localBindingConfig,
           ...(directCloudflare
             ? {
+                // The scheduled homepage check must reach the public Worker,
+                // rather than bypass it for the zone's nonexistent origin.
+                compatibility_flags: [
+                  'nodejs_compat',
+                  'global_fetch_strictly_public',
+                ],
                 workers_dev: true,
                 kv_namespaces: [
                   {

@@ -128,29 +128,44 @@
 }
 .bay-chapters {
   position: absolute;
-  right: 4.5%;
+  right: 24px;
   top: 37%;
   display: flex;
   flex-direction: column;
-  gap: 19px;
+  gap: 4px;
+  padding: 6px;
+  background: #f4f8fa;
+  border: 1px solid #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px #112f4724;
 }
 .bay-chapters button {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 8px;
   background: transparent;
   border: 0;
-  padding: 4px 0;
-  color: #45667a;
-  font-size: 0.75rem;
+  border-radius: 7px;
+  padding: 8px 10px;
+  color: #244354;
+  font-size: 0.875rem;
   text-align: right;
   justify-content: end;
 }
+.bay-chapters button:hover {
+  background: #dce8ef;
+}
+.bay-chapters button:focus-visible {
+  outline: 2px solid #173c50;
+  outline-offset: 2px;
+}
 .bay-chapters button span:nth-child(2) {
   width: 76px;
+  font-family: var(--font-geist-sans), sans-serif;
+  white-space: nowrap;
 }
 .bay-chapters button span:first-child {
-  opacity: 0.45;
+  opacity: 0.85;
 }
 .bay-chapters button i {
   height: 1px;
@@ -160,7 +175,8 @@
   transition: width 0.3s;
 }
 .bay-chapters button[aria-current='step'] {
-  color: #a4502c;
+  color: #ffffff;
+  background: #173c50;
 }
 .bay-chapters button[aria-current='step'] i {
   width: 32px;
@@ -368,18 +384,24 @@
     left: 7%;
     right: 7%;
     flex-direction: row;
-    gap: 0;
+    gap: 4px;
+    padding: 4px;
     justify-content: space-between;
   }
   .bay-chapters button {
-    padding-block: 10px;
-    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    padding: 10px 4px;
+    justify-content: center;
+  }
+  .bay-chapters button span:first-child {
+    opacity: 1;
   }
   .bay-chapters button span:nth-child(2) {
     display: none;
   }
   .bay-chapters button i {
-    width: 19px;
+    display: none;
   }
   .bay-chapters button[aria-current='step'] i {
     width: 26px;

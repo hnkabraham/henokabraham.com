@@ -216,7 +216,7 @@ console.log(
         .includes(((edge * edge * 4) / 2 ** 20).toFixed(1)),
     );
   }
-  assert.ok(featured.features.join(' ').includes('15 of the 16'));
+  assert.match(featured.features.join(' '), /uses all 16 fragment samplers/);
   for (const project of ids)
     for (const chapter of BAY_CHAPTERS) {
       const path = flightLink(new URL('https://example.test/?keep=1#flight'), {
@@ -336,9 +336,11 @@ console.log(
     'utf8',
   );
   assert.ok(
-    css.replace(/\s+/g, ' ').includes(
-      '(max-width: 1100px), (max-height: 700px), (prefers-reduced-motion: reduce)',
-    ),
+    css
+      .replace(/\s+/g, ' ')
+      .includes(
+        '(max-width: 1100px), (max-height: 700px), (prefers-reduced-motion: reduce)',
+      ),
   );
   console.log(
     'content check: measured project budgets, every project/chapter URL round trip, replace-only history, sparse scene annotations and honest logbook seeds',

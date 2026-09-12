@@ -1290,6 +1290,9 @@ export default function BayFlightScene(props: Props) {
           })
           .then((buffer) =>
             createImageBitmap(new Blob([buffer]), {
+              // Match TextureLoader's north-up UVs. ImageBitmap ignores
+              // Texture.flipY, so imagery and baked shade must flip here.
+              imageOrientation: 'flipY',
               premultiplyAlpha: 'none',
               colorSpaceConversion: 'none',
             }),

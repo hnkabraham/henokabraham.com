@@ -81,6 +81,7 @@ const config = JSON.parse(readFileSync(configPath, 'utf8'));
 if (
   config.name !== 'henokabraham-com' ||
   config.workers_dev !== true ||
+  !config.compatibility_flags?.includes('global_fetch_strictly_public') ||
   !config.assets?.directory
 ) {
   throw new Error('Unexpected Worker build target. Deployment stopped.');

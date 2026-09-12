@@ -1,7 +1,12 @@
 import { Miniflare } from 'miniflare';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+const config = JSON.parse(await readFile('dist/server/wrangler.json', 'utf8'));
+assert.ok(
+  config.compatibility_flags.includes('global_fetch_strictly_public'),
+  'Homepage monitoring must use public routing',
+);
 const paths = await readdir(resolve('dist/server'), { recursive: true });
 const modules = [
   'index.js',
@@ -10,8 +15,8 @@ const modules = [
 const mf = new Miniflare({
   modules,
   modulesRoot: resolve('dist/server'),
-  compatibilityDate: '2026-05-15',
-  compatibilityFlags: ['nodejs_compat'],
+  compatibilityDate: config.compatibility_date,
+  compatibilityFlags: config.compatibility_flags,
   kvNamespaces: ['LIVE_DATA'],
 });
 try {
@@ -23,6 +28,11 @@ try {
   const projects = await kv.get('projects:v1', 'json');
   assert.equal(weather?.station, 'KSFO');
   assert.equal(projects?.projects.length, 5);
+  assert.equal(
+    projects.projects.find((project) => project.id === 'bay-departure')
+      ?.reachable,
+    true,
+  );
   console.log(
     'Built Worker scheduled handler passed: KSFO weather and five project records written to local KV.',
   );
