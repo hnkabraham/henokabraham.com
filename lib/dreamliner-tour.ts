@@ -72,12 +72,16 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     mix(14, 0, arrival),
     mix(-65, 0, arrival),
   ];
+  // The Devices stop puts the forward fuselage, titles and all, behind the
+  // story column on a wide screen. Slide the frame right there so the
+  // headline sits on sky while the wing root stays inside the frame.
+  const devices = ease((p - 0.49) / 0.05) * (1 - ease((p - 0.66) / 0.05));
   return {
     camera,
     target,
     aircraft,
     fov: mix(a.fov, b.fov, t),
-    offsetX: mix(-0.18, 0, portrait),
+    offsetX: mix(-0.18 - 0.18 * devices, 0, portrait),
     offsetY: mix(-0.035, -0.12 + 0.1 * engineFocus, portrait),
     bank: mix(-0.08, 0.025, arrival) + Math.sin(p * Math.PI * 2) * 0.025,
     visible: p > 0.025,

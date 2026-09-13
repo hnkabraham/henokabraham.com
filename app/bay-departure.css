@@ -191,7 +191,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  color: #eef4f6;
+  /* Dark ink in every phase: the opening puts these controls on white cloud
+     tops with no scrim behind them, where the old near-white read at 1.9:1. */
+  color: #21465f;
 }
 .bay-scroll-cue {
   display: flex;
@@ -247,29 +249,6 @@
 .bay-loading {
   font-size: 0.75rem;
   opacity: 0.7;
-}
-.bay-toast {
-  position: absolute;
-  left: 50%;
-  bottom: 96px;
-  transform: translateX(-50%);
-  max-width: min(520px, 86vw);
-  padding: 9px 16px;
-  border-radius: 999px;
-  background: #16344899;
-  color: #f2f6f8;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  text-align: center;
-  backdrop-filter: blur(8px);
-  animation: bay-toast 0.45s both;
-  pointer-events: none;
-}
-@keyframes bay-toast {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 8px);
-  }
 }
 .bay-progress {
   position: absolute;
@@ -772,6 +751,15 @@
   h1 {
   font-size: clamp(2.8rem, 4.4vw, 5rem);
   letter-spacing: -0.065em;
+}
+/* The fuselage titles pass behind the headline at the Apps and Devices
+   stops; a soft white halo keeps the two lines of lettering apart. */
+.dreamliner-journey[data-phase='roll'] .bay-story h1,
+.dreamliner-journey[data-phase='liftoff'] .bay-story h1 {
+  text-shadow:
+    0 0 2px #ffffffe6,
+    0 0 14px #ffffffcc,
+    0 2px 34px #ffffff99;
 }
 .dreamliner-journey .bay-bottom {
   color: #21465f;

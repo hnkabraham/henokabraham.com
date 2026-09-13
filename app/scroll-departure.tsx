@@ -41,16 +41,15 @@ const copy: Record<BayPhase, [string, string, string]> = {
   cruise: ['04 / KEEP EXPLORING', 'Made with\ncuriosity.', 'Explore the rest.'],
 };
 
+// `travel` is the section's scrollable height, measured by the caller before
+// any style write so a scroll frame lays out once rather than twice.
 function updateOpening(
   section: HTMLElement,
   progress: number,
   staticSky: boolean,
+  travel: number,
 ) {
-  const reveal = staticSky
-    ? 0
-    : openingSkyReveal(
-        progress * Math.max(1, section.offsetHeight - innerHeight),
-      );
+  const reveal = staticSky ? 0 : openingSkyReveal(progress * travel);
   section.style.setProperty('--flight-reveal', String(reveal));
   section.dataset.opening = String(reveal < 1);
   return reveal;
@@ -76,11 +75,11 @@ export default function ScrollDeparture({
     'loading',
   );
   const [sound, setSound] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   useLayoutEffect(() => {
     const section = root.current;
     if (!section || !entry) return;
+    const travel = Math.max(1, section.offsetHeight - innerHeight);
     const chapter = TOUR_CHAPTERS.find((item) => item.phase === entry.chapter);
     if (chapter && !reducedMotion) {
       progress.current = chapter.at;
@@ -97,7 +96,12 @@ export default function ScrollDeparture({
               Math.max(1, section.offsetHeight - innerHeight),
           );
     }
-    reveal.current = updateOpening(section, progress.current, reducedMotion);
+    reveal.current = updateOpening(
+      section,
+      progress.current,
+      reducedMotion,
+      travel,
+    );
     setPhase(tourPhase(progress.current));
     // Mount the renderer only after the shared chapter has seeded its ref.
     setSceneReady(true);
@@ -124,21 +128,6 @@ export default function ScrollDeparture({
       document.removeEventListener('visibilitychange', activity);
     };
   }, [paused]);
-  // The scene announces found easter eggs; show each for a few seconds.
-  useEffect(() => {
-    let timer = 0;
-    const onEgg = (event: Event) => {
-      const { message } = (event as CustomEvent<{ message: string }>).detail;
-      setToast(message);
-      clearTimeout(timer);
-      timer = window.setTimeout(() => setToast(null), 4200);
-    };
-    addEventListener('bay-easter-egg', onEgg);
-    return () => {
-      clearTimeout(timer);
-      removeEventListener('bay-easter-egg', onEgg);
-    };
-  }, []);
   const toggleSound = () => {
     if (audio.current) {
       audio.current.dispose();
@@ -158,18 +147,18 @@ export default function ScrollDeparture({
     if (!section || !sceneReady) return;
     let frame = 0;
     const update = () => {
+      // All reads first: a write between them would force a second layout on
+      // every scroll frame, in a document with a 420svh section.
       const rect = section.getBoundingClientRect();
-      progress.current =
-        reducedMotion || status === 'unavailable'
-          ? 1
-          : clamp01(
-              -rect.top / Math.max(1, section.offsetHeight - innerHeight),
-            );
+      const travel = Math.max(1, section.offsetHeight - innerHeight);
+      const staticSky = reducedMotion || status === 'unavailable';
+      progress.current = staticSky ? 1 : clamp01(-rect.top / travel);
       section.style.setProperty('--flight-progress', String(progress.current));
       reveal.current = updateOpening(
         section,
         progress.current,
-        reducedMotion || status === 'unavailable',
+        staticSky,
+        travel,
       );
       const currentPhase = tourPhase(progress.current);
       setPhase(currentPhase);
@@ -199,7 +188,7 @@ export default function ScrollDeparture({
     if (!section) return;
     const top = scrollY + section.getBoundingClientRect().top;
     scrollTo({
-      top: top + position * (section.offsetHeight - innerHeight),
+      top: top + position * Math.max(0, section.offsetHeight - innerHeight),
       behavior: reducedMotion ? 'instant' : 'smooth',
     });
   };
@@ -225,8 +214,15 @@ export default function ScrollDeparture({
               setStatus(value);
               if (value === 'ready')
                 recordFlightMetric('scene_ready_ms', performance.now());
-              if (value === 'unavailable')
+              if (value === 'unavailable') {
                 recordFlightMetric('scene_unavailable', 1);
+                // A lost context stops the loop that drives the ambience, so
+                // close it rather than leave a silent context running behind
+                // a disabled button that still reads ON.
+                audio.current?.dispose();
+                audio.current = null;
+                setSound(false);
+              }
             }}
           />
         )}
@@ -350,7 +346,9 @@ export default function ScrollDeparture({
             )}
             <button
               className="mono"
-              disabled={status !== 'ready'}
+              // The render loop sets the ambience level, and the static sky
+              // has no loop: without one the button would only ever be silent.
+              disabled={status !== 'ready' || reducedMotion}
               aria-pressed={sound}
               onClick={toggleSound}
             >
@@ -367,9 +365,6 @@ export default function ScrollDeparture({
             </button>
           </div>
         </div>
-        <output className="bay-toast mono" hidden={!toast} aria-live="polite">
-          {toast}
-        </output>
         <div className="bay-source-note">
           <a
             href="/credits/dreamliner.html"
