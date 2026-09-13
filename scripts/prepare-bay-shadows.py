@@ -6,7 +6,7 @@
 For each imagery layer a height field is built from the terrain grid plus
 every building footprint (the corridor city and the airport set), then the
 scene's fixed sun direction is marched through it. The result is written as
-public/scenery/shade-<layer>.webp: red is the direct-sun factor, green the
+archive/scenery/shade-<layer>.webp: red is the direct-sun factor, green the
 fraction of sky visible, sampled by lib/bay-surface.ts through the same
 Web Mercator projection as the imagery. Building masks for the tree scatter
 are left in the cache.
@@ -37,8 +37,8 @@ SIZE = 4096
 # The scene's sun: local east/up/south components (app/bay-flight-scene.tsx).
 SUN = np.array([-0.66, 0.44, 0.61])
 SUN /= np.linalg.norm(SUN)
-ELEVATION_GRID = ROOT / 'public/scenery/bay-elevation.webp'
-SFO_BUILDINGS = ROOT / 'public/scenery/sfo-buildings.json'
+ELEVATION_GRID = ROOT / 'archive/scenery/bay-elevation.webp'
+SFO_BUILDINGS = ROOT / 'archive/scenery/sfo-buildings.json'
 
 
 def terrain_grid():
@@ -162,7 +162,7 @@ def bake(name, bounds, cache, grid, footprints):
     image = np.stack([lit, sky, np.full_like(lit, 0.5)], axis=-1)
     image = Image.fromarray((np.clip(image, 0, 1) * 255).astype(np.uint8), 'RGB')
     image = image.filter(ImageFilter.GaussianBlur(0.8))
-    target = ROOT / 'public/scenery'
+    target = ROOT / 'archive/scenery'
     image.save(target / f'shade-{name}.webp', 'WEBP', quality=60, method=6)
     image.resize((2048, 2048), Image.LANCZOS).save(target / f'shade-{name}-mobile.webp', 'WEBP', quality=58, method=6)
     Image.fromarray((building > 0).astype(np.uint8) * 255, 'L').save(pathlib.Path(cache) / f'buildings-{name}.png')

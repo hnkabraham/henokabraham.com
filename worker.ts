@@ -64,8 +64,9 @@ const worker = {
       });
       if (api) return api;
       const page = await handler.fetch(request, env, ctx);
+      // HEAD must describe the same response GET would send, policy included.
       if (
-        request.method !== 'GET' ||
+        !['GET', 'HEAD'].includes(request.method) ||
         !page.headers.get('content-type')?.includes('text/html')
       )
         return page;

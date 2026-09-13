@@ -15,7 +15,7 @@ const { sampleBayFlight, sampleBayCamera, BAY_CHAPTERS, RUNWAY_HEADING } =
     `data:text/javascript;base64,${Buffer.from(js).toString('base64')}`
   );
 const bytes = await fs.readFile(
-  new URL('../public/models/boeing-787-9.glb', import.meta.url),
+  new URL('../archive/models/boeing-787-9.glb', import.meta.url),
 );
 // Only image decoding is stubbed: geometry, hierarchy, materials and axes parse normally.
 const loader = new GLTFLoader().register(() => ({
@@ -140,7 +140,7 @@ for (const [width, height] of [
   );
 }
 const elevation = await fs.readFile(
-  new URL('../public/scenery/bay-elevation.webp', import.meta.url),
+  new URL('../archive/scenery/bay-elevation.webp', import.meta.url),
 );
 // Lossless WebP (VP8L): RIFF header, then a 14-bit width-1 and height-1.
 assert.equal(elevation.toString('latin1', 0, 4), 'RIFF');

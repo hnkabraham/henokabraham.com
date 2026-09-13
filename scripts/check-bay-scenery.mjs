@@ -104,7 +104,7 @@ const { MARIN_BOUNDS, NORTH_BOUNDS } = await import(surfaceURL);
 const { GOLDEN_GATE, mercatorToLocal, mercator } = await import(surfaceURL);
 const data = JSON.parse(
   await fs.readFile(
-    new URL('../public/scenery/sfo-buildings.json', import.meta.url),
+    new URL('../archive/scenery/sfo-buildings.json', import.meta.url),
   ),
 );
 // Elevation is decoded from a lossless WebP in the browser; the batching is
@@ -619,7 +619,7 @@ console.log(
 {
   const airfield = JSON.parse(
     await fs.readFile(
-      new URL('../public/scenery/sfo-airfield.json', import.meta.url),
+      new URL('../archive/scenery/sfo-airfield.json', import.meta.url),
     ),
   );
   const main = airfield.runways.find((r) => r.ref === '10L/28R');
@@ -860,19 +860,19 @@ console.log(
   assert.ok(
     (
       await fs.stat(
-        new URL('../public/scenery/naip-marin.webp', import.meta.url),
+        new URL('../archive/scenery/naip-marin.webp', import.meta.url),
       )
     ).size > 1e6,
     'North-bay imagery shipped',
   );
   assert.ok(
-    (await fs.stat(new URL('../public/scenery/sf-bay.webp', import.meta.url)))
+    (await fs.stat(new URL('../archive/scenery/sf-bay.webp', import.meta.url)))
       .size > 1e6,
     'Desktop base map shipped',
   );
   const roads = JSON.parse(
     await fs.readFile(
-      new URL('../public/scenery/bay-roads.json', import.meta.url),
+      new URL('../archive/scenery/bay-roads.json', import.meta.url),
     ),
   );
   assert.ok(
@@ -920,7 +920,7 @@ console.log(
 {
   const manifest = JSON.parse(
     await fs.readFile(
-      new URL('../public/tiles/manifest.json', import.meta.url),
+      new URL('../archive/tiles/manifest.json', import.meta.url),
     ),
   );
   assert.equal(
@@ -970,7 +970,7 @@ console.log(
     tileBytes += (
       await fs.stat(
         new URL(
-          `../public/tiles/${tileLevel(id)}-${tileX(id)}-${tileY(id)}.webp`,
+          `../archive/tiles/${tileLevel(id)}-${tileX(id)}-${tileY(id)}.webp`,
           import.meta.url,
         ),
       )
@@ -985,7 +985,7 @@ console.log(
       (
         await fs.stat(
           new URL(
-            `../public/tiles/${tileLevel(id)}-${tileX(id)}-${tileY(id)}.webp`,
+            `../archive/tiles/${tileLevel(id)}-${tileX(id)}-${tileY(id)}.webp`,
             import.meta.url,
           ),
         )

@@ -16,7 +16,7 @@ page. The coarsest level over the whole region (with the next level along the
 corridor) is a permanent floor, and the 2.4 m level over the airport square
 is wanted while the aircraft is low, so the ground never falls back to the
 10 m base map. The result is
-public/tiles/manifest.json: per bucket, the tile ids to have resident,
+archive/tiles/manifest.json: per bucket, the tile ids to have resident,
 coarse first, plus the floor and airport sets.
 
 `build` fetches the two finest levels from San Mateo County's 2022
@@ -24,7 +24,7 @@ orthoimagery service (0.5 ft source, reprojected by the service) in blocks
 of 15 × 15 tiles with a border margin, fills the county's coverage gaps
 and takes the two coarser levels from USGS NAIP, matches the county tone
 to the NAIP corridor layer with one per-channel linear fit, and writes
-public/tiles/<level>-<x>-<y>.webp with 4 px borders for filtering.
+archive/tiles/<level>-<x>-<y>.webp with 4 px borders for filtering.
 """
 import argparse
 import io

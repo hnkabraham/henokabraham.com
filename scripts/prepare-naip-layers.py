@@ -5,7 +5,7 @@ Usage: python3 scripts/prepare-naip-layers.py /path/to/tile-cache [layer ...]
 Each layer is requested from the USGS NAIP ImageServer credited in ASSETS.md as
 a 4 × 4 mosaic of 2048² tiles at twice the target resolution (the service caps
 single exports at 4000 px), downsampled with Lanczos to 4096² and 2048² and
-saved as WebP into public/scenery. Tiles are cached in the given directory.
+saved as WebP into archive/scenery. Tiles are cached in the given directory.
 Bounds are EPSG:3857 metres and must match lib/bay-surface.ts.
 """
 import pathlib
@@ -33,7 +33,7 @@ LAYERS = {
 only = set(sys.argv[2:])
 cache = pathlib.Path(sys.argv[1])
 cache.mkdir(parents=True, exist_ok=True)
-target = pathlib.Path(__file__).resolve().parents[1] / 'public/scenery'
+target = pathlib.Path(__file__).resolve().parents[1] / 'archive/scenery'
 
 def fetch(bbox, path, tile):
     if path.exists() and path.stat().st_size > 1000:

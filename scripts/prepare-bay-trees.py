@@ -8,7 +8,7 @@ buildings (masks left by scripts/prepare-bay-shadows.py) and not water
 (the terrain grid is at sea level, which also excludes the Golden Gate's
 shadow on the strait) become canopy instances, thinned to a density the
 page can draw. Each tree is written to
-public/scenery/bay-trees.bin.gz as local metres, size and the photograph's
+archive/scenery/bay-trees.bin.gz as local metres, size and the photograph's
 colour, read by lib/bay-trees.ts.
 """
 import argparse
@@ -49,7 +49,7 @@ def local_from_mercator(mx, my):
 
 def canopy(name, bounds, cache, rng, grid):
     x0, y0, x1, y1 = bounds
-    photo = np.asarray(Image.open(ROOT / f'public/scenery/naip-{name}.webp').convert('RGB'), dtype=np.float32) / 255
+    photo = np.asarray(Image.open(ROOT / f'archive/scenery/naip-{name}.webp').convert('RGB'), dtype=np.float32) / 255
     size = photo.shape[0]
     mask = np.asarray(Image.open(pathlib.Path(cache) / f'buildings-{name}.png').resize((size, size), Image.NEAREST)) > 0
     # Nothing grows on the water; the terrain grid is clamped to sea level there.
@@ -101,6 +101,6 @@ if __name__ == '__main__':
     diameter = np.concatenate([p[2] for p in parts])
     colour = np.concatenate([p[3] for p in parts])
     assert np.abs(lx).max() < 32000 and np.abs(lz).max() < 32000
-    write(ROOT / 'public/scenery/bay-trees.bin.gz', lx, lz, diameter, colour)
+    write(ROOT / 'archive/scenery/bay-trees.bin.gz', lx, lz, diameter, colour)
     subset = rng.random(len(lx)) < MOBILE_DENSITY / DENSITY
-    write(ROOT / 'public/scenery/bay-trees-mobile.bin.gz', lx[subset], lz[subset], diameter[subset], colour[subset])
+    write(ROOT / 'archive/scenery/bay-trees-mobile.bin.gz', lx[subset], lz[subset], diameter[subset], colour[subset])

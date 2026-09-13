@@ -7,7 +7,7 @@
 `fetch` asks Overpass for the airport's runways, taxiways, stand lead-in
 lines (aeroway=parking_position) and windsocks; `build` projects them into
 the scene's local metres (see lib/sfo-buildings.ts lonLatToBay) and writes
-public/scenery/sfo-airfield.json: runway ends, taxiway centrelines, stands
+archive/scenery/sfo-airfield.json: runway ends, taxiway centrelines, stands
 with their stop point and nose heading, the runway holding positions where
 taxiways enter 28R, a few taxiway spots for aircraft on the move, and the
 windsock. The output is a derived database of OpenStreetMap data (ODbL).
@@ -22,7 +22,7 @@ import urllib.parse
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / 'public/scenery/sfo-airfield.json'
+OUTPUT = ROOT / 'archive/scenery/sfo-airfield.json'
 BBOX = (37.605, -122.405, 37.64, -122.36)
 MIRRORS = [
     'https://overpass.kumi.systems/api/interpreter',

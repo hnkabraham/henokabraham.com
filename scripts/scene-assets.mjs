@@ -1,19 +1,17 @@
 import { createHash } from 'node:crypto';
-import { readFile, mkdir, cp, rm, appendFile } from 'node:fs/promises';
+import { readFile, mkdir, cp, appendFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Everything the airborne tour fetches at runtime, and nothing else. The
-// earlier terrain experiment's tiles and scenery stay in the repository for
-// its scripts and checks, but no page requests them, so the build drops them
-// from dist rather than upload 145 MB of unused imagery with every deploy.
+// Everything the airborne tour fetches at runtime. The earlier terrain
+// experiment's tiles and scenery live under archive/, outside public/, so a
+// build neither copies nor lists them; only these four files are versioned.
 export const SCENE_FILES = [
   'models/dreamliner-787-9.glb',
   'scenery/daylight.hdr',
   'draco/draco_wasm_wrapper.js',
   'draco/draco_decoder.wasm',
 ];
-const PUBLIC_FOLDERS = ['models', 'scenery', 'tiles', 'draco'];
 
 export async function sceneVersion(root) {
   const hash = createHash('sha256');
@@ -32,13 +30,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     await mkdir(resolve(destination, path, '..'), { recursive: true });
     await cp(resolve(root, 'public', path), resolve(destination, path));
   }
-  // Vite copies all of public/; the plain copies are not referenced by the
-  // built page, whose asset URLs all carry the content version.
-  for (const folder of PUBLIC_FOLDERS)
-    await rm(resolve(root, 'dist/client', folder), {
-      recursive: true,
-      force: true,
-    });
+  // Vite also copies the plain files; only the versioned paths are cached
+  // immutably, and older tabs can still resolve the plain ones.
   await appendFile(
     resolve(root, 'dist/client/_headers'),
     '\n/scene/*\n  Cache-Control: public, max-age=31536000, immutable\n',

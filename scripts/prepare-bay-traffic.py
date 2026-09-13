@@ -7,7 +7,7 @@
 `fetch` asks OpenStreetMap's Overpass API for every motorway and motorway
 link inside the climb-out box (US 101, I-380 and I-280 between the airport
 and San Bruno Mountain) and caches the raw answer; `build` writes
-public/scenery/bay-roads.json with each carriageway as a polyline in local
+archive/scenery/bay-roads.json with each carriageway as a polyline in local
 scene metres (X east, Z south, origin at the 28R threshold), its lane count
 and a short reference, simplified to 1 m. lib/bay-traffic.ts drives the
 vehicles along these at runtime. Data © OpenStreetMap contributors, ODbL.

@@ -523,7 +523,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['fetch', 'fetch-sf', 'build'])
     parser.add_argument('--cache', required=True)
-    parser.add_argument('--out', default='public/scenery/bay-buildings.bin.gz')
+    parser.add_argument('--out', default='archive/scenery/bay-buildings.bin.gz')
     args = parser.parse_args()
     if args.command == 'fetch':
         fetch(args.cache)

@@ -5,7 +5,7 @@ Usage: python3 scripts/prepare-bay-terrain.py /path/to/source-assets [--grid 102
 The source directory must contain `sf-bay-georeferencing.json` (a copy of
 public/credits/bay-georeferencing.json). Missing `terrarium-{z}-{x}-{y}.png`
 tiles are downloaded there from the public Mapzen/AWS bucket credited in
-ASSETS.md. Output is public/scenery/bay-elevation.webp: a lossless RGB WebP
+ASSETS.md. Output is archive/scenery/bay-elevation.webp: a lossless RGB WebP
 whose red and green channels hold the high and low bytes of quarter-metre
 elevations above sea level, north-to-south rows. Ocean is clamped to zero and
 the airfield apron is levelled so the detailed runway sits on flat ground.
@@ -78,6 +78,6 @@ image.save(buffer, 'WEBP', lossless=True, quality=100, method=6)
 decoded = Image.open(io.BytesIO(buffer.getvalue())).convert('RGB').load()
 assert all(decoded[x, y][0] * 256 + decoded[x, y][1] == heights[y*grid + x]
            for y in range(0, grid, 13) for x in range(0, grid, 17)), 'lossless round trip failed'
-target = pathlib.Path(__file__).resolve().parents[1] / 'public/scenery/bay-elevation.webp'
+target = pathlib.Path(__file__).resolve().parents[1] / 'archive/scenery/bay-elevation.webp'
 target.write_bytes(buffer.getvalue())
 print(f'{target.name}: {grid}² elevations, {len(buffer.getvalue()):,} bytes; {max(heights)/4:.1f} m maximum')

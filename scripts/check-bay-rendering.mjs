@@ -78,7 +78,7 @@ for (const [name, width, height] of [
   ['irradiance', 64, 16],
 ]) {
   const bytes = await fs.readFile(
-    new URL(`../public/scenery/atmosphere/${name}.exr`, import.meta.url),
+    new URL(`../archive/scenery/atmosphere/${name}.exr`, import.meta.url),
   );
   totalBytes += bytes.byteLength;
   const exr = new EXRLoader().parse(

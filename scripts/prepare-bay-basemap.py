@@ -8,7 +8,7 @@ Sentinel-2 mosaic (CC BY-SA 3.0 IGO; contains modified Copernicus Sentinel
 data (2019), processed by ESA). Crop and resize are the only edits, so the
 scene's registration to the source's 10 m pixels still holds.
 
-Two derivatives are written into public/scenery:
+Two derivatives are written into archive/scenery:
 
   sf-bay.webp         4096 square, 11.7 m/px, desktop, loaded after the opening
   sf-bay-mobile.webp  2048 square, 23.4 m/px, every device, in the opening set
@@ -31,7 +31,7 @@ SIZES = {'sf-bay': (4096, 82), 'sf-bay-mobile': (2048, 84)}
 
 Image.MAX_IMAGE_PIXELS = None
 source = pathlib.Path(sys.argv[1])
-target = pathlib.Path(__file__).resolve().parents[1] / 'public/scenery'
+target = pathlib.Path(__file__).resolve().parents[1] / 'archive/scenery'
 image = Image.open(source).convert('RGB')
 if image.size != (10980, 14367):
     raise SystemExit(f'unexpected source size {image.size}; expected the HI-RES JPG')
