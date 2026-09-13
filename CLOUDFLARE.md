@@ -54,10 +54,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `7d8f3095-2824-4c91-be3d-576098a9fd1e`
+- Cloudflare version: `1ac1b8d5-211a-4719-abec-a8279bd58548`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: airborne Dreamliner tour, source `56b8012` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
-- Current validation: TypeScript, focused lint, actual-model/camera checks at five viewport sizes, lifecycle/first-scroll/hidden-document checks, performance checks and preserved scenery/flight checks passed. Desktop and 390 × 844 Chrome visual QA completed. Cloudflare confirmed deployment to both existing hostnames with the 15-minute schedule and service bindings preserved. Full-repository lint still has the previously documented unrelated UI findings.
+- Current release: navigation over the moving sky, source `86d819a` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
+- Current validation: TypeScript, existing Dreamliner model/camera checks, production build and Cloudflare dry run passed. Cloudflare confirmed deployment to both existing hostnames with the schedule and service bindings preserved. The live homepage returns HTTP 200 and the published stylesheet matches the production build by SHA-256. This CSS-only update did not include a new browser QA pass.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
 
@@ -137,3 +137,8 @@ The cloud-motion enhancement (`e5cdd4d`) raises the moving layers into view, inc
 Source `6a2e34e` replaces the ground departure with a moving-sky fly-in and engine, wing and tail close-ups. The credited FlightGear exterior has 4K fuselage/engine textures and 105,622 triangles merged into ten main material groups; it uses HDR reflections and a personal livery. The original terrain experiment remains in the repository and is absent from active scene imports. Source `56b8012` changes the HTTP Early Hint from the old tile manifest to the universal sky image. The aircraft remains a low-priority, motion-qualified HTML preload.
 
 The opening stays free of WebGL draws until scrolling, with a bounded wake-up that handles parent/renderer RAF ordering. WebGL, audio and clouds suspend offscreen/hidden; reduced motion keeps a static sky. New regression tests cover late fetch/parse completion and single disposal after unmount. A shader warm-up cleanup race found during development was fixed; final visual checks recorded no new console errors. Desktop spot checks reached about 120 fps on the test computer; phone-size checks verify composition, not physical-phone performance.
+
+
+## Header integrated into the sky
+
+Source `86d819a` positions the transparent header over the existing moving sky, removing the white band and border. Darker navigation text keeps the links readable. The flight label and secondary project shortcut appear after the header has scrolled away; opening text keeps clearance below the header on desktop and mobile. The reduced-motion and unavailable-scene fallbacks retain the same header clearance without revealing duplicate controls.
