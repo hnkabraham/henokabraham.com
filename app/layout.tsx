@@ -2,26 +2,38 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './bay-departure.css';
 import './airport-services.css';
-import { sceneAsset } from '@/lib/scene-assets';
 
-// The opening scene's first fetches start with the document instead of
-// after the module chain has run, at low priority so they fill the bandwidth
-// the module scripts leave rather than delaying them. Visitors who get the
-// static view (reduced motion) skip them through the media query.
-const OPENING_ASSETS: [string, 'fetch' | 'image'][] = [
-  ['/models/dreamliner-787-9.glb', 'fetch'],
-  ['/scenery/daylight.hdr', 'fetch'],
-];
+// The aircraft and its lighting are fetched by the scene itself once it has
+// decided to run, so visitors on reduced motion or a metered connection
+// download neither. A document preload would fetch them for everyone.
+const title = 'Henok Abraham — Personal Airspace';
+const summary =
+  'iOS apps, flight tracking, connected hardware, and things worth building.';
+const card = {
+  url: '/images/og-card.jpg',
+  width: 1200,
+  height: 630,
+  alt: 'A Boeing 787-9 in Henok Abraham’s livery above a cloud deck',
+};
 export const metadata: Metadata = {
+  metadataBase: new URL('https://henokabraham.com'),
+  alternates: { canonical: '/' },
   icons: { icon: '/favicon.svg' },
-  title: 'Henok Abraham — Personal Airspace',
+  title,
   description:
     'Welcome to the personal airspace of Henok Abraham. An aviation-inspired journey through iOS apps, flight tracking, connected hardware, and curious experiments.',
   openGraph: {
-    title: 'Henok Abraham — Personal Airspace',
-    description:
-      'iOS apps, flight tracking, connected hardware, and things worth building.',
+    title,
+    description: summary,
     type: 'website',
+    url: '/',
+    images: [card],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title,
+    description: summary,
+    images: [card.url],
   },
 };
 export default function RootLayout({
@@ -36,17 +48,6 @@ export default function RootLayout({
         type="font/woff2"
         crossOrigin="anonymous"
       />
-      {OPENING_ASSETS.map(([path, as]) => (
-        <link
-          key={path}
-          rel="preload"
-          href={sceneAsset(path)}
-          as={as}
-          crossOrigin="anonymous"
-          fetchPriority="low"
-          media="(prefers-reduced-motion: no-preference)"
-        />
-      ))}
       <body>{children}</body>
     </html>
   );

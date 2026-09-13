@@ -64,7 +64,17 @@ export default function TerminalExperience() {
   useAirspaceDepth(root, !reducedMotion);
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setReducedMotion(preference.matches);
+    // The tour costs a couple of megabytes; a visitor who asked their browser
+    // to save data, or is on a 2G-class link, gets the static sky instead.
+    const connection = (
+      navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+      }
+    ).connection;
+    const metered =
+      Boolean(connection?.saveData) ||
+      /^(slow-)?2g$/.test(connection?.effectiveType ?? '');
+    const update = () => setReducedMotion(preference.matches || metered);
     update();
     preference.addEventListener('change', update);
     const restore = () => {
@@ -182,6 +192,7 @@ export default function TerminalExperience() {
                     onClick={() => selectFlight(index)}
                     aria-pressed={selected === index}
                     aria-controls="selected-project"
+                    aria-label={`${item.code}, ${item.name}, ${item.destination.toLowerCase()}, gate ${item.gate}, ${item.status.toLowerCase()}`}
                   >
                     <span className="flight-code mono">{item.code}</span>
                     <span className="flight-destination">
