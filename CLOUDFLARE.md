@@ -54,10 +54,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `ca1aab04-fb1b-4d73-9f1e-c82cc7355ecf`
+- Cloudflare version: `c77693bd-3722-4e4e-a348-e0953c970213`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: populated Flighty atlas and paged flight history, source `56ba6da` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
-- Current validation: Flighty import fixtures, source-row reconciliation, distance/route geometry checks, rendered flight-log assertions, TypeScript and focused lint passed. The production build and deployment passed, preserving both hostnames, bindings and schedule. The live homepage returns HTTP 200 with populated Flighty content; the stylesheet and flight-data credits match local SHA-256 hashes. This release did not include a new browser QA pass.
+- Current release: summary-only flight atlas, international destination flags and overlapping passport flags in first-visit order, source `5bd9720` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
+- Current validation: all 12 summary periods reconcile with the import; 13 country flags and 13 international airport labels render. First-visit ordering was independently checked against chronological CSV rows. TypeScript, geometry/import checks, summary/privacy checks, production builds and deployments passed. The live homepage returns HTTP 200 with the correct chronological flag row and no individual flight UI; the new stylesheet and 13 flag assets match local SHA-256 hashes. All 27 public code/data files were scanned for individual flight IDs and none were found. This release did not include browser QA.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
 
@@ -160,3 +160,9 @@ The new flight atlas uses a local 49 KB Natural Earth map with selectable great-
 Source `56ba6da` imports 370 historical flights from the owner-supplied export: 42 airports, 13 countries/regions and 325,585 estimated airport-to-airport miles. Three cancellations are excluded. Four diversions retain their scheduled destinations and map their actual arrivals; a return-to-origin record counts as a flight without estimated route miles. The list uses 20-record pages while the map and totals retain the full year selection.
 
 Only allowlisted public flight fields are included. The private CSV, booking references, seats, notes, tail numbers and exact travel times remain outside the published assets and repository. The source was pushed to the verified private GitHub repository.
+
+## Summary-only passport view
+
+Sources `889c501`, `7fcd817` and `5bd9720` remove the individual flight list and boarding passes. Import records now live under `scripts/data`, outside the application dependency graph. Every build generates only aggregate totals, unique routes, airports and country order for all time and each year. Exact travel dates, flight numbers, airlines and aircraft details are absent from runtime data.
+
+The map labels international airports with local flags. Thirteen circular flags overlap in a single responsive row below the totals; selecting a country highlights its routes. Flags follow the first logged visit within the selected year or the complete log. All-time order: United States, Canada, United Kingdom, Ireland, Mexico, Colombia, Denmark, Netherlands, Argentina, Japan, Switzerland, French Polynesia and South Korea. Source credits and the MIT license for the flag assets are in `public/credits/country-flags.txt`.
