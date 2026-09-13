@@ -214,6 +214,65 @@ assert.ok(
   'Early Hints must not preload old terrain',
 );
 assert.ok(
-  worker.includes('</images/cruise-sky.jpg>; rel=preload; as=image'),
-  'The universal sky is the early preload',
+  worker.includes(
+    '</images/cruise-sky.avif>; rel=preload; as=image; type=image/avif',
+  ),
+  'The universal sky, as AVIF with its type, is the early preload',
+);
+// The stylesheet falls back from AVIF to the original encodings.
+const stylesheet = await fs.readFile(
+  new URL('../app/bay-departure.css', import.meta.url),
+  'utf8',
+);
+for (const [modern, fallback] of [
+  ['cruise-sky.avif', 'cruise-sky.jpg'],
+  ['cloud-sprite.avif', 'cloud-sprite.png'],
+]) {
+  const rule = stylesheet.indexOf(`url('/images/${modern}') type('image/avif')`);
+  assert.ok(rule > 0, `${modern} is offered through image-set()`);
+  assert.ok(
+    stylesheet.lastIndexOf(`background: url('/images/${fallback}')`, rule) > 0,
+    `${fallback} stays the plain background before the image-set`,
+  );
+  const [modernSize, fallbackSize] = await Promise.all(
+    [modern, fallback].map(async (name) =>
+      (await fs.stat(new URL(`../public/images/${name}`, import.meta.url)))
+        .size,
+    ),
+  );
+  assert.ok(
+    modernSize * 5 < fallbackSize,
+    `${modern} is at most a fifth of ${fallback}`,
+  );
+}
+
+// The phone variant carries the desktop Draco mesh under 2048² textures.
+const phoneBytes = await fs.readFile(
+  new URL('../public/models/dreamliner-787-9-phone.glb', import.meta.url),
+);
+const phoneMetadata = JSON.parse(
+  phoneBytes.toString('utf8', 20, 20 + phoneBytes.readUInt32LE(12)),
+);
+assert.ok(phoneBytes.length < 700_000, 'Phone aircraft stays under 700 KB');
+assert.equal(phoneMetadata.extras.license, metadata.extras.license);
+assert.deepEqual(phoneMetadata.meshes, metadata.meshes);
+assert.deepEqual(phoneMetadata.materials, metadata.materials);
+assert.deepEqual(phoneMetadata.accessors, metadata.accessors);
+const phoneDocument = await io.readBinary(new Uint8Array(phoneBytes));
+const phoneTextures = phoneDocument.getRoot().listTextures();
+assert.equal(phoneTextures.length, decoded.getRoot().listTextures().length);
+for (const texture of phoneTextures)
+  assert.deepEqual(texture.getSize(), [2048, 2048], texture.getName());
+for (const texture of decoded.getRoot().listTextures())
+  assert.deepEqual(texture.getSize(), [4096, 4096], texture.getName());
+const scene = await fs.readFile(
+  new URL('../app/dreamliner-scene.tsx', import.meta.url),
+  'utf8',
+);
+assert.ok(
+  scene.includes("width < 800\n          ? '/models/dreamliner-787-9-phone.glb'"),
+  'Narrow viewports fetch the phone aircraft',
+);
+console.log(
+  `Passed: phone aircraft ${phoneBytes.length.toLocaleString()} bytes with the desktop mesh; AVIF sky and cloud with fallbacks.`,
 );

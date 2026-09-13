@@ -1,5 +1,12 @@
 'use client';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   ArrowDown,
   ArrowUpRight,
@@ -13,7 +20,9 @@ import {
 } from 'lucide-react';
 import { clamp01, type BayPhase } from '@/lib/bay-flight';
 import { createBayAudio } from '@/lib/bay-audio';
-import DreamlinerScene from './dreamliner-scene';
+// The renderer, its shader helpers and their slice of three.js arrive in a
+// chunk of their own, fetched only once a motion visit mounts the scene.
+const DreamlinerScene = lazy(() => import('./dreamliner-scene'));
 import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
@@ -71,9 +80,11 @@ export default function ScrollDeparture({
   const reveal = useRef(0);
   const audio = useRef<ReturnType<typeof createBayAudio> | null>(null);
   const [phase, setPhase] = useState<BayPhase>('preflight');
-  const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>(
-    'loading',
-  );
+  const [rendererStatus, setStatus] = useState<
+    'loading' | 'ready' | 'unavailable'
+  >('loading');
+  // Reduced motion never mounts the renderer; the static sky is ready at once.
+  const status = reducedMotion ? 'ready' : rendererStatus;
   const [sound, setSound] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
   useLayoutEffect(() => {
@@ -204,27 +215,29 @@ export default function ScrollDeparture({
       aria-label="Explore Henok’s work through a scrolling Boeing 787 journey"
     >
       <div className="bay-sticky">
-        {sceneReady && (
-          <DreamlinerScene
-            progress={progress}
-            reducedMotion={reducedMotion}
-            paused={paused}
-            audio={audio}
-            onStatus={(value) => {
-              setStatus(value);
-              if (value === 'ready')
-                recordFlightMetric('scene_ready_ms', performance.now());
-              if (value === 'unavailable') {
-                recordFlightMetric('scene_unavailable', 1);
-                // A lost context stops the loop that drives the ambience, so
-                // close it rather than leave a silent context running behind
-                // a disabled button that still reads ON.
-                audio.current?.dispose();
-                audio.current = null;
-                setSound(false);
-              }
-            }}
-          />
+        {sceneReady && !reducedMotion && (
+          <Suspense fallback={null}>
+            <DreamlinerScene
+              progress={progress}
+              reducedMotion={reducedMotion}
+              paused={paused}
+              audio={audio}
+              onStatus={(value) => {
+                setStatus(value);
+                if (value === 'ready')
+                  recordFlightMetric('scene_ready_ms', performance.now());
+                if (value === 'unavailable') {
+                  recordFlightMetric('scene_unavailable', 1);
+                  // A lost context stops the loop that drives the ambience,
+                  // so close it rather than leave a silent context running
+                  // behind a disabled button that still reads ON.
+                  audio.current?.dispose();
+                  audio.current = null;
+                  setSound(false);
+                }
+              }}
+            />
+          </Suspense>
         )}
         <div className="bay-opening-sky" aria-hidden="true">
           <div className="bay-poster" />

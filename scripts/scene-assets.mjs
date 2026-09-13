@@ -5,9 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 // Everything the airborne tour fetches at runtime. The earlier terrain
 // experiment's tiles and scenery live under archive/, outside public/, so a
-// build neither copies nor lists them; only these four files are versioned.
+// build neither copies nor lists them; only these five files are versioned.
 export const SCENE_FILES = [
   'models/dreamliner-787-9.glb',
+  'models/dreamliner-787-9-phone.glb',
   'scenery/daylight.hdr',
   'draco/draco_wasm_wrapper.js',
   'draco/draco_decoder.wasm',

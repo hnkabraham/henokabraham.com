@@ -451,12 +451,20 @@
   position: absolute;
   inset: -7%;
   background: url('/images/cruise-sky.jpg') center / cover;
+  background-image: image-set(
+    url('/images/cruise-sky.avif') type('image/avif'),
+    url('/images/cruise-sky.jpg') type('image/jpeg')
+  );
   animation: bay-sky-drift 32s linear infinite alternate;
   animation-delay: -8s;
 }
 .bay-opening-cloud {
   position: absolute;
   background: url('/images/cloud-sprite.png') center / contain no-repeat;
+  background-image: image-set(
+    url('/images/cloud-sprite.avif') type('image/avif'),
+    url('/images/cloud-sprite.png') type('image/png')
+  );
   opacity: var(--cloud-opacity, 0.6);
   animation: bay-cloud-drift 26s linear infinite;
 }

@@ -41,6 +41,12 @@ const imports = {
       .map((k) => `export const ${k}=t.${k};`)
       .join('')}`,
   ),
+  // The scene imports its subset of three through lib/dreamliner-three.
+  '@/lib/dreamliner-three': uri(
+    `const t=globalThis.tourHarness.three;${Object.keys(THREE)
+      .map((k) => `export const ${k}=t.${k};`)
+      .join('')}`,
+  ),
   'three/addons/loaders/GLTFLoader.js': uri(
     'export class GLTFLoader { setDRACOLoader(){return this;} parseAsync(){return globalThis.tourHarness.parse.promise;} }',
   ),

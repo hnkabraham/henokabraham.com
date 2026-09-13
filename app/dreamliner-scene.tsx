@@ -85,7 +85,7 @@ export default function DreamlinerScene({
     const start = async () => {
       const [T, { GLTFLoader }, { DRACOLoader }, { HDRLoader }] =
         await Promise.all([
-          import('three'),
+          import('@/lib/dreamliner-three'),
           import('three/addons/loaders/GLTFLoader.js'),
           import('three/addons/loaders/DRACOLoader.js'),
           import('three/addons/loaders/HDRLoader.js'),
@@ -200,10 +200,16 @@ export default function DreamlinerScene({
         .catch(() => {
           /* The aircraft also has ordinary direct and sky lighting. */
         });
-      const bytes = await fetchBytes('/models/dreamliner-787-9.glb');
+      // A narrow viewport never resolves the 4096² maps, so it takes the
+      // 611 KB variant: the same Draco mesh under 2048² textures. The wide
+      // model is 1.3 MB against 5.3 MB plain. The wasm decoder is served
+      // beside the model; its workers end once parsed.
+      const bytes = await fetchBytes(
+        width < 800
+          ? '/models/dreamliner-787-9-phone.glb'
+          : '/models/dreamliner-787-9.glb',
+      );
       if (disposed) return;
-      // The mesh is Draco-compressed, 1.3 MB against 5.3 MB plain. The wasm
-      // decoder is served beside the model; its workers end once parsed.
       const draco = new DRACOLoader().setDecoderPath(sceneAsset('/draco/'));
       const gltf = await new GLTFLoader()
         .setDRACOLoader(draco)

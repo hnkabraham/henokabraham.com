@@ -4,9 +4,11 @@ import { handleApi, type EdgeEnv } from './server/api';
 import { refreshLiveData } from './server/live';
 import { pruneMetrics } from './server/metrics';
 // The opening sky is useful for every visitor, including reduced motion.
-// Aircraft preloads stay in the document with their motion preference and
-// low priority; no terrain data is needed by the airborne tour.
-const EARLY_HINTS = '</images/cruise-sky.jpg>; rel=preload; as=image';
+// It is the AVIF (57 KB against the 357 KB JPEG the stylesheet falls back
+// to); the type lets a browser without AVIF skip the hint. Aircraft assets
+// are fetched by the scene once it decides to run.
+const EARLY_HINTS =
+  '</images/cruise-sky.avif>; rel=preload; as=image; type=image/avif';
 // Static assets take their headers from public/_headers; the document is
 // rendered here, so its transport and embedding policy is set here. No
 // script or connect directives: the page carries inline framework scripts
