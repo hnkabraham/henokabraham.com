@@ -19,7 +19,7 @@ import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
 import { replaceFlightLink } from '@/lib/flight-links';
 import Image from 'next/image';
-import { personalFlights } from './personal-flights';
+import { flightAtlas } from './flight-atlas';
 
 const copy: Record<BayPhase, [string, string, string]> = {
   preflight: [
@@ -297,8 +297,8 @@ export default function ScrollDeparture({
               <span>
                 Open the logbook
                 <small>
-                  {personalFlights.length
-                    ? `${personalFlights.length} recorded flights`
+                  {flightAtlas.periods.all.stats.flights
+                    ? `${flightAtlas.periods.all.stats.flights} recorded flights`
                     : 'Routes coming soon'}
                 </small>
               </span>

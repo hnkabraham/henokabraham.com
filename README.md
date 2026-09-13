@@ -69,11 +69,11 @@ Project selection and scroll chapters use replace-only query parameters, for exa
 
 In the earlier terrain experiment, `lib/bay-annotations.ts` schedules six sparse DOM annotations from scroll progress: brake release, rotation, gear retraction, wing flex, San Bruno Mountain and the Golden Gate. Each is labelled as cinematic scene data rather than real flight data. They appear only with a ready scene and are hidden at widths of 1100 px or less, heights of 700 px or less, and for reduced motion. Rapid scrolling can put these scroll-scheduled notes ahead of the rate-limited aircraft; inspect their timing in visual QA.
 
-`app/personal-flights.ts` contains 370 owner-supplied historical Flighty records spanning December 2016–September 2026: 42 airports, 13 countries/regions and 325,585 estimated airport-to-airport miles. Three canceled flights are excluded. All four diversions retain the scheduled airport and use the actual destination on the map; the return-to-origin record contributes one flight but no estimated route miles. One historical noncanceled record lacks actual timing data and is retained as logged, without inventing times. The old site-reference notes remain in `app/aviation-logbook-data.ts` but are no longer displayed as a flight log.
+`scripts/data/personal-flights.ts` is an import source used only during summary generation. It contains 370 owner-supplied historical Flighty records spanning December 2016–September 2026: 42 airports, 13 countries/regions and 325,585 estimated airport-to-airport miles. Three canceled flights are excluded. All four diversions retain the scheduled airport and use the actual destination on the map; the return-to-origin record contributes one flight but no estimated route miles. One historical noncanceled record lacks actual timing data and is retained as logged, without inventing times. The old site-reference notes remain in `app/aviation-logbook-data.ts` but are no longer displayed as a flight log.
 
 Each verified record uses the `PersonalFlight` type from `lib/personal-flight-log.ts`: a stable ID, a date (or `null`), origin/destination airport codes, names, country labels, latitude/longitude, and optional airline, flight number, aircraft and `scheduledTo` for a diversion. Airport records can include `city` for compact display. Keep booking references, seats, and other private fields out. Do not infer personal trips from project names or the site's SFO reference.
 
-The atlas filters by year, highlights selected great-circle routes and shows boarding-pass details. Flight rows are paged in groups of 20 to keep the initial document and updates small; all filtered routes and totals remain visible on the map. Route miles are estimates between airport coordinates, not actual track miles. Repeated trips count separately in totals and share a map arc; date-line crossings split into separate segments. The 49 KB world map is local Natural Earth public-domain land data, credited in `public/credits/flight-log-map.txt`. SVG route animation pauses offscreen and in hidden tabs and respects reduced motion. The regression checks use synthetic geometry fixtures that never enter the public dataset.
+The atlas shows only the map, summary totals and circular country flags. Year filters update every summary; selecting a flag highlights that country’s routes. International airport labels include local SVG flags. Individual flights, dates, flight numbers and boarding passes are absent from the UI and runtime data. `scripts/build-flight-atlas.mjs` generates `app/flight-atlas.ts` with only totals, airport metadata and deduplicated routes for each year and all time; both build commands refresh it automatically. Route miles are estimates between airport coordinates, not actual track miles. Repeated trips count separately in totals and share a map arc; date-line crossings split into separate segments. The 49 KB world map is local Natural Earth public-domain land data, credited in `public/credits/flight-log-map.txt`. The summary map is static, with country highlights on demand; flag hover motion respects reduced motion. The regression checks use synthetic geometry fixtures that never enter the public dataset.
 
 ## Deploy to your Cloudflare account
 
@@ -84,10 +84,13 @@ See [CLOUDFLARE.md](CLOUDFLARE.md) for the scoped token, account ID, local dry r
 
 ```sh
 python3 scripts/import-flighty.py /path/to/FlightyExport.csv --before 2026-09-13
-npx oxfmt app/personal-flights.ts
+npx oxfmt scripts/data/personal-flights.ts
+node scripts/build-flight-atlas.mjs
 python3 scripts/check-flighty-import.py
 node scripts/check-personal-flight-log.mjs
 node scripts/check-flight-log-view.mjs
+# After a production build, also verify no individual flights are shipped:
+node scripts/check-flight-log-view.mjs --built
 ```
 
 The cutoff is exclusive: flights on that day or later are omitted. Use an explicit date when refreshing. The importer reconciles all source rows, excludes cancellations, skips exact duplicate flights and writes only allowlisted public fields. The private CSV stays outside the repo and matching filenames are ignored by Git. Airport lookup data is checked in at `scripts/data/flight-log-airports.json`; unknown airports or airline codes require an explicit lookup update. Public source credits are in `public/credits/flight-log-data.txt`.

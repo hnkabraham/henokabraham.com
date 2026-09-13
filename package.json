@@ -13,7 +13,9 @@
     "format": "oxfmt",
     "build:cloudflare": "DEPLOY_TARGET=cloudflare vinext build && node scripts/scene-assets.mjs",
     "check:cloudflare": "node scripts/deploy-cloudflare.mjs --dry-run",
-    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs"
+    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs",
+    "prebuild": "node scripts/build-flight-atlas.mjs",
+    "prebuild:cloudflare": "node scripts/build-flight-atlas.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

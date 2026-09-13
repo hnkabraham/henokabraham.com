@@ -1,107 +1,90 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowUpRight, Plane } from 'lucide-react';
-import { personalFlights, flightLogImport } from './personal-flights';
-import {
-  flightLogStats,
-  mapPoint,
-  routeMiles,
-  routePath,
-} from '@/lib/personal-flight-log';
+import { flightAtlas } from './flight-atlas';
+import { mapPoint, routePath } from '@/lib/personal-flight-log';
+import { countryFlag, countryName } from '@/lib/flight-atlas';
 
 const number = (n: number) => n.toLocaleString('en-US');
 const compact = new Intl.NumberFormat('en-US', {
   notation: 'compact',
   maximumFractionDigits: 1,
 });
-const dateLabel = (date: string | null) =>
-  date
-    ? new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        timeZone: 'UTC',
-      })
-    : 'Date not recorded';
 
 export default function AviationLogbook() {
   const [year, setYear] = useState('all');
-  const [page, setPage] = useState(0);
-  const [selected, setSelected] = useState<string | null>(null);
-  const root = useRef<HTMLElement>(null);
-  const list = useRef<HTMLFieldSetElement>(null);
-  useEffect(() => {
-    const element = root.current;
-    if (!element) return;
-    let visible = false;
-    const update = () => {
-      element.dataset.active = String(visible && !document.hidden);
-    };
-    const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-      update();
-    });
-    observer.observe(element);
-    document.addEventListener('visibilitychange', update);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener('visibilitychange', update);
-    };
-  }, []);
-  const years = useMemo(
-    () =>
-      [
-        ...new Set(
-          personalFlights.flatMap((f) => (f.date ? [f.date.slice(0, 4)] : [])),
-        ),
-      ]
-        .sort()
-        .reverse(),
-    [],
+  const [country, setCountry] = useState<string | null>(null);
+  const { years } = flightAtlas;
+  const period = flightAtlas.periods[year] ?? flightAtlas.periods.all;
+  const { stats } = period;
+  const airports = useMemo(
+    () => period.airportCodes.map((code) => flightAtlas.airports[code]),
+    [period],
   );
-  const flights = useMemo(
+  const countries = useMemo(
     () =>
-      personalFlights
-        .filter((f) => year === 'all' || f.date?.startsWith(year))
-        .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')),
-    [year],
+      [...new Set(airports.map((a) => a.country))].sort((a, b) =>
+        a === b
+          ? 0
+          : a === 'US'
+            ? -1
+            : b === 'US'
+              ? 1
+              : countryName(a).localeCompare(countryName(b)),
+      ),
+    [airports],
   );
-  const stats = useMemo(() => flightLogStats(flights), [flights]);
   const routes = useMemo(
     () =>
-      [
-        ...new Map(
-          flights.map((flight) => [
-            `${flight.from.code}:${flight.to.code}`,
-            flight,
-          ]),
-        ).values(),
-      ].map((flight) => ({ flight, path: routePath(flight) })),
-    [flights],
+      period.routes.map(([from, to]) => {
+        const route = {
+          from: flightAtlas.airports[from],
+          to: flightAtlas.airports[to],
+        };
+        return { ...route, key: `${from}:${to}`, path: routePath(route) };
+      }),
+    [period],
   );
-  const airports = useMemo(
-    () => [
-      ...new Map(
-        flights.flatMap((f) => [f.from, f.to]).map((a) => [a.code, a]),
-      ).values(),
-    ],
-    [flights],
-  );
-  const active = flights.find((f) => f.id === selected) ?? flights[0];
-  const pageSize = 20;
-  const pageCount = Math.ceil(flights.length / pageSize);
-  const changePage = (next: number) => {
-    const index = Math.max(0, Math.min(pageCount - 1, next));
-    setPage(index);
-    setSelected(flights[index * pageSize]?.id ?? null);
-    list.current?.scrollTo({ top: 0 });
-  };
+  // Stagger nearby international labels, keeping the dense Europe cluster legible.
+  const labels = useMemo(() => {
+    const occupied: { x: number; y: number }[] = [];
+    return airports
+      .filter((a) => a.country !== 'US')
+      .sort((a, b) => b.latitude - a.latitude)
+      .map((airport) => {
+        const [x, y] = mapPoint(airport);
+        const candidates = [
+          [12, -32],
+          [-82, -32],
+          [12, 10],
+          [-82, 10],
+          [-35, -65],
+          [12, 44],
+          [-82, 44],
+          [47, -65],
+          [-117, -65],
+          [47, -98],
+          [-117, -98],
+        ];
+        const spots = candidates.map(([dx, dy]) => ({
+          x: Math.max(2, Math.min(928, x + dx)),
+          y: Math.max(2, Math.min(468, y + dy)),
+        }));
+        const spot =
+          spots.find((p) =>
+            occupied.every(
+              (o) => Math.abs(p.x - o.x) >= 76 || Math.abs(p.y - o.y) >= 34,
+            ),
+          ) ?? spots[0];
+        occupied.push(spot);
+        return { airport, x, y, labelX: spot.x, labelY: spot.y };
+      });
+  }, [airports]);
   return (
     <section
       className="aviation-logbook"
       id="logbook"
-      ref={root}
       aria-labelledby="logbook-title"
     >
       <div className="logbook-heading">
@@ -116,9 +99,7 @@ export default function AviationLogbook() {
               value={year}
               onChange={(e) => {
                 setYear(e.target.value);
-                setPage(0);
-                setSelected(null);
-                list.current?.scrollTo({ top: 0 });
+                setCountry(null);
               }}
             >
               <option value="all">All flights</option>
@@ -136,11 +117,16 @@ export default function AviationLogbook() {
       </div>
       <figure className="logbook-atlas">
         <figcaption className="sr-only">
-          {flights.length
-            ? `${stats.flights} recorded flights connecting ${stats.airports} airports. Select a flight below to highlight its route.`
-            : 'World map. Personal flight routes have not been added yet.'}
+          {stats.flights} flights connecting {stats.airports} airports across{' '}
+          {stats.countries} countries and regions. International airports are
+          labeled with their country flags.
         </figcaption>
-        <svg viewBox="0 0 1000 500" className="logbook-map" aria-hidden="true">
+        <svg
+          viewBox="0 0 1000 500"
+          className="logbook-map"
+          role="img"
+          aria-label="Travel route map with international destination flags"
+        >
           <defs>
             <pattern
               id="logbook-grid"
@@ -156,6 +142,9 @@ export default function AviationLogbook() {
                 strokeWidth=".7"
               />
             </pattern>
+            <clipPath id="logbook-flag-circle">
+              <circle cx="14" cy="14" r="13" />
+            </clipPath>
           </defs>
           <rect width="1000" height="500" fill="url(#logbook-grid)" />
           <image
@@ -163,56 +152,51 @@ export default function AviationLogbook() {
             width="1000"
             height="500"
           />
-          {routes.map(({ flight, path }) => (
+          {routes.map((route) => (
             <path
-              key={flight.id}
-              d={path}
-              className={`logbook-route ${active?.from.code === flight.from.code && active?.to.code === flight.to.code ? 'selected' : ''}`}
+              key={route.key}
+              d={route.path}
+              className={`logbook-route${country ? (route.from.country === country || route.to.country === country ? ' selected' : ' muted') : ''}`}
             />
           ))}
           {airports.map((airport) => {
             const [x, y] = mapPoint(airport);
-            const highlighted =
-              active?.from.code === airport.code ||
-              active?.to.code === airport.code;
             return (
               <g
                 key={airport.code}
                 transform={`translate(${x},${y})`}
-                className={
-                  highlighted ? 'logbook-airport selected' : 'logbook-airport'
-                }
+                className={`logbook-airport${country === airport.country ? ' selected' : ''}`}
               >
-                <circle r={highlighted ? 4 : 2} />
-                {highlighted && (
-                  <text y="-11" textAnchor="middle">
-                    {airport.code}
-                  </text>
-                )}
+                <title>{`${airport.code} · ${airport.city || airport.name} · ${countryName(airport.country)}`}</title>
+                <circle r={country === airport.country ? 4 : 2.6} />
               </g>
             );
           })}
+          {labels.map(({ airport, x, y, labelX, labelY }) => (
+            <g
+              key={airport.code}
+              className={`logbook-destination${country && country !== airport.country ? ' muted' : ''}`}
+            >
+              <title>{`${airport.code} · ${airport.city || airport.name} · ${countryName(airport.country)}`}</title>
+              <path
+                d={`M${x},${y}L${labelX + 14},${labelY + 14}`}
+                className="logbook-label-line"
+              />
+              <g transform={`translate(${labelX},${labelY})`}>
+                <circle cx="14" cy="14" r="14" fill="#102c3e" />
+                <image
+                  href={countryFlag(airport.country)}
+                  width="28"
+                  height="28"
+                  clipPath="url(#logbook-flag-circle)"
+                />
+                <text x="33" y="19">
+                  {airport.code}
+                </text>
+              </g>
+            </g>
+          ))}
         </svg>
-        {!flights.length && (
-          <div className="logbook-empty">
-            <Plane size={28} strokeWidth={1.2} />
-            <p>
-              Every flight,
-              <br />
-              <em>a story.</em>
-            </p>
-            <span>Routes coming soon.</span>
-          </div>
-        )}
-        {active && (
-          <div className="logbook-route-caption">
-            <span>{active.from.code}</span>
-            <span className="logbook-route-dash" />
-            <Plane size={17} />
-            <span className="logbook-route-dash" />
-            <span>{active.to.code}</span>
-          </div>
-        )}
         <a
           className="logbook-map-credit"
           href="https://www.naturalearthdata.com/about/terms-of-use/"
@@ -223,160 +207,53 @@ export default function AviationLogbook() {
         </a>
       </figure>
       <dl className="logbook-stats">
-        {[
-          ['Flights', stats.flights],
-          ['Airports', stats.airports],
-          ['Countries / regions', stats.countries],
-          ['Est. route miles', stats.miles],
-        ].map(([label, value]) => (
+        {(
+          [
+            ['Flights', stats.flights],
+            ['Airports', stats.airports],
+            ['Countries / regions', stats.countries],
+            ['Est. route miles', stats.miles],
+          ] as const
+        ).map(([label, value]) => (
           <div key={label}>
-            <dd
-              title={flights.length ? number(Number(value)) : undefined}
-              aria-label={flights.length ? number(Number(value)) : undefined}
-            >
-              {flights.length
-                ? Number(value) >= 10000
-                  ? compact.format(Number(value))
-                  : number(Number(value))
-                : '—'}
+            <dd title={number(value)} aria-label={number(value)}>
+              {value >= 10000 ? compact.format(value) : number(value)}
             </dd>
             <dt>{label}</dt>
           </div>
         ))}
       </dl>
-      {flightLogImport.canceled > 0 && (
-        <p className="logbook-data-note">
-          Full log excludes {flightLogImport.canceled} cancellations. Distances
-          are estimated between airports.
-        </p>
-      )}
-      {active && (
-        <div className="logbook-records">
-          <div className="logbook-history">
-            <fieldset
-              className="logbook-flight-list"
-              ref={list}
-              aria-label="Choose a recorded flight"
-            >
-              {flights
-                .slice(page * pageSize, (page + 1) * pageSize)
-                .map((flight) => (
-                  <button
-                    key={flight.id}
-                    type="button"
-                    aria-pressed={active.id === flight.id}
-                    onClick={() => setSelected(flight.id)}
-                  >
-                    <span className="logbook-list-route">
-                      {flight.from.code}
-                      <Plane size={14} />
-                      {flight.to.code}
-                    </span>
-                    <time dateTime={flight.date ?? undefined}>
-                      {dateLabel(flight.date)}
-                    </time>
-                    <span>
-                      {flight.flightNumber || flight.airline || 'Flight'}
-                      {flight.scheduledTo && (
-                        <small className="logbook-diverted-label">
-                          Diverted
-                        </small>
-                      )}
-                    </span>
-                    <ArrowUpRight size={16} />
-                  </button>
-                ))}
-            </fieldset>
-            {pageCount > 1 && (
-              <nav
-                className="logbook-pagination"
-                aria-label="Flight history pages"
+      <div className="logbook-passport">
+        <ul
+          className="logbook-flags"
+          aria-label="Visited countries and regions"
+        >
+          {countries.map((code) => (
+            <li key={code}>
+              <button
+                type="button"
+                className="logbook-country"
+                aria-label={countryName(code)}
+                aria-pressed={country === code}
+                title={countryName(code)}
+                onClick={() => setCountry(country === code ? null : code)}
               >
-                <button
-                  type="button"
-                  disabled={page === 0}
-                  onClick={() => changePage(page - 1)}
-                >
-                  ← Newer
-                </button>
-                <span aria-live="polite">
-                  {page + 1} / {pageCount}
-                </span>
-                <button
-                  type="button"
-                  disabled={page === pageCount - 1}
-                  onClick={() => changePage(page + 1)}
-                >
-                  Older →
-                </button>
-              </nav>
-            )}
-          </div>
-          <article
-            className="logbook-pass"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            <div className="logbook-pass-top">
-              <span>FLIGHT LOG</span>
-              <Plane size={18} />
-            </div>
-            <div className="logbook-pass-route">
-              <div>
-                <strong>{active.from.code}</strong>
-                <span title={active.from.name}>
-                  {active.from.city || active.from.name}
-                </span>
-              </div>
-              <span>→</span>
-              <div>
-                <strong>{active.to.code}</strong>
-                <span title={active.to.name}>
-                  {active.to.city || active.to.name}
-                </span>
-              </div>
-            </div>
-            {active.scheduledTo && (
-              <p className="logbook-diversion">
-                {active.from.code === active.to.code
-                  ? `Returned to ${active.to.code}`
-                  : `Diverted to ${active.to.code}`}{' '}
-                · scheduled for {active.scheduledTo.code}
-              </p>
-            )}
-            <dl>
-              <div>
-                <dt>Date</dt>
-                <dd>{dateLabel(active.date)}</dd>
-              </div>
-              {active.airline && (
-                <div>
-                  <dt>Airline</dt>
-                  <dd>{active.airline}</dd>
-                </div>
-              )}
-              {active.aircraft && (
-                <div>
-                  <dt>Aircraft</dt>
-                  <dd>{active.aircraft}</dd>
-                </div>
-              )}
-              <div>
-                <dt>Est. distance</dt>
-                <dd>
-                  {active.from.code === active.to.code
-                    ? 'Not available'
-                    : `${number(Math.round(routeMiles(active)))} mi`}
-                </dd>
-              </div>
-            </dl>
-            <div className="logbook-pass-stub">
-              <span>HENOK ABRAHAM</span>
-              <span className="barcode" aria-hidden="true" />
-            </div>
-          </article>
-        </div>
-      )}
+                <img
+                  src={countryFlag(code)}
+                  alt=""
+                  width="44"
+                  height="44"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <p className="logbook-country-name" aria-live="polite">
+          {country ? countryName(country) : '\u00a0'}
+        </p>
+      </div>
     </section>
   );
 }

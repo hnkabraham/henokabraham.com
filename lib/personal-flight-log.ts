@@ -50,11 +50,11 @@ const angle = (a: LogAirport, b: LogAirport) => {
 };
 
 /** Great-circle estimate, not the distance of the actual flown track. */
-export const routeMiles = (flight: PersonalFlight) =>
+export const routeMiles = (flight: Pick<PersonalFlight, 'from' | 'to'>) =>
   angle(flight.from, flight.to) * 3958.7613;
 
 /** Split date-line crossings instead of drawing an incorrect line across the map. */
-export function routePath(flight: PersonalFlight) {
+export function routePath(flight: Pick<PersonalFlight, 'from' | 'to'>) {
   const a = vector(flight.from),
     b = vector(flight.to);
   const omega = angle(flight.from, flight.to);

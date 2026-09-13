@@ -13,7 +13,7 @@ const load = async (path) => {
 const { routeMiles, routePath, flightLogStats, mapPoint } = await load(
   '../lib/personal-flight-log.ts',
 );
-const { personalFlights } = await load('../app/personal-flights.ts');
+const { personalFlights } = await load('./data/personal-flights.ts');
 // Synthetic coordinates exercise the geometry; these are never published flights.
 const airport = (code, latitude, longitude, country = code) => ({
   code,
