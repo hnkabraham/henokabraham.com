@@ -22,19 +22,7 @@ export default function AviationLogbook() {
     () => period.airportCodes.map((code) => flightAtlas.airports[code]),
     [period],
   );
-  const countries = useMemo(
-    () =>
-      [...new Set(airports.map((a) => a.country))].sort((a, b) =>
-        a === b
-          ? 0
-          : a === 'US'
-            ? -1
-            : b === 'US'
-              ? 1
-              : countryName(a).localeCompare(countryName(b)),
-      ),
-    [airports],
-  );
+  const countries = period.countryCodes;
   const routes = useMemo(
     () =>
       period.routes.map(([from, to]) => {

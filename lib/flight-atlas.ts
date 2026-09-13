@@ -12,6 +12,7 @@ export type FlightAtlas = {
         countries: number;
         miles: number;
       };
+      countryCodes: string[];
       airportCodes: string[];
       routes: string[][];
     }

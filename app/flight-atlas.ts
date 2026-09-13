@@ -361,6 +361,9 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 1168
       },
+      "countryCodes": [
+        "US"
+      ],
       "airportCodes": [
         "DFW",
         "SAN"
@@ -379,6 +382,10 @@ export const flightAtlas: FlightAtlas = {
         "countries": 2,
         "miles": 7282
       },
+      "countryCodes": [
+        "US",
+        "CA"
+      ],
       "airportCodes": [
         "ATL",
         "BWI",
@@ -422,6 +429,9 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 19764
       },
+      "countryCodes": [
+        "US"
+      ],
       "airportCodes": [
         "ATL",
         "BWI",
@@ -510,6 +520,11 @@ export const flightAtlas: FlightAtlas = {
         "countries": 3,
         "miles": 39463
       },
+      "countryCodes": [
+        "US",
+        "GB",
+        "IE"
+      ],
       "airportCodes": [
         "ATL",
         "BWI",
@@ -627,6 +642,9 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 10929
       },
+      "countryCodes": [
+        "US"
+      ],
       "airportCodes": [
         "BWI",
         "DAL",
@@ -684,6 +702,9 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 4245
       },
+      "countryCodes": [
+        "US"
+      ],
       "airportCodes": [
         "DEN",
         "DFW",
@@ -720,6 +741,9 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 10213
       },
+      "countryCodes": [
+        "US"
+      ],
       "airportCodes": [
         "AUS",
         "DEN",
@@ -774,6 +798,9 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 23461
       },
+      "countryCodes": [
+        "US"
+      ],
       "airportCodes": [
         "AUS",
         "BUR",
@@ -837,6 +864,15 @@ export const flightAtlas: FlightAtlas = {
         "countries": 7,
         "miles": 81726
       },
+      "countryCodes": [
+        "US",
+        "MX",
+        "CO",
+        "DK",
+        "NL",
+        "AR",
+        "JP"
+      ],
       "airportCodes": [
         "AMS",
         "BOG",
@@ -968,6 +1004,14 @@ export const flightAtlas: FlightAtlas = {
         "countries": 6,
         "miles": 73612
       },
+      "countryCodes": [
+        "JP",
+        "US",
+        "MX",
+        "GB",
+        "CH",
+        "AR"
+      ],
       "airportCodes": [
         "AUS",
         "BUR",
@@ -1094,6 +1138,13 @@ export const flightAtlas: FlightAtlas = {
         "countries": 5,
         "miles": 53721
       },
+      "countryCodes": [
+        "AR",
+        "US",
+        "MX",
+        "PF",
+        "KR"
+      ],
       "airportCodes": [
         "BUR",
         "EZE",
@@ -1171,6 +1222,21 @@ export const flightAtlas: FlightAtlas = {
         "countries": 13,
         "miles": 325585
       },
+      "countryCodes": [
+        "US",
+        "CA",
+        "GB",
+        "IE",
+        "MX",
+        "CO",
+        "DK",
+        "NL",
+        "AR",
+        "JP",
+        "CH",
+        "PF",
+        "KR"
+      ],
       "airportCodes": [
         "AMS",
         "ATL",

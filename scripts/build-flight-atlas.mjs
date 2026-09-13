@@ -37,6 +37,13 @@ for (const period of ['all', ...years]) {
   );
   periods[period] = {
     stats: flightLogStats(flights),
+    countryCodes: [
+      ...new Set(
+        [...flights]
+          .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+          .flatMap((f) => [f.from.country, f.to.country]),
+      ),
+    ],
     airportCodes: [
       ...new Set(flights.flatMap((f) => [f.from.code, f.to.code])),
     ].sort(),

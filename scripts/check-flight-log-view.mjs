@@ -40,10 +40,30 @@ for (const [year, period] of Object.entries(flightAtlas.periods)) {
   );
   assert.deepEqual(Object.keys(period).sort(), [
     'airportCodes',
+    'countryCodes',
     'routes',
     'stats',
   ]);
 }
+assert.deepEqual(
+  flightAtlas.periods.all.countryCodes,
+  [
+    'US',
+    'CA',
+    'GB',
+    'IE',
+    'MX',
+    'CO',
+    'DK',
+    'NL',
+    'AR',
+    'JP',
+    'CH',
+    'PF',
+    'KR',
+  ],
+  'Flags follow first visits, independently verified against chronological CSV rows',
+);
 const serialized = JSON.stringify(flightAtlas);
 assert.ok(
   !/flightNumber|aircraft|airline|scheduledTo|flight-|\d{4}-\d{2}-\d{2}/.test(
