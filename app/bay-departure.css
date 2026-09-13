@@ -1227,3 +1227,11 @@
     display: none;
   }
 }
+
+/* The Immersive control: the fullscreen toggle keeps its word on wide
+   screens and becomes an icon where the bottom row is tight. */
+@media (max-width: 800px) {
+  .bay-immersive span {
+    display: none;
+  }
+}

@@ -6,10 +6,13 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from 'react';
 import {
   ArrowDown,
   ArrowUpRight,
+  Maximize2,
+  Minimize2,
   RotateCcw,
   Volume2,
   VolumeX,
@@ -23,6 +26,46 @@ import { createBayAudio } from '@/lib/bay-audio';
 // The renderer, its shader helpers and their slice of three.js arrive in a
 // chunk of their own, fetched only once a motion visit mounts the scene.
 const DreamlinerScene = lazy(() => import('./dreamliner-scene'));
+
+// A browser never hides its own bars for a page; a tap into the Fullscreen
+// API does (iPhone Safari since 16.4, with the webkit names), and a Home
+// Screen launch has none to hide, so the control stays out of the way there.
+type FullscreenDocument = Document & {
+  webkitFullscreenEnabled?: boolean;
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => void;
+};
+type FullscreenRoot = HTMLElement & { webkitRequestFullscreen?: () => void };
+const subscribeFullscreen = (notify: () => void) => {
+  document.addEventListener('fullscreenchange', notify);
+  document.addEventListener('webkitfullscreenchange', notify);
+  return () => {
+    document.removeEventListener('fullscreenchange', notify);
+    document.removeEventListener('webkitfullscreenchange', notify);
+  };
+};
+const readImmersive = () => {
+  const d = document as FullscreenDocument;
+  return Boolean(d.fullscreenElement || d.webkitFullscreenElement);
+};
+const readFullscreenOffered = () => {
+  const d = document as FullscreenDocument;
+  const standalone =
+    matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return !standalone && Boolean(d.fullscreenEnabled || d.webkitFullscreenEnabled);
+};
+const never = () => false;
+function toggleImmersive() {
+  const d = document as FullscreenDocument;
+  const root = document.documentElement as FullscreenRoot;
+  if (d.fullscreenElement || d.webkitFullscreenElement) {
+    if (d.exitFullscreen) void d.exitFullscreen().catch(() => {});
+    else d.webkitExitFullscreen?.();
+  } else if (root.requestFullscreen) {
+    void root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+  } else root.webkitRequestFullscreen?.();
+}
 import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
@@ -87,6 +130,16 @@ export default function ScrollDeparture({
   const status = reducedMotion ? 'ready' : rendererStatus;
   const [sound, setSound] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
+  const immersive = useSyncExternalStore(
+    subscribeFullscreen,
+    readImmersive,
+    never,
+  );
+  const fullscreenOffered = useSyncExternalStore(
+    subscribeFullscreen,
+    readFullscreenOffered,
+    never,
+  );
   useLayoutEffect(() => {
     const section = root.current;
     if (!section || !entry) return;
@@ -358,6 +411,21 @@ export default function ScrollDeparture({
           <div className="bay-utilities">
             {status === 'loading' && (
               <output className="bay-loading mono">Loading 787</output>
+            )}
+            {fullscreenOffered && (
+              <button
+                className="mono bay-immersive"
+                aria-pressed={immersive}
+                aria-label={
+                  immersive
+                    ? 'Leave the immersive view'
+                    : 'Immersive view: fill the screen'
+                }
+                onClick={toggleImmersive}
+              >
+                {immersive ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                <span>{immersive ? 'EXIT' : 'IMMERSIVE'}</span>
+              </button>
             )}
             <button
               className="mono"
