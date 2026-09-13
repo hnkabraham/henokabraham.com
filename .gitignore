@@ -48,7 +48,21 @@ FlightyExport*.csv
 # Intermediate buffers and render of the Golden Gate sprite (scripts/prepare-golden-gate.swift)
 archive/models/golden-gate/
 
+# My own RevMatchApp screenshots, staged here as input to
+# scripts/make-downshift-mockup.py. Not licence-restricted like the PSD
+# mockup they feed into, but they're intermediate inputs with no direct use
+# outside that script, so they stay local like the Golden Gate buffers above.
+archive/downshift-screens/
+
 # Source model with an unknown licence (see ASSETS.md); only the rendered
 # sprite under public/images/ is redistributed. Supply your own to reproduce
 # scripts/prepare-golden-gate.swift.
 archive/models/golden-gate-bridge.usdz
+
+# Rendered from a MockupNest free-tier iPhone mockup (personal-use licence;
+# redistributing the mockup file itself isn't permitted, so the composited
+# output stays local-only — see ASSETS.md). Deployed to Cloudflare directly
+# from this untracked file; supply your own PSD to reproduce with
+# scripts/make-downshift-mockup.py.
+public/images/downshift-mockup.avif
+public/images/downshift-mockup.png

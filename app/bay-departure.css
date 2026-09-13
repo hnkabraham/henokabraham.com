@@ -1016,6 +1016,16 @@
 .dreamliner-journey {
   height: 420svh;
 }
+.tour-mockup {
+  display: block;
+  margin: 18px 0 0 -14px;
+  height: clamp(150px, 30svh, 320px);
+}
+.tour-mockup img {
+  display: block;
+  height: 100%;
+  width: auto;
+}
 .tour-preview {
   display: flex;
   align-items: center;
@@ -1053,8 +1063,11 @@
   background: #fff;
 }
 .tour-preview-art {
-  flex: 0 0 43px;
+  flex: 0 0 90px;
   height: 90px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #112c3d;
 }
 .tour-devices,
 .tour-atlas {
@@ -1102,6 +1115,10 @@
   height: 100lvh;
 }
 @media (max-width: 800px) {
+  .tour-mockup {
+    margin-top: 14px;
+    height: clamp(130px, 26svh, 260px);
+  }
   .tour-preview {
     margin-top: 17px;
     width: min(340px, 100%);
@@ -1110,7 +1127,7 @@
     border-radius: 10px;
   }
   .tour-preview-art {
-    flex-basis: 31px;
+    flex-basis: 64px;
     height: 64px;
   }
   .tour-preview > span:nth-child(2) {
@@ -1149,12 +1166,16 @@
   .dreamliner-journey .bay-story .eyebrow {
     margin-bottom: 12px;
   }
+  .tour-mockup {
+    margin-top: 10px;
+    height: clamp(120px, 22svh, 210px);
+  }
   .tour-preview {
     margin-top: 14px;
   }
   .tour-preview-art {
     height: 62px;
-    flex-basis: 30px;
+    flex-basis: 62px;
   }
   .tour-destinations {
     margin-top: 10px;
@@ -1194,7 +1215,11 @@
   }
   #flight.dreamliner-journey .tour-preview-art {
     height: 48px;
-    flex-basis: 23px;
+    flex-basis: 48px;
+  }
+  #flight.dreamliner-journey .tour-mockup {
+    margin-top: 8px;
+    height: clamp(90px, 30vh, 140px);
   }
   #flight .bay-story h1 {
     font-size: 2.2rem;
@@ -1213,7 +1238,11 @@
   }
   #flight .tour-preview-art {
     height: 52px;
-    flex-basis: 25px;
+    flex-basis: 52px;
+  }
+  #flight .tour-mockup {
+    margin-top: 10px;
+    height: clamp(95px, 32vh, 150px);
   }
   #flight .bay-chapters {
     bottom: calc(24px + (100lvh - 100svh) + env(safe-area-inset-bottom));

@@ -88,7 +88,6 @@ import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
 import { replaceFlightLink } from '@/lib/flight-links';
-import IPhoneMockup from './iphone-mockup';
 import { flightAtlas } from './flight-atlas';
 
 const copy: Record<BayPhase, [string, string, string]> = {
@@ -335,24 +334,17 @@ export default function ScrollDeparture({
             </p>
           )}
           {phase === 'roll' && (
-            <button
-              className="tour-preview"
-              onClick={() => onProject('downshift')}
-            >
-              <span className="tour-preview-art">
-                <IPhoneMockup
-                  src="/images/downshift-dashboard.jpg"
-                  alt="Downshift driving dashboard, running on an iPhone 17 Pro"
-                  width={690}
-                  height={1500}
-                  compact
-                />
-              </span>
-              <span>
-                Take a look<small>iOS · OBD-II</small>
-              </span>
-              <ArrowUpRight size={21} />
-            </button>
+            <picture className="tour-mockup">
+              <source
+                srcSet="/images/downshift-mockup.avif"
+                type="image/avif"
+              />
+              <img
+                src="/images/downshift-mockup.png"
+                alt="Downshift's dashboard, performance and settings screens, each on its own iPhone"
+                loading="lazy"
+              />
+            </picture>
           )}
           {phase === 'liftoff' && (
             <button

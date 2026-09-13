@@ -1315,6 +1315,13 @@ a:focus-visible,
   margin: 15px 0 0;
   align-self: start;
 }
+.briefing-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+  border: 4px solid #253947;
+  box-shadow: 0 15px 25px #14283618;
+}
 .briefing-image figcaption {
   text-align: center;
   color: #798990;
