@@ -54,10 +54,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `979f7e67-cd5c-4af0-9fb4-2d9b36369545`
+- Cloudflare version: `ca1aab04-fb1b-4d73-9f1e-c82cc7355ecf`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: portfolio scroll stops, concise copy and personal flight atlas, source `3815107` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
-- Current validation: TypeScript, focused lint, Dreamliner lifecycle/modal pause/resume, camera/quality checks, performance checks, retained flight/link checks and flight-map geometry/data checks passed. The production build and Cloudflare dry run passed; the final deployment preserved both hostnames, bindings and schedule. The live homepage returns HTTP 200 with current content; the map and stylesheet match local SHA-256 hashes. This release did not include a new browser QA pass.
+- Current release: populated Flighty atlas and paged flight history, source `56ba6da` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
+- Current validation: Flighty import fixtures, source-row reconciliation, distance/route geometry checks, rendered flight-log assertions, TypeScript and focused lint passed. The production build and deployment passed, preserving both hostnames, bindings and schedule. The live homepage returns HTTP 200 with populated Flighty content; the stylesheet and flight-data credits match local SHA-256 hashes. This release did not include a new browser QA pass.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
 
@@ -154,3 +154,9 @@ Source `5283b88` replaces the previous UI fonts with Google Sans from the owner'
 Source `3815107` shortens the native scroll journey from 680svh to 420svh and reveals the first project at 18% progress. The stops preview Downshift, the iPhone–Wear OS bridge, the flight log and the rest of the portfolio. Project buttons open the existing briefings without leaving the tour. Opening a briefing pauses rendering/clouds and closing it restores focus without scrolling. Project descriptions, about text, section introductions and repeated camera captions were shortened.
 
 The new flight atlas uses a local 49 KB Natural Earth map with selectable great-circle routes, year filtering, estimated distance totals and boarding-pass details. Date-line crossings are split, repeated trips count correctly and large totals use compact labels. The user's actual flight records are still pending: `app/personal-flights.ts` is empty and the live view says “Routes coming soon,” with unknown totals. No sample trips or the earlier site-reference notes are presented as personal history. See README for the public data shape.
+
+## Flighty atlas populated
+
+Source `56ba6da` imports 370 historical flights from the owner-supplied export: 42 airports, 13 countries/regions and 325,585 estimated airport-to-airport miles. Three cancellations are excluded. Four diversions retain their scheduled destinations and map their actual arrivals; a return-to-origin record counts as a flight without estimated route miles. The list uses 20-record pages while the map and totals retain the full year selection.
+
+Only allowlisted public flight fields are included. The private CSV, booking references, seats, notes, tail numbers and exact travel times remain outside the published assets and repository. The source was pushed to the verified private GitHub repository.
