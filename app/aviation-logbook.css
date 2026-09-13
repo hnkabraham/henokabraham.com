@@ -132,11 +132,24 @@
 .logbook-flags {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 9px;
+  flex-wrap: nowrap;
+  gap: 0;
+  isolation: isolate;
   padding: 0;
   margin: 0;
   list-style: none;
+}
+.logbook-flags li {
+  position: relative;
+  flex: 0 0 auto;
+}
+.logbook-flags li + li {
+  margin-left: -18px;
+}
+.logbook-flags li:hover,
+.logbook-flags li:focus-within,
+.logbook-flags li:has([aria-pressed='true']) {
+  z-index: 1;
 }
 .logbook-country {
   display: grid;
@@ -146,7 +159,7 @@
   padding: 4px;
   border-radius: 50%;
   border: 1px solid transparent;
-  background: transparent;
+  background: #102c3e;
   cursor: pointer;
   transition:
     transform 150ms ease,
@@ -204,13 +217,13 @@
   .logbook-passport {
     margin-top: 28px;
   }
-  .logbook-flags {
-    gap: 4px;
+  .logbook-flags li + li {
+    margin-left: -22px;
   }
   .logbook-country {
     width: 44px;
     height: 44px;
-    padding: 3px;
+    padding: 2px;
   }
 }
 @media (max-width: 480px) {
@@ -230,5 +243,11 @@
   }
   .logbook-country:hover {
     transform: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .logbook-flags li + li {
+    margin-left: -24px;
   }
 }
