@@ -7,6 +7,18 @@ import './airport-services.css';
 // decided to run, so visitors on reduced motion or a metered connection
 // download neither. A document preload would fetch them for everyone.
 const title = 'Henok Abraham — Personal Airspace';
+// Sampled from the opening sky under the header, so Safari's tab bar and
+// Android's toolbar continue the sky instead of framing it in white.
+const skyColor = '#6398cf';
+// What search engines may attach to the name; only facts the page states.
+const person = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Henok Abraham',
+  url: 'https://henokabraham.com/',
+  description: 'I build apps, connect devices, and make things in 3D.',
+  sameAs: ['https://github.com/hnkabraham'],
+};
 const summary =
   'iOS apps, flight tracking, connected hardware, and things worth building.';
 const card = {
@@ -44,6 +56,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <meta name="theme-color" content={skyColor} />
       <link
         rel="preload"
         href="/fonts/google-sans-regular-7d5c767caf2d.woff2"
@@ -51,7 +64,14 @@ export default function RootLayout({
         type="font/woff2"
         crossOrigin="anonymous"
       />
-      <body>{children}</body>
+      <body>
+        {children}
+        <script
+          type="application/ld+json"
+          // Structured data is inert: the browser never runs it.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(person) }}
+        />
+      </body>
     </html>
   );
 }
