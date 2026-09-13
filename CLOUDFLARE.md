@@ -61,7 +61,6 @@ References:
 - Current validation: TypeScript, summary/asset/privacy checks, the production build and deployment passed. The live homepage returns HTTP 200 with all 14 airline logos; the stylesheet and all 14 logo files match local SHA-256 hashes. American’s three-color SVG and the isolated Frontier mark were inspected as standalone assets. Airline totals, country order and individual-flight exclusions remain unchanged. This release did not include browser QA.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
-
 ## Zone settings that affect the opening
 
 - **Bot Fight Mode and JavaScript Detections: off.** With them on, Cloudflare injects `/cdn-cgi/challenge-platform/scripts/jsd/main.js` into every page; on 2026-09-10 it was the largest main-thread cost before the scene appeared (340 ms of 1.4 s) and it can challenge visitors that look automated. The AI-crawler block injects nothing and stays on.
@@ -109,7 +108,6 @@ New bindings are configured only for `DEPLOY_TARGET=cloudflare`. The original Si
 
 Analytics Engine activation was attempted in the dashboard, but the upload API continued rejecting the entitlement (10089). The final Worker uses D1 for its custom measurements, so it does not depend on that service. Web Analytics remains enabled separately.
 
-
 To initialize the same schema in a newly provisioned metrics database, first update the dedicated database ID in `vite.config.ts` and the deployment guard, build, then apply the idempotent schema:
 
 ```sh
@@ -132,23 +130,19 @@ Source commit `8ae9181` keeps the existing blue sky visible after the scene is r
 
 The cloud-motion enhancement (`e5cdd4d`) raises the moving layers into view, increases their contrast, and uses continuous 26/42-second drift loops with fading resets. The sky photo moves over 32 seconds. Desktop and 390 × 844 visual checks and the production build passed; the scroll reveal and motion/visibility safeguards are unchanged.
 
-
 ## Airborne Dreamliner showcase deployed
 
 Source `e79ed3d` replaces the ground departure with a moving-sky fly-in and engine, wing and tail close-ups. The credited FlightGear exterior has 4K fuselage/engine textures and 105,622 triangles merged into ten main material groups; it uses HDR reflections and a personal livery. The original terrain experiment remains in the repository and is absent from active scene imports. Source `1151a4d` changes the HTTP Early Hint from the old tile manifest to the universal sky image. The aircraft remains a low-priority, motion-qualified HTML preload.
 
 The opening stays free of WebGL draws until scrolling, with a bounded wake-up that handles parent/renderer RAF ordering. WebGL, audio and clouds suspend offscreen/hidden; reduced motion keeps a static sky. New regression tests cover late fetch/parse completion and single disposal after unmount. A shader warm-up cleanup race found during development was fixed; final visual checks recorded no new console errors. Desktop spot checks reached about 120 fps on the test computer; phone-size checks verify composition, not physical-phone performance.
 
-
 ## Header integrated into the sky
 
 Source `dc98073` positions the transparent header over the existing moving sky, removing the white band and border. Darker navigation text keeps the links readable. The flight label and secondary project shortcut appear after the header has scrolled away; opening text keeps clearance below the header on desktop and mobile. The reduced-motion and unavailable-scene fallbacks retain the same header clearance without revealing duplicate controls.
 
-
 ## Google Sans typography
 
 Source `d4170cb` replaces the previous UI fonts with Google Sans from my own download. Normal and italic WOFF2 subsets retain the weight (400–700), optical-size and grade axes. The normal font is 133,964 bytes and preloaded; the 142,504-byte italic face loads when used. Both use content-hashed URLs and one-year immutable caching. Text uses `font-display: swap` with a system fallback. The font license and reproducible preparation script are included; no third-party font request is required.
-
 
 ## Portfolio stops and personal flight atlas
 
@@ -177,7 +171,6 @@ Ten SVG logos are sourced from Soaring Symbols and four PNG logos from Kiwi’s 
 ## Transparent airline marks and brand colors
 
 Sources `54faff3` and `035e597` remove the white tiles and replace American, Frontier and Spirit’s boxed PNGs with transparent SVGs. The final layout uses spaced marks and wraps on narrow screens; the country flags continue to overlap. American uses blue, silver and red, Spirit yellow, and United blue. Other airlines retain their representative colors, with dark blue ink brightened for the navy surface. Hover, keyboard focus, selection and year filtering are retained. Updated asset provenance is in `public/credits/airline-logos.txt`.
-
 
 ## Review fixes: lighter aircraft, policy headers and a sharing card
 
@@ -216,3 +209,9 @@ The missing control was WebKit: the Fullscreen API on an iPhone covers only vide
 ## Live at SFO panel removed
 
 I wanted the "Live at SFO" airport-conditions band gone. Source `9cc61cc` removes the panel from the page and everything that existed only for it: `LiveAtSfo` and the Fahrenheit formatter in `app/airport-services.tsx`, its styles, the KSFO METAR fetch and parser in `server/live.ts`, the `weather` field of `/api/live` (now `{ projects }`), and the canned METAR upstream in `scripts/check-edge.mjs` and `scripts/check-scheduled.mjs`. The scheduled handler keeps the GitHub repository and website reachability checks that feed the latest-check lines inside the project briefings, still every 15 minutes into the same KV namespace; the stored `weather:v1` key expires on its own within a day. Worker version `b9484484-2705-414c-b5d0-41335a79904e`. Verified live on desktop and phone: no panel or text, the departures section directly after the journey, `/api/live` returning only the project snapshot, and a briefing showing "LATEST CHECK · Sep 13, 2026 · 07:00 UTC"; all thirteen checks pass, the scheduled check writing five project records.
+
+## Downshift's screens on a real device render
+
+The first pass at showing Downshift on an iPhone used a CSS-only frame; it didn't read as realistic. Source `54f752c` replaces it: the scroll teaser now shows three of Downshift's screens (dashboard, performance, settings), each composited onto its own phone in a three-phone fan from a free MockupNest PSD, plain image now, no card, no button, not clickable. `scripts/make-downshift-mockup.py` recovers each phone's rotation from its screen mask (OpenCV `minAreaRect`) since the smart objects are placed as plain unrotated rectangles internally and the fan is baked into each mask, not into Photoshop's placement transform. That PSD's free tier is personal-use only and doesn't permit redistributing the mockup file, so the composited `public/images/downshift-mockup.avif`/`.png` are gitignored and deployed straight from this local build rather than committed, the same way the Golden Gate bridge asset was handled earlier. The project briefing's image goes back to the plain screenshot it used before that CSS pass, so it keeps using the one committable asset. Worker version `f2faa1e6-389c-459d-beee-5839c7da3849`.
+
+A first render had the screen content rotated the wrong way relative to each phone's own tilt (`Image.rotate`'s sign convention is opposite `minAreaRect`'s), which read as the app floating unglued from the glass rather than sitting on it; caught by measuring the status-bar text's angle against the bezel's in the rendered pixels, not by eye, and fixed by negating the angle before rotating. Verified: TypeScript, lint, a full `build:cloudflare` and every check script pass with the gitignored image entirely absent (mimicking a fresh clone) and present (confirming Vinext copies `public/` regardless of git state); the live PNG and AVIF byte sizes match the local build exactly. Not yet re-confirmed by eye on the live page or on a real phone/landscape viewport — this session's Chrome automation stopped responding to screenshot requests on this WebGL-heavy route partway through and didn't recover.
