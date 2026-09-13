@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { handleApi, boundedJson, validContact } from '../server/api.ts';
-import { parseWeather, refreshLiveData } from '../server/live.ts';
+import { refreshLiveData } from '../server/live.ts';
 const origin = 'https://henokabraham.com';
 const realFetch = globalThis.fetch;
 const request = (path, body, extra = {}) =>
@@ -188,32 +188,7 @@ try {
       1000,
     ),
   );
-  const now = new Date('2026-09-10T03:00:00Z');
-  const weather = parseWeather(
-    [
-      {
-        icaoId: 'KSFO',
-        obsTime: now.getTime() / 1000,
-        rawOb: 'KSFO TEST',
-        temp: 0,
-        wdir: 'VRB',
-        wspd: 0,
-        visib: '10+',
-        fltCat: 'VFR',
-      },
-    ],
-    now,
-  );
-  assert.equal(weather.temperatureC, 0);
-  assert.equal(weather.windKnots, 0);
-  assert.equal(weather.windDegrees, null);
-  assert.throws(() =>
-    parseWeather(
-      [{ icaoId: 'KLAX', obsTime: 10, rawOb: 'wrong station' }],
-      now,
-    ),
-  );
-  const cache = new Map([['weather:v1', JSON.stringify(weather)]]);
+  const cache = new Map();
   globalThis.fetch = async () => {
     throw new Error('Upstream unavailable');
   };
@@ -221,11 +196,6 @@ try {
     get: async (key) => cache.get(key),
     put: async (key, value) => cache.set(key, value),
   });
-  assert.equal(
-    cache.get('weather:v1'),
-    JSON.stringify(weather),
-    'A failed refresh preserves the previous weather observation',
-  );
   assert.ok(
     JSON.parse(cache.get('projects:v1')).projects.every(
       (p) => p.reachable !== false,
@@ -233,7 +203,7 @@ try {
     'An unsuccessful automated check cannot claim that a project is down',
   );
   console.log(
-    'Edge checks passed: request limits, origins, Turnstile, delivery failures, metric privacy, stale feeds.',
+    'Edge checks passed: request limits, origins, Turnstile, delivery failures, metric privacy, unverified project checks.',
   );
 } finally {
   globalThis.fetch = realFetch;

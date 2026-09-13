@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { ArrowUpRight, Radio, Send, Wind } from 'lucide-react';
-import type { Weather, ProjectLive } from '@/server/live';
+import { ArrowUpRight, Radio, Send } from 'lucide-react';
+import type { ProjectLive } from '@/server/live';
 import {
   edgeConfig,
   measurementAllowed,
@@ -9,7 +9,6 @@ import {
 } from '@/lib/flight-metrics';
 
 type LiveData = {
-  weather: Weather | null;
   projects: { checkedAt: string; projects: ProjectLive[] } | null;
 };
 export function useAirportLive() {
@@ -60,9 +59,6 @@ const utc = (date: string) =>
     minute: '2-digit',
     timeZone: 'UTC',
   }) + ' UTC';
-// METAR reports temperature in Celsius the world over; the page reads in
-// Fahrenheit, like every other unit it shows.
-const fahrenheit = (celsius: number) => Math.round((celsius * 9) / 5 + 32);
 const calendar = (date: string) =>
   new Date(date).toLocaleDateString('en-US', {
     month: 'short',
@@ -70,95 +66,6 @@ const calendar = (date: string) =>
     year: 'numeric',
     timeZone: 'UTC',
   });
-export function LiveAtSfo({
-  data,
-  failed,
-  now,
-}: ReturnType<typeof useAirportLive>) {
-  const weather = data?.weather;
-  const age = weather && now ? now - Date.parse(weather.observedAt) : 0;
-  const expired = age > 24 * 3600000;
-  const stale = failed || age > 2 * 3600000;
-  return (
-    <section className="sfo-conditions" aria-labelledby="sfo-conditions-title">
-      <div className="sfo-station">
-        <p className="eyebrow">
-          <Radio size={15} /> AIRPORT CONDITIONS
-        </p>
-        <h2 id="sfo-conditions-title">Live at SFO</h2>
-        <span className="mono">KSFO · SAN FRANCISCO</span>
-      </div>
-      {weather && !expired ? (
-        <>
-          <dl className="sfo-readings">
-            <div>
-              <dt>Temperature</dt>
-              <dd>
-                {weather.temperatureC === null
-                  ? '—'
-                  : `${fahrenheit(weather.temperatureC)}°F`}
-              </dd>
-            </div>
-            <div>
-              <dt>
-                <Wind size={14} /> Wind
-              </dt>
-              <dd>
-                {weather.windKnots === null
-                  ? '—'
-                  : weather.windKnots === 0
-                    ? 'Calm'
-                    : `${weather.windDegrees === null ? 'Variable' : String(weather.windDegrees).padStart(3, '0') + '°'} / ${weather.windKnots} kt`}
-                {weather.gustKnots !== null && (
-                  <small>Gusting {weather.gustKnots} kt</small>
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Visibility</dt>
-              <dd>
-                {weather.visibilityMiles === null
-                  ? '—'
-                  : `${weather.visibilityMiles} mi`}
-              </dd>
-            </div>
-            <div>
-              <dt>Flight conditions</dt>
-              <dd>{weather.category || '—'}</dd>
-            </div>
-          </dl>
-          <div className="sfo-source">
-            <p>
-              {stale ? 'Last available report' : 'Observed'}{' '}
-              <time dateTime={weather.observedAt}>
-                {utc(weather.observedAt)}
-              </time>
-              {stale && ` · ${calendar(weather.observedAt)}`}
-            </p>
-            <a
-              href="https://aviationweather.gov/data/metar/?id=KSFO"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Aviation Weather Center <ArrowUpRight size={14} />
-            </a>
-            <details>
-              <summary>Read the METAR</summary>
-              <p>{weather.raw}</p>
-            </details>
-          </div>
-        </>
-      ) : (
-        <output className="sfo-feed-note">
-          {failed || data
-            ? 'Weather temporarily unavailable.'
-            : 'Loading weather…'}
-        </output>
-      )}
-      <p className="sfo-scene-note">Scene weather is cinematic.</p>
-    </section>
-  );
-}
 export function ProjectUpdate({
   item,
   now,

@@ -98,13 +98,10 @@ export async function handleApi(
         200,
         'public, max-age=60',
       );
-    const [weather, projects] = env.LIVE_DATA
-      ? await Promise.all([
-          env.LIVE_DATA.get('weather:v1', 'json'),
-          env.LIVE_DATA.get('projects:v1', 'json'),
-        ])
-      : [null, null];
-    return reply({ weather, projects }, 200, 'public, max-age=60');
+    const projects = env.LIVE_DATA
+      ? await env.LIVE_DATA.get('projects:v1', 'json')
+      : null;
+    return reply({ projects }, 200, 'public, max-age=60');
   }
   if (!['/api/contact', '/api/metrics'].includes(path))
     return reply({ error: 'Not found' }, 404);

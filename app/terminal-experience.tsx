@@ -20,7 +20,6 @@ import type { BayPhase } from '@/lib/bay-flight';
 import AviationLogbook from './aviation-logbook';
 import {
   useAirportLive,
-  LiveAtSfo,
   ProjectUpdate,
   ContactTower,
   FlightMeasurements,
@@ -151,7 +150,6 @@ export default function TerminalExperience() {
             setProjectOpen(true);
           }}
         />
-        <LiveAtSfo {...live} />
         <section
           className="terminal-section"
           id="departures"

@@ -1,16 +1,3 @@
-export type Weather = {
-  station: string;
-  observedAt: string;
-  fetchedAt: string;
-  temperatureC: number | null;
-  windDegrees: number | null;
-  windKnots: number | null;
-  gustKnots: number | null;
-  visibilityMiles: string | null;
-  category: string | null;
-  clouds: string | null;
-  raw: string;
-};
 export type ProjectLive = {
   id: string;
   repo?: string;
@@ -25,35 +12,6 @@ const headers = {
   'User-Agent': 'HenokAbraham-Portfolio/1.0 (https://henokabraham.com)',
   Accept: 'application/json',
 };
-const finite = (v: unknown) =>
-  typeof v === 'number' && Number.isFinite(v) ? v : null;
-
-export function parseWeather(data: unknown, now = new Date()): Weather {
-  const r = Array.isArray(data) ? data.find((v) => v?.icaoId === 'KSFO') : null;
-  if (!r || !Number.isFinite(r.obsTime) || !r.rawOb)
-    throw new Error('Missing KSFO observation');
-  const observedAt = new Date(r.obsTime * 1000);
-  if (observedAt.getTime() > now.getTime() + 10 * 60000)
-    throw new Error('Future observation');
-  return {
-    station: 'KSFO',
-    observedAt: observedAt.toISOString(),
-    fetchedAt: now.toISOString(),
-    temperatureC: finite(r.temp),
-    windDegrees: finite(r.wdir),
-    windKnots: finite(r.wspd),
-    gustKnots: finite(r.wgst),
-    visibilityMiles:
-      typeof r.visib === 'string' || typeof r.visib === 'number'
-        ? String(r.visib)
-        : null,
-    category: ['VFR', 'MVFR', 'IFR', 'LIFR'].includes(r.fltCat)
-      ? r.fltCat
-      : null,
-    clouds: typeof r.cover === 'string' ? r.cover : null,
-    raw: String(r.rawOb).slice(0, 1200),
-  };
-}
 async function json(url: string) {
   const r = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
   if (!r.ok) {
@@ -61,17 +19,6 @@ async function json(url: string) {
     throw new Error(`Upstream HTTP ${r.status}`);
   }
   return r.json();
-}
-export async function refreshWeather(store: LiveStore) {
-  const weather = parseWeather(
-    await json(
-      'https://aviationweather.gov/api/data/metar?ids=KSFO&format=json',
-    ),
-  );
-  await store.put('weather:v1', JSON.stringify(weather), {
-    expirationTtl: 86400,
-  });
-  return weather;
 }
 export const repositories = [
   { id: 'wear-bridge', repo: 'wear-ios-bridge' },
@@ -158,16 +105,13 @@ export async function refreshProjects(store: LiveStore) {
   });
   return snapshot;
 }
+// The scheduled handler's entry point: the project checks are the only
+// feed left (the KSFO weather panel was removed in September 2026).
 export async function refreshLiveData(store: LiveStore) {
-  const results = await Promise.allSettled([
-    refreshWeather(store),
-    refreshProjects(store),
-  ]);
-  results.forEach((result, i) => {
-    if (result.status === 'rejected')
-      console.warn('live_refresh_failed', {
-        feed: i === 0 ? 'weather' : 'projects',
-      });
-  });
-  return results;
+  try {
+    return await refreshProjects(store);
+  } catch {
+    console.warn('live_refresh_failed', { feed: 'projects' });
+    return null;
+  }
 }
