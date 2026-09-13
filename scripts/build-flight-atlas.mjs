@@ -30,6 +30,16 @@ const years = [
 ]
   .sort()
   .reverse();
+const airlines = {};
+for (const flight of personalFlights) {
+  const code = flight.flightNumber?.slice(0, 2);
+  if (!code || !flight.airline)
+    throw new Error('Airline identification is missing');
+  airlines[code] = {
+    name: code === 'P5' ? 'Wingo (Aero Republica)' : flight.airline,
+    logo: `/images/airlines/${code.toLowerCase()}.${['AA', 'F9', 'NK', 'P5'].includes(code) ? 'png' : 'svg'}`,
+  };
+}
 const periods = {};
 for (const period of ['all', ...years]) {
   const flights = personalFlights.filter(
@@ -37,6 +47,15 @@ for (const period of ['all', ...years]) {
   );
   periods[period] = {
     stats: flightLogStats(flights),
+    airlines: Object.entries(
+      flights.reduce((counts, flight) => {
+        const code = flight.flightNumber.slice(0, 2);
+        counts[code] = (counts[code] || 0) + 1;
+        return counts;
+      }, {}),
+    )
+      .map(([code, flights]) => ({ code, flights }))
+      .sort((a, b) => b.flights - a.flights || a.code.localeCompare(b.code)),
     countryCodes: [
       ...new Set(
         [...flights]
@@ -53,7 +72,7 @@ for (const period of ['all', ...years]) {
   };
 }
 // Only totals, visited airports and unique routes leave the import source.
-const output = `import type { FlightAtlas } from '@/lib/flight-atlas';\n\n// Generated summary only. No individual flight records are sent to visitors.\nexport const flightAtlas: FlightAtlas = ${JSON.stringify({ airports, years, periods }, null, 2)};\n`;
+const output = `import type { FlightAtlas } from '@/lib/flight-atlas';\n\n// Generated summary only. No individual flight records are sent to visitors.\nexport const flightAtlas: FlightAtlas = ${JSON.stringify({ airports, airlines, years, periods }, null, 2)};\n`;
 const destination = new URL('../app/flight-atlas.ts', import.meta.url);
 const previous = await readFile(destination, 'utf8').catch(() => '');
 if (previous !== output) await writeFile(destination, output);

@@ -2,6 +2,7 @@ import type { LogAirport } from './personal-flight-log';
 
 export type FlightAtlas = {
   airports: Record<string, LogAirport>;
+  airlines: Record<string, { name: string; logo: string }>;
   years: string[];
   periods: Record<
     string,
@@ -12,6 +13,7 @@ export type FlightAtlas = {
         countries: number;
         miles: number;
       };
+      airlines: { code: string; flights: number }[];
       countryCodes: string[];
       airportCodes: string[];
       routes: string[][];

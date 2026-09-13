@@ -340,6 +340,64 @@ export const flightAtlas: FlightAtlas = {
       "longitude": 8.548056
     }
   },
+  "airlines": {
+    "UA": {
+      "name": "United Airlines",
+      "logo": "/images/airlines/ua.svg"
+    },
+    "WN": {
+      "name": "Southwest Airlines",
+      "logo": "/images/airlines/wn.svg"
+    },
+    "DL": {
+      "name": "Delta Air Lines",
+      "logo": "/images/airlines/dl.svg"
+    },
+    "AS": {
+      "name": "Alaska Airlines",
+      "logo": "/images/airlines/as.svg"
+    },
+    "LX": {
+      "name": "Swiss International Air Lines",
+      "logo": "/images/airlines/lx.svg"
+    },
+    "F9": {
+      "name": "Frontier Airlines",
+      "logo": "/images/airlines/f9.png"
+    },
+    "AR": {
+      "name": "Aerolíneas Argentinas",
+      "logo": "/images/airlines/ar.svg"
+    },
+    "KL": {
+      "name": "KLM",
+      "logo": "/images/airlines/kl.svg"
+    },
+    "SK": {
+      "name": "Scandinavian Airlines",
+      "logo": "/images/airlines/sk.svg"
+    },
+    "P5": {
+      "name": "Wingo (Aero Republica)",
+      "logo": "/images/airlines/p5.png"
+    },
+    "AV": {
+      "name": "Avianca",
+      "logo": "/images/airlines/av.svg"
+    },
+    "AA": {
+      "name": "American Airlines",
+      "logo": "/images/airlines/aa.png"
+    },
+    "BA": {
+      "name": "British Airways",
+      "logo": "/images/airlines/ba.svg"
+    },
+    "NK": {
+      "name": "Spirit Airlines",
+      "logo": "/images/airlines/nk.png"
+    }
+  },
   "years": [
     "2026",
     "2025",
@@ -361,6 +419,12 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 1168
       },
+      "airlines": [
+        {
+          "code": "AA",
+          "flights": 1
+        }
+      ],
       "countryCodes": [
         "US"
       ],
@@ -382,6 +446,20 @@ export const flightAtlas: FlightAtlas = {
         "countries": 2,
         "miles": 7282
       },
+      "airlines": [
+        {
+          "code": "DL",
+          "flights": 4
+        },
+        {
+          "code": "AA",
+          "flights": 1
+        },
+        {
+          "code": "NK",
+          "flights": 1
+        }
+      ],
       "countryCodes": [
         "US",
         "CA"
@@ -429,6 +507,28 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 19764
       },
+      "airlines": [
+        {
+          "code": "AA",
+          "flights": 4
+        },
+        {
+          "code": "UA",
+          "flights": 4
+        },
+        {
+          "code": "WN",
+          "flights": 4
+        },
+        {
+          "code": "DL",
+          "flights": 3
+        },
+        {
+          "code": "NK",
+          "flights": 1
+        }
+      ],
       "countryCodes": [
         "US"
       ],
@@ -520,6 +620,20 @@ export const flightAtlas: FlightAtlas = {
         "countries": 3,
         "miles": 39463
       },
+      "airlines": [
+        {
+          "code": "DL",
+          "flights": 24
+        },
+        {
+          "code": "BA",
+          "flights": 4
+        },
+        {
+          "code": "WN",
+          "flights": 2
+        }
+      ],
       "countryCodes": [
         "US",
         "GB",
@@ -642,6 +756,24 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 10929
       },
+      "airlines": [
+        {
+          "code": "WN",
+          "flights": 3
+        },
+        {
+          "code": "AA",
+          "flights": 2
+        },
+        {
+          "code": "DL",
+          "flights": 2
+        },
+        {
+          "code": "UA",
+          "flights": 2
+        }
+      ],
       "countryCodes": [
         "US"
       ],
@@ -702,6 +834,12 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 4245
       },
+      "airlines": [
+        {
+          "code": "DL",
+          "flights": 6
+        }
+      ],
       "countryCodes": [
         "US"
       ],
@@ -741,6 +879,20 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 10213
       },
+      "airlines": [
+        {
+          "code": "AS",
+          "flights": 11
+        },
+        {
+          "code": "UA",
+          "flights": 3
+        },
+        {
+          "code": "WN",
+          "flights": 3
+        }
+      ],
       "countryCodes": [
         "US"
       ],
@@ -798,6 +950,16 @@ export const flightAtlas: FlightAtlas = {
         "countries": 1,
         "miles": 23461
       },
+      "airlines": [
+        {
+          "code": "UA",
+          "flights": 24
+        },
+        {
+          "code": "AS",
+          "flights": 6
+        }
+      ],
       "countryCodes": [
         "US"
       ],
@@ -864,6 +1026,48 @@ export const flightAtlas: FlightAtlas = {
         "countries": 7,
         "miles": 81726
       },
+      "airlines": [
+        {
+          "code": "UA",
+          "flights": 73
+        },
+        {
+          "code": "WN",
+          "flights": 6
+        },
+        {
+          "code": "AS",
+          "flights": 3
+        },
+        {
+          "code": "AR",
+          "flights": 1
+        },
+        {
+          "code": "AV",
+          "flights": 1
+        },
+        {
+          "code": "DL",
+          "flights": 1
+        },
+        {
+          "code": "F9",
+          "flights": 1
+        },
+        {
+          "code": "KL",
+          "flights": 1
+        },
+        {
+          "code": "P5",
+          "flights": 1
+        },
+        {
+          "code": "SK",
+          "flights": 1
+        }
+      ],
       "countryCodes": [
         "US",
         "MX",
@@ -1004,6 +1208,32 @@ export const flightAtlas: FlightAtlas = {
         "countries": 6,
         "miles": 73612
       },
+      "airlines": [
+        {
+          "code": "UA",
+          "flights": 64
+        },
+        {
+          "code": "WN",
+          "flights": 23
+        },
+        {
+          "code": "AS",
+          "flights": 10
+        },
+        {
+          "code": "DL",
+          "flights": 1
+        },
+        {
+          "code": "F9",
+          "flights": 1
+        },
+        {
+          "code": "LX",
+          "flights": 1
+        }
+      ],
       "countryCodes": [
         "JP",
         "US",
@@ -1138,6 +1368,20 @@ export const flightAtlas: FlightAtlas = {
         "countries": 5,
         "miles": 53721
       },
+      "airlines": [
+        {
+          "code": "UA",
+          "flights": 55
+        },
+        {
+          "code": "WN",
+          "flights": 10
+        },
+        {
+          "code": "DL",
+          "flights": 1
+        }
+      ],
       "countryCodes": [
         "AR",
         "US",
@@ -1222,6 +1466,64 @@ export const flightAtlas: FlightAtlas = {
         "countries": 13,
         "miles": 325585
       },
+      "airlines": [
+        {
+          "code": "UA",
+          "flights": 225
+        },
+        {
+          "code": "WN",
+          "flights": 51
+        },
+        {
+          "code": "DL",
+          "flights": 42
+        },
+        {
+          "code": "AS",
+          "flights": 30
+        },
+        {
+          "code": "AA",
+          "flights": 8
+        },
+        {
+          "code": "BA",
+          "flights": 4
+        },
+        {
+          "code": "F9",
+          "flights": 2
+        },
+        {
+          "code": "NK",
+          "flights": 2
+        },
+        {
+          "code": "AR",
+          "flights": 1
+        },
+        {
+          "code": "AV",
+          "flights": 1
+        },
+        {
+          "code": "KL",
+          "flights": 1
+        },
+        {
+          "code": "LX",
+          "flights": 1
+        },
+        {
+          "code": "P5",
+          "flights": 1
+        },
+        {
+          "code": "SK",
+          "flights": 1
+        }
+      ],
       "countryCodes": [
         "US",
         "CA",

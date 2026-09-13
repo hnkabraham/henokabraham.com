@@ -15,6 +15,7 @@ const compact = new Intl.NumberFormat('en-US', {
 export default function AviationLogbook() {
   const [year, setYear] = useState('all');
   const [country, setCountry] = useState<string | null>(null);
+  const [airline, setAirline] = useState<string | null>(null);
   const { years } = flightAtlas;
   const period = flightAtlas.periods[year] ?? flightAtlas.periods.all;
   const { stats } = period;
@@ -23,6 +24,7 @@ export default function AviationLogbook() {
     [period],
   );
   const countries = period.countryCodes;
+  const selectedAirline = period.airlines.find((item) => item.code === airline);
   const routes = useMemo(
     () =>
       period.routes.map(([from, to]) => {
@@ -88,6 +90,7 @@ export default function AviationLogbook() {
               onChange={(e) => {
                 setYear(e.target.value);
                 setCountry(null);
+                setAirline(null);
               }}
             >
               <option value="all">All flights</option>
@@ -240,6 +243,44 @@ export default function AviationLogbook() {
         </ul>
         <p className="logbook-country-name" aria-live="polite">
           {country ? countryName(country) : '\u00a0'}
+        </p>
+      </div>
+      <div className="logbook-carriers">
+        <ul
+          className="logbook-airlines"
+          aria-label="Airlines flown, ordered by flight count"
+        >
+          {period.airlines.map((item) => {
+            const brand = flightAtlas.airlines[item.code];
+            return (
+              <li key={item.code}>
+                <button
+                  type="button"
+                  className="logbook-airline"
+                  aria-label={`${brand.name} · ${item.flights} ${item.flights === 1 ? 'flight' : 'flights'}`}
+                  aria-pressed={airline === item.code}
+                  title={brand.name}
+                  onClick={() =>
+                    setAirline(airline === item.code ? null : item.code)
+                  }
+                >
+                  <img
+                    src={brand.logo}
+                    alt=""
+                    width="48"
+                    height="48"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="logbook-airline-caption" aria-live="polite">
+          {selectedAirline
+            ? `${flightAtlas.airlines[selectedAirline.code].name} · ${selectedAirline.flights} ${selectedAirline.flights === 1 ? 'flight' : 'flights'}`
+            : `${period.airlines.length} airlines`}
         </p>
       </div>
     </section>

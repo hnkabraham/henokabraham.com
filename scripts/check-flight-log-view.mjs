@@ -38,7 +38,26 @@ for (const [year, period] of Object.entries(flightAtlas.periods)) {
     new Set(period.routes.map((route) => route.join(':'))),
     new Set(flights.map((f) => `${f.from.code}:${f.to.code}`)),
   );
+  const carrierCounts = new Map();
+  for (const flight of flights) {
+    const code = flight.flightNumber.slice(0, 2);
+    carrierCounts.set(code, (carrierCounts.get(code) || 0) + 1);
+  }
+  assert.deepEqual(
+    new Map(period.airlines.map((item) => [item.code, item.flights])),
+    carrierCounts,
+  );
+  assert.equal(
+    period.airlines.reduce((total, item) => total + item.flights, 0),
+    period.stats.flights,
+  );
+  assert.ok(
+    period.airlines.every(
+      (item, i) => i === 0 || item.flights <= period.airlines[i - 1].flights,
+    ),
+  );
   assert.deepEqual(Object.keys(period).sort(), [
+    'airlines',
     'airportCodes',
     'countryCodes',
     'routes',
@@ -66,7 +85,7 @@ assert.deepEqual(
 );
 const serialized = JSON.stringify(flightAtlas);
 assert.ok(
-  !/flightNumber|aircraft|airline|scheduledTo|flight-|\d{4}-\d{2}-\d{2}/.test(
+  !/flightNumber|aircraft|scheduledTo|flight-|\d{4}-\d{2}-\d{2}/.test(
     serialized,
   ),
   'Published data has no exact flights',
@@ -96,6 +115,24 @@ assert.equal(
   count(/class="logbook-country"/g),
   flightAtlas.periods.all.stats.countries,
 );
+assert.equal(count(/class="logbook-airline"/g), 14);
+assert.equal(flightAtlas.periods.all.airlines[0].code, 'UA');
+assert.equal(flightAtlas.periods.all.airlines[0].flights, 225);
+for (const { code } of flightAtlas.periods.all.airlines) {
+  const brand = flightAtlas.airlines[code];
+  assert.ok(html.includes(`src="${brand.logo}"`));
+  const asset = await readFile(
+    new URL('../public' + brand.logo, import.meta.url),
+  );
+  assert.ok(asset.length > 100);
+  assert.ok(
+    brand.logo.endsWith('.svg')
+      ? asset.toString().includes('<svg')
+      : asset
+          .subarray(0, 8)
+          .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+  );
+}
 const international = Object.values(flightAtlas.airports).filter(
   (a) => a.country !== 'US',
 );
@@ -171,5 +208,5 @@ if (process.argv.includes('--built')) {
   );
 }
 console.log(
-  `Passed: 12 reconciled summary periods, ${flightAtlas.periods.all.stats.countries} country flags, ${international.length} international map labels, no flight details. Rendered log: ${Buffer.byteLength(html).toLocaleString()} bytes.`,
+  `Passed: 12 reconciled summary periods, ${flightAtlas.periods.all.stats.countries} country flags, ${international.length} international map labels, 14 airline logos and reconciled carrier totals, no flight details. Rendered log: ${Buffer.byteLength(html).toLocaleString()} bytes.`,
 );
