@@ -4,6 +4,7 @@
 // aviationweather.gov. `--live` uses the real feeds instead, for a manual
 // end-to-end run.
 import { Miniflare } from 'miniflare';
+// Pinned to Miniflare's own undici: it accepts only that version's MockAgent.
 import { MockAgent } from 'undici';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
