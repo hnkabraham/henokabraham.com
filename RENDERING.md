@@ -3,7 +3,7 @@
 
 ## Current airborne edition — September 12, 2026
 
-The home page now uses `app/dreamliner-scene.tsx` over the persistent moving sky. The FlightGear exterior uses ten main material groups (105,622 triangles; roughly twice that with the directional shadow pass), 4K fuselage/engine textures, HDR reflections and physical clearcoat paint. The camera enters from a wide shot and moves past the engine, wing and tail; portrait framing is authored separately. Native scroll and existing shared chapter IDs are preserved.
+The home page now uses `app/dreamliner-scene.tsx` over the persistent moving sky. The FlightGear exterior uses ten main material groups (105,359 triangles after Draco compression; roughly twice that with the directional shadow pass), 4K fuselage/engine textures, HDR reflections and physical clearcoat paint. The camera enters from a wide shot and moves past the engine, wing and tail; portrait framing is authored separately. Native scroll and existing shared chapter IDs are preserved.
 
 `lib/dreamliner-tour.ts` gives the simpler scene a larger pixel budget than the previous terrain implementation: desktop tiers cap 1/1.5/2× at 1.3/2.8/4 million pixels, and phone tiers cap 1.15/1.8/2.2× at 0.65/1.25/1.8 million pixels. Sustained slow frames reduce resolution and disable shadows at the lowest tier; recovery is gradual. These are caps, not promised frame rates. No terrain atlas, atmosphere lookup or postprocessing composer is allocated by the active tour.
 

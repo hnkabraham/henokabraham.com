@@ -3,6 +3,9 @@ import fs from 'node:fs/promises';
 import { transpileModule, ModuleKind } from 'typescript';
 import * as T from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { NodeIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import draco3d from 'draco3dgltf';
 const moduleURL = async (file, replacements = {}) => {
   let js = transpileModule(
     await fs.readFile(new URL(file, import.meta.url), 'utf8'),
@@ -25,14 +28,30 @@ const metadata = JSON.parse(
   bytes.toString('utf8', 20, 20 + bytes.readUInt32LE(12)),
 );
 assert.match(metadata.extras.license, /GPL-2.0/);
-assert.ok(bytes.length < 6_000_000, 'Aircraft transfer stays under 6 MB');
+assert.ok(bytes.length < 1_500_000, 'Aircraft transfer stays under 1.5 MB');
+assert.ok(
+  metadata.extensionsUsed.includes('KHR_draco_mesh_compression'),
+  'The shipped mesh is Draco-compressed',
+);
+// The browser decodes Draco in workers, which Node lacks. Decode here with the
+// reference codec and hand the loader the plain model it would have produced.
+const io = new NodeIO()
+  .registerExtensions(ALL_EXTENSIONS)
+  .registerDependencies({
+    'draco3d.decoder': await draco3d.createDecoderModule(),
+  });
+const decoded = await io.readBinary(new Uint8Array(bytes));
+for (const extension of decoded.getRoot().listExtensionsUsed())
+  if (extension.extensionName === 'KHR_draco_mesh_compression')
+    extension.dispose();
+const plain = Buffer.from(await io.writeBinary(decoded));
 const loader = new GLTFLoader().register(() => ({
   name: 'EXT_texture_webp',
   loadTexture: () => Promise.resolve(new T.Texture()),
 }));
 const model = (
   await loader.parseAsync(
-    bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    plain.buffer.slice(plain.byteOffset, plain.byteOffset + plain.byteLength),
     '',
   )
 ).scene;

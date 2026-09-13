@@ -83,11 +83,13 @@ export default function DreamlinerScene({
       status.current('unavailable');
     };
     const start = async () => {
-      const [T, { GLTFLoader }, { HDRLoader }] = await Promise.all([
-        import('three'),
-        import('three/addons/loaders/GLTFLoader.js'),
-        import('three/addons/loaders/HDRLoader.js'),
-      ]);
+      const [T, { GLTFLoader }, { DRACOLoader }, { HDRLoader }] =
+        await Promise.all([
+          import('three'),
+          import('three/addons/loaders/GLTFLoader.js'),
+          import('three/addons/loaders/DRACOLoader.js'),
+          import('three/addons/loaders/HDRLoader.js'),
+        ]);
       if (disposed) return;
       const r = (renderer = new T.WebGLRenderer({
         alpha: true,
@@ -170,8 +172,10 @@ export default function DreamlinerScene({
         if (!response.ok) throw new Error('Aircraft asset unavailable');
         return response.arrayBuffer();
       };
-      // HDR is optional: directional/hemisphere light remains a usable fallback.
-      const hdrPromise = fetchBytes('/scenery/daylight.hdr')
+      // HDR is optional: directional/hemisphere light remains a usable fallback,
+      // so the aircraft never waits for it. Should it land after the scene is
+      // ready, recompile once so the environment map is not built mid-frame.
+      void fetchBytes('/scenery/daylight.hdr')
         .then((bytes) => {
           if (disposed) return;
           const data = new HDRLoader().parse(bytes);
@@ -191,13 +195,20 @@ export default function DreamlinerScene({
           texture.dispose();
           pmrem.dispose();
           cleanups.push(() => environment.dispose());
+          if (ready) r.compile(scene, camera);
         })
         .catch(() => {
           /* The aircraft also has ordinary direct and sky lighting. */
         });
       const bytes = await fetchBytes('/models/dreamliner-787-9.glb');
       if (disposed) return;
-      const gltf = await new GLTFLoader().parseAsync(bytes, '');
+      // The mesh is Draco-compressed, 1.3 MB against 5.3 MB plain. The wasm
+      // decoder is served beside the model; its workers end once parsed.
+      const draco = new DRACOLoader().setDecoderPath(sceneAsset('/draco/'));
+      const gltf = await new GLTFLoader()
+        .setDRACOLoader(draco)
+        .parseAsync(bytes, '')
+        .finally(() => draco.dispose());
       // Parsing can finish after React has unmounted. Register resources before
       // testing the lifecycle so late completions are disposed as well.
       gltf.scene.traverse((node) => {
@@ -282,8 +293,6 @@ export default function DreamlinerScene({
         delete pivot.userData.mesh;
       }
       aircraft.add(gltf.scene);
-      await hdrPromise;
-      if (disposed) return;
       // Synchronous warm-up avoids an uncancellable driver poll after unmount.
       r.compile(scene, camera);
       if (disposed) return;

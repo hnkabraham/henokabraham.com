@@ -42,7 +42,10 @@ const imports = {
       .join('')}`,
   ),
   'three/addons/loaders/GLTFLoader.js': uri(
-    'export class GLTFLoader { parseAsync(){return globalThis.tourHarness.parse.promise;} }',
+    'export class GLTFLoader { setDRACOLoader(){return this;} parseAsync(){return globalThis.tourHarness.parse.promise;} }',
+  ),
+  'three/addons/loaders/DRACOLoader.js': uri(
+    'export class DRACOLoader { setDecoderPath(){return this;} dispose(){globalThis.tourHarness.decoderDisposals=(globalThis.tourHarness.decoderDisposals||0)+1;} }',
   ),
   'three/addons/loaders/HDRLoader.js': uri(
     'export class HDRLoader { parse(){return {data:new Uint16Array(4),width:1,height:1,type:1016};} }',
