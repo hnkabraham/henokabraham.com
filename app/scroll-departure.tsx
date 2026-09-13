@@ -240,7 +240,9 @@ export default function ScrollDeparture({
           </Suspense>
         )}
         <div className="bay-opening-sky" aria-hidden="true">
-          <div className="bay-poster" />
+          <div className="bay-poster">
+            <div className="bay-landmark" />
+          </div>
           <div className="bay-opening-cloud bay-opening-cloud-far" />
           <div className="bay-opening-cloud bay-opening-cloud-near" />
         </div>

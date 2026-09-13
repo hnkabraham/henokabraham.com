@@ -43,3 +43,6 @@ __pycache__/
 
 # Private travel exports
 FlightyExport*.csv
+
+# Intermediate buffers and render of the Golden Gate sprite (scripts/prepare-golden-gate.swift)
+archive/models/golden-gate/

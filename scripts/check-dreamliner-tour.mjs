@@ -273,6 +273,28 @@ assert.ok(
   scene.includes("width < 800\n          ? '/models/dreamliner-787-9-phone.glb'"),
   'Narrow viewports fetch the phone aircraft',
 );
+// The Golden Gate landmark: a small sprite anchored to the sky photograph
+// inside the poster, on the home page and the 404 page alike.
+const landmark = await Promise.all(
+  ['golden-gate.avif', 'golden-gate.png'].map(async (name) =>
+    (await fs.stat(new URL(`../public/images/${name}`, import.meta.url))).size,
+  ),
+);
+assert.ok(landmark[0] < 30_000, 'The landmark AVIF stays under 30 KB');
+assert.ok(landmark[1] < 120_000, 'The landmark PNG fallback stays under 120 KB');
+assert.ok(
+  stylesheet.includes("url('/images/golden-gate.avif') type('image/avif')"),
+  'The landmark is offered as AVIF through image-set()',
+);
+assert.match(stylesheet, /\.bay-poster \{[^}]*container-type: size/);
+assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-x: 0\.57/);
+for (const file of ['../app/scroll-departure.tsx', '../app/not-found.tsx'])
+  assert.ok(
+    (await fs.readFile(new URL(file, import.meta.url), 'utf8')).includes(
+      '<div className="bay-landmark" />',
+    ),
+    `${file} places the landmark inside the poster`,
+  );
 console.log(
-  `Passed: phone aircraft ${phoneBytes.length.toLocaleString()} bytes with the desktop mesh; AVIF sky and cloud with fallbacks.`,
+  `Passed: phone aircraft ${phoneBytes.length.toLocaleString()} bytes with the desktop mesh; AVIF sky and cloud with fallbacks; Golden Gate landmark ${landmark[0].toLocaleString()} bytes.`,
 );

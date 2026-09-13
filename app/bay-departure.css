@@ -457,6 +457,35 @@
   );
   animation: bay-sky-drift 32s linear infinite alternate;
   animation-delay: -8s;
+  /* A size container, so the landmark can follow the photo's cover scaling. */
+  container-type: size;
+}
+/* The Golden Gate's towers above the fog, from the owner's model, anchored
+   to the sky photograph in image fractions (x 0.57, fog line y 0.6) so it
+   sits on the haze band at every aspect ratio and drifts with the poster.
+   Portrait centres it: the cover crop keeps only the photo's middle third. */
+.bay-landmark {
+  --sky-w: max(100cqw, 100cqh * 2048 / 1152);
+  --sky-h: max(100cqh, 100cqw * 1152 / 2048);
+  --landmark-x: 0.57;
+  position: absolute;
+  left: calc(50cqw + (var(--landmark-x) - 0.5) * var(--sky-w));
+  top: calc(50cqh + 0.1 * var(--sky-h));
+  width: calc(0.25 * var(--sky-w));
+  aspect-ratio: 781 / 246;
+  transform: translate(-50%, -100%);
+  background: url('/images/golden-gate.png') center / contain no-repeat;
+  background-image: image-set(
+    url('/images/golden-gate.avif') type('image/avif'),
+    url('/images/golden-gate.png') type('image/png')
+  );
+  pointer-events: none;
+}
+@media (max-width: 800px) {
+  .bay-landmark {
+    --landmark-x: 0.5;
+    width: calc(0.21 * var(--sky-w));
+  }
 }
 .bay-opening-cloud {
   position: absolute;
