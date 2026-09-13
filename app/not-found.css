@@ -1,0 +1,65 @@
+/* The 404 page: the tour's opening sky (bay-departure.css) behind one card. */
+.diverted {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: 7rem 6% 4rem;
+  color: #162d3d;
+  background: #82b9df;
+}
+.diverted-card {
+  position: relative;
+  max-width: 600px;
+}
+.diverted-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  color: #21465f;
+  margin: 0 0 18px;
+}
+.diverted h1 {
+  font-size: clamp(3.2rem, 7vw, 6.8rem);
+  line-height: 1.02;
+  font-weight: 430;
+  letter-spacing: -0.065em;
+  margin: 0 0 22px;
+  text-shadow:
+    0 0 2px #ffffffe6,
+    0 2px 34px #ffffff99;
+}
+.diverted p:not(.diverted-eyebrow) {
+  font-size: 1.125rem;
+  line-height: 1.55;
+  max-width: 34rem;
+  margin: 0 0 30px;
+  color: #21465f;
+}
+.diverted nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.diverted-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: #162d3de0;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 480;
+  transition: background 0.2s ease;
+}
+.diverted-link:hover,
+.diverted-link:focus-visible {
+  background: #db4f24;
+}
+@media (prefers-reduced-motion: reduce) {
+  .diverted .bay-poster,
+  .diverted .bay-opening-cloud {
+    animation: none;
+  }
+}
