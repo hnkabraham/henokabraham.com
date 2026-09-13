@@ -257,6 +257,7 @@ export default function AviationLogbook() {
                 <button
                   type="button"
                   className="logbook-airline"
+                  data-airline={item.code}
                   aria-label={`${brand.name} · ${item.flights} ${item.flights === 1 ? 'flight' : 'flights'}`}
                   aria-pressed={airline === item.code}
                   title={brand.name}

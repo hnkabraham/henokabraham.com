@@ -13,9 +13,9 @@ AV: https://raw.githubusercontent.com/soaring-symbols/soaring-symbols/2e97859ed3
 KL: https://raw.githubusercontent.com/soaring-symbols/soaring-symbols/2e97859ed3e7aba051d5696ff59c97c3de36823b/assets/klm/icon.svg
 SK: https://raw.githubusercontent.com/soaring-symbols/soaring-symbols/2e97859ed3e7aba051d5696ff59c97c3de36823b/assets/scandinavian-airlines/logo.svg
 LX: https://raw.githubusercontent.com/soaring-symbols/soaring-symbols/2e97859ed3e7aba051d5696ff59c97c3de36823b/assets/swiss/icon.svg
-AA: https://images.kiwi.com/airlines/128/AA.png
-F9: https://images.kiwi.com/airlines/128/F9.png
-NK: https://images.kiwi.com/airlines/128/NK.png
+AA: https://raw.githubusercontent.com/simple-icons/simple-icons/11.0.0/icons/americanairlines.svg (Simple Icons; CC0)
+F9: https://commons.wikimedia.org/wiki/File:Frontier_Airlines_logo.svg (public-domain text logo; three original symbol paths isolated from wordmark, green fill adapted for dark surface)
+NK: https://commons.wikimedia.org/wiki/File:Spirit_Airlines_logo.svg (public-domain text logo)
 P5: https://images.kiwi.com/airlines/128/P5.png
 
 MIT License
@@ -41,3 +41,5 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 P5 identifies Aero Republica flights marketed as Wingo. Source: https://storage.googleapis.com/gcp-wingo-pro-public/docs/contrato-transporte.pdf
+
+Dark-surface presentation: selected single-color marks use a light CSS treatment; transparent logo geometry is preserved.

@@ -37,7 +37,7 @@ for (const flight of personalFlights) {
     throw new Error('Airline identification is missing');
   airlines[code] = {
     name: code === 'P5' ? 'Wingo (Aero Republica)' : flight.airline,
-    logo: `/images/airlines/${code.toLowerCase()}.${['AA', 'F9', 'NK', 'P5'].includes(code) ? 'png' : 'svg'}`,
+    logo: `/images/airlines/${code.toLowerCase()}.${code === 'P5' ? 'png' : 'svg'}`,
   };
 }
 const periods = {};

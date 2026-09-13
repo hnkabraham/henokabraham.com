@@ -363,7 +363,7 @@ export const flightAtlas: FlightAtlas = {
     },
     "F9": {
       "name": "Frontier Airlines",
-      "logo": "/images/airlines/f9.png"
+      "logo": "/images/airlines/f9.svg"
     },
     "AR": {
       "name": "Aerolíneas Argentinas",
@@ -387,7 +387,7 @@ export const flightAtlas: FlightAtlas = {
     },
     "AA": {
       "name": "American Airlines",
-      "logo": "/images/airlines/aa.png"
+      "logo": "/images/airlines/aa.svg"
     },
     "BA": {
       "name": "British Airways",
@@ -395,7 +395,7 @@ export const flightAtlas: FlightAtlas = {
     },
     "NK": {
       "name": "Spirit Airlines",
-      "logo": "/images/airlines/nk.png"
+      "logo": "/images/airlines/nk.svg"
     }
   },
   "years": [
