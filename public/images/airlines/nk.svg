@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="286.23163" height="79.737061" viewBox="0 0 75.732117 21.097098">
-<g style="clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41420996;fill:#231f20;fill-rule:nonzero" transform="translate(-67.967274,-64.201443) matrix(0.26458333,0,0,0.26458333,68.099555,64.333713)">
+<g style="clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41420996;fill:#ffdc00;fill-rule:nonzero" transform="translate(-67.967274,-64.201443) matrix(0.26458333,0,0,0.26458333,68.099555,64.333713)">
  <g transform="matrix(0.24,0,0,0.24,-35.9996,-104.631) scale(4.16667)">
   <path transform="translate(272.885,153.166)" d="m 0,-32.41 h 9.425 l 3.099,-14.589 h 17.991 l -3.109,14.589 h 11.886 l -2.528,11.871 H 24.885 l -3.936,18.502 c -0.88,4.158 0.013,4.744 4.852,4.744 2.2,0 4.007,-0.082 6.404,-0.165 L 29.821,13.741 C 26.064,14.247 21.238,14.589 15.975,14.589 4.266,14.589 0.04,11.71 2.152,1.779 L 6.904,-20.539 H -2.52 Z" />
   <path transform="translate(248.461,166.742)" d="M 0,-45.986 H 17.985 L 8.214,0 H -9.771 Z" />

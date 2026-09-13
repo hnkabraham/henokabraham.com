@@ -42,4 +42,4 @@ SOFTWARE.
 
 P5 identifies Aero Republica flights marketed as Wingo. Source: https://storage.googleapis.com/gcp-wingo-pro-public/docs/contrato-transporte.pdf
 
-Dark-surface presentation: selected single-color marks use a light CSS treatment; transparent logo geometry is preserved.
+Dark-surface presentation: American’s original three symbol segments use blue, silver and red fills; Spirit’s wordmark uses yellow. Dark blue marks use a modest brightness lift. Transparent logo geometry is preserved.
