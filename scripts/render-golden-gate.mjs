@@ -47,14 +47,24 @@ window.renderModelBridge = async function (opts) {
   stage.add(new T.Mesh(geometry, new T.MeshStandardMaterial({ color: 0xc0362c, roughness: 0.62, metalness: 0.12, side: T.DoubleSide })));
   stage.add(new T.HemisphereLight(0xcfe3f5, 0xdad8d0, 1.3));
   const sun = new T.DirectionalLight(0xfff1dc, 2.6); sun.position.set(0.4, 0.75, 0.55).multiplyScalar(1000); stage.add(sun);
-  const camera = new T.PerspectiveCamera(24, W / H, 5, 40000);
+  const camera = new T.PerspectiveCamera(opts.fov ?? 30, W / H, 5, 40000);
   camera.position.set(...opts.camera); camera.lookAt(...opts.target);
   camera.updateMatrixWorld(); camera.updateProjectionMatrix();
   r.render(stage, camera);
-  const project = (x, y) => { const v = new T.Vector3(x, y, 0).project(camera); return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H }; };
-  const refs = {};
-  for (const [name, x] of Object.entries(opts.towers)) { refs[name] = {}; for (let h = -20; h <= 180; h += 5) refs[name][h] = project(x, h); }
-  return { png: canvas.toDataURL('image/png'), refs, meshes: keep.length, triangles: total / 3 };
+  const beauty = canvas.toDataURL('image/png');
+  // Data pass: world height in red (metres, -100..300) and distance from
+  // the camera in green (0..4000 m), so the sprite step can fade the fog
+  // and thicken the haze per pixel whatever the camera angle.
+  const mesh = stage.children[0];
+  mesh.material = new T.ShaderMaterial({
+    side: T.DoubleSide,
+    vertexShader: 'varying vec3 vWorld; void main() { vWorld = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'varying vec3 vWorld; uniform vec3 eye; void main() { gl_FragColor = vec4(clamp((vWorld.y + 100.0) / 400.0, 0.0, 1.0), clamp(distance(vWorld, eye) / 4000.0, 0.0, 1.0), 0.0, 1.0); }',
+    uniforms: { eye: { value: camera.position.clone() } },
+  });
+  r.toneMapping = T.NoToneMapping; r.outputColorSpace = T.LinearSRGBColorSpace;
+  r.render(stage, camera);
+  return { png: beauty, data: canvas.toDataURL('image/png'), meshes: keep.length, triangles: total / 3 };
 };`;
 const types = { '.bin': 'application/octet-stream', '.json': 'application/json' };
 const server = createServer(async (req, res) => {
@@ -75,15 +85,15 @@ const page = await browser.newPage({ viewport: { width: 400, height: 300 } });
 page.on('pageerror', (error) => console.error('page:', String(error).slice(0, 300)));
 await page.goto(`http://127.0.0.1:${server.address().port}/`);
 // The model's units are metres with the deck at y 6 and the tower tops at
-// 165; towers at x -476 and 453. The camera looks from 2.5 km out and 380 m
-// up, from the north-east, so the portals show and the span recedes.
+// 165; towers at x -476 and 453. The camera sits beyond the north end,
+// 330 m up and a little to the ocean side, looking down the span, so the
+// near tower stands large at the bottom and the bridge recedes upward.
 const result = await page.evaluate((o) => window.renderModelBridge(o), {
-  width: 2400, height: 1000, minTop: 45,
-  camera: [2000, 380, 1450], target: [-10, 95, 0],
-  towers: { south: -476, north: 453 },
+  width: 1400, height: 2000, minTop: 45,
+  camera: [1350, 330, -100], target: [-150, 90, 0],
 });
 await writeFile(`${out}.png`, Buffer.from(result.png.split(',')[1], 'base64'));
-await writeFile(`${out}.json`, JSON.stringify(result.refs));
+await writeFile(`${out}-data.png`, Buffer.from(result.data.split(',')[1], 'base64'));
 console.log(`${out}.png: ${result.meshes} meshes, ${result.triangles.toLocaleString()} triangles`);
 await browser.close();
 server.close();

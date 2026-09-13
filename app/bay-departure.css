@@ -466,23 +466,24 @@
   /* A size container, so the landmark can follow the photo's cover scaling. */
   container-type: size;
 }
-/* The Golden Gate's towers above the fog, from the owner's model, anchored
-   to the sky photograph in image fractions so it keeps its place in the
-   cloud deck at every aspect ratio and drifts with the poster: lower left,
-   fog line at y 0.72, nearer than the horizon and so a little larger.
-   Portrait keeps it in the photo's middle third, which is all the cover
-   crop shows, and above the chapter bar. */
+/* The Golden Gate seen down its span, from the owner's model: the near
+   tower stands at the lower left and the bridge recedes up the left edge
+   into the haze. Anchored to the sky photograph in image fractions (the
+   sprite's bottom centre at x, y; height as a share of the photo), so it
+   keeps its place at every aspect ratio and drifts with the poster.
+   Portrait, which shows only the photo's middle third, keeps it left of
+   centre and above the chapter bar. */
 .bay-landmark {
   --sky-w: max(100cqw, 100cqh * 2048 / 1152);
   --sky-h: max(100cqh, 100cqw * 1152 / 2048);
-  --landmark-x: 0.33;
-  --landmark-y: 0.72;
-  --landmark-w: 0.3;
+  --landmark-x: 0.17;
+  --landmark-y: 0.9;
+  --landmark-h: 0.33;
   position: absolute;
   left: calc(50cqw + (var(--landmark-x) - 0.5) * var(--sky-w));
   top: calc(50cqh + (var(--landmark-y) - 0.5) * var(--sky-h));
-  width: calc(var(--landmark-w) * var(--sky-w));
-  aspect-ratio: 781 / 246;
+  height: calc(var(--landmark-h) * var(--sky-h));
+  aspect-ratio: 373 / 892;
   transform: translate(-50%, -100%);
   background: url('/images/golden-gate.png') center / contain no-repeat;
   background-image: image-set(
@@ -493,9 +494,9 @@
 }
 @media (max-width: 800px) {
   .bay-landmark {
-    --landmark-x: 0.47;
-    --landmark-y: 0.66;
-    --landmark-w: 0.24;
+    --landmark-x: 0.4;
+    --landmark-y: 0.7;
+    --landmark-h: 0.22;
   }
 }
 .bay-opening-cloud {

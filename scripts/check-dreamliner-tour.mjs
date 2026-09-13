@@ -280,15 +280,16 @@ const landmark = await Promise.all(
     (await fs.stat(new URL(`../public/images/${name}`, import.meta.url))).size,
   ),
 );
-assert.ok(landmark[0] < 30_000, 'The landmark AVIF stays under 30 KB');
-assert.ok(landmark[1] < 120_000, 'The landmark PNG fallback stays under 120 KB');
+assert.ok(landmark[0] < 40_000, 'The landmark AVIF stays under 40 KB');
+assert.ok(landmark[1] < 160_000, 'The landmark PNG fallback stays under 160 KB');
 assert.ok(
   stylesheet.includes("url('/images/golden-gate.avif') type('image/avif')"),
   'The landmark is offered as AVIF through image-set()',
 );
 assert.match(stylesheet, /\.bay-poster \{[^}]*container-type: size/);
-assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-x: 0\.33/);
-assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-y: 0\.72/);
+assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-x: 0\.17/);
+assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-y: 0\.9/);
+assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-h: 0\.33/);
 for (const file of ['../app/scroll-departure.tsx', '../app/not-found.tsx'])
   assert.ok(
     (await fs.readFile(new URL(file, import.meta.url), 'utf8')).includes(
