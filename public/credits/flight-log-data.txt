@@ -1,0 +1,15 @@
+Personal flight records: owner-supplied Flighty CSV, imported 2026-09-13.
+Only public historical flight details are included; the original CSV is not published.
+
+Airport names, cities, country/territory codes and coordinates: OurAirports, public domain.
+https://ourairports.com/data/
+https://github.com/davidmegginson/ourairports-data
+Airport snapshot retrieved 2026-09-13; 42 matching airports retained.
+Airports CSV SHA-256: 8bb6f48835fbedc41e6294c570980c16c5d3014e3a529927f6aa9dbdd1c38327
+
+Airline code labels: Flighty ICAO codes expanded to airline names and IATA flight prefixes.
+https://www.iata.org/en/about/members/airline-list/
+https://www.iata.org/codes
+
+Distances are great-circle estimates between recorded departure and arrival airports.
+Diversions use actual arrival airports; a return to origin has no distance estimate.

@@ -1,0 +1,338 @@
+{
+  "AMS": {
+    "code": "AMS",
+    "name": "Amsterdam Airport Schiphol",
+    "city": "Amsterdam",
+    "country": "NL",
+    "latitude": 52.308601,
+    "longitude": 4.76389
+  },
+  "ATL": {
+    "code": "ATL",
+    "name": "Hartsfield Jackson Atlanta International Airport",
+    "city": "Atlanta",
+    "country": "US",
+    "latitude": 33.6367,
+    "longitude": -84.428101
+  },
+  "AUS": {
+    "code": "AUS",
+    "name": "Austin Bergstrom International Airport",
+    "city": "Austin",
+    "country": "US",
+    "latitude": 30.197535,
+    "longitude": -97.662015
+  },
+  "BOG": {
+    "code": "BOG",
+    "name": "El Dorado International Airport",
+    "city": "Bogota",
+    "country": "CO",
+    "latitude": 4.70159,
+    "longitude": -74.1469
+  },
+  "BUR": {
+    "code": "BUR",
+    "name": "Hollywood Burbank/Bob Hope Airport",
+    "city": "Burbank",
+    "country": "US",
+    "latitude": 34.202834,
+    "longitude": -118.35805
+  },
+  "BWI": {
+    "code": "BWI",
+    "name": "Baltimore/Washington International Thurgood Marshall Airport",
+    "city": "Baltimore",
+    "country": "US",
+    "latitude": 39.1754,
+    "longitude": -76.668297
+  },
+  "CLT": {
+    "code": "CLT",
+    "name": "Charlotte Douglas International Airport",
+    "city": "Charlotte",
+    "country": "US",
+    "latitude": 35.2140007019043,
+    "longitude": -80.94309997558594
+  },
+  "CPH": {
+    "code": "CPH",
+    "name": "Copenhagen Kastrup Airport",
+    "city": "Copenhagen",
+    "country": "DK",
+    "latitude": 55.617900848389,
+    "longitude": 12.656000137329
+  },
+  "CTG": {
+    "code": "CTG",
+    "name": "Rafael Nuñez International Airport",
+    "city": "Cartagena",
+    "country": "CO",
+    "latitude": 10.4424,
+    "longitude": -75.513
+  },
+  "DAL": {
+    "code": "DAL",
+    "name": "Dallas Love Field",
+    "city": "Dallas",
+    "country": "US",
+    "latitude": 32.844776,
+    "longitude": -96.847653
+  },
+  "DCA": {
+    "code": "DCA",
+    "name": "Ronald Reagan Washington National Airport",
+    "city": "Washington",
+    "country": "US",
+    "latitude": 38.8521,
+    "longitude": -77.037697
+  },
+  "DEN": {
+    "code": "DEN",
+    "name": "Denver International Airport",
+    "city": "Denver",
+    "country": "US",
+    "latitude": 39.860027,
+    "longitude": -104.673792
+  },
+  "DFW": {
+    "code": "DFW",
+    "name": "Dallas Fort Worth International Airport",
+    "city": "Dallas-Fort Worth",
+    "country": "US",
+    "latitude": 32.896801,
+    "longitude": -97.038002
+  },
+  "DTW": {
+    "code": "DTW",
+    "name": "Detroit Metropolitan Wayne County Airport",
+    "city": "Detroit",
+    "country": "US",
+    "latitude": 42.21377,
+    "longitude": -83.353786
+  },
+  "DUB": {
+    "code": "DUB",
+    "name": "Dublin Airport",
+    "city": "Dublin",
+    "country": "IE",
+    "latitude": 53.428713,
+    "longitude": -6.262121
+  },
+  "EWR": {
+    "code": "EWR",
+    "name": "Newark Liberty International Airport",
+    "city": "Newark",
+    "country": "US",
+    "latitude": 40.6894,
+    "longitude": -74.170545
+  },
+  "EZE": {
+    "code": "EZE",
+    "name": "Ezeiza International Airport - Ministro Pistarini",
+    "city": "Buenos Aires (Ezeiza)",
+    "country": "AR",
+    "latitude": -34.8222,
+    "longitude": -58.5358
+  },
+  "IAD": {
+    "code": "IAD",
+    "name": "Washington Dulles International Airport",
+    "city": "Dulles",
+    "country": "US",
+    "latitude": 38.9445,
+    "longitude": -77.455803
+  },
+  "IAH": {
+    "code": "IAH",
+    "name": "George Bush Intercontinental Airport",
+    "city": "Houston",
+    "country": "US",
+    "latitude": 29.9844,
+    "longitude": -95.3414
+  },
+  "ICN": {
+    "code": "ICN",
+    "name": "Incheon International Airport",
+    "city": "Seoul",
+    "country": "KR",
+    "latitude": 37.469101,
+    "longitude": 126.450996
+  },
+  "JFK": {
+    "code": "JFK",
+    "name": "John F. Kennedy International Airport",
+    "city": "New York",
+    "country": "US",
+    "latitude": 40.639447,
+    "longitude": -73.779317
+  },
+  "KOA": {
+    "code": "KOA",
+    "name": "Ellison Onizuka Kona International Airport at Keāhole",
+    "city": "Kailua-Kona",
+    "country": "US",
+    "latitude": 19.738783,
+    "longitude": -156.045603
+  },
+  "LAX": {
+    "code": "LAX",
+    "name": "Los Angeles International Airport",
+    "city": "Los Angeles",
+    "country": "US",
+    "latitude": 33.942501,
+    "longitude": -118.407997
+  },
+  "LHR": {
+    "code": "LHR",
+    "name": "London Heathrow Airport",
+    "city": "London",
+    "country": "GB",
+    "latitude": 51.470748,
+    "longitude": -0.459909
+  },
+  "MEX": {
+    "code": "MEX",
+    "name": "Mexico City Benito Juárez International Airport",
+    "city": "Mexico City",
+    "country": "MX",
+    "latitude": 19.435822,
+    "longitude": -99.07033
+  },
+  "MIA": {
+    "code": "MIA",
+    "name": "Miami International Airport",
+    "city": "Miami",
+    "country": "US",
+    "latitude": 25.796011,
+    "longitude": -80.289751
+  },
+  "MSP": {
+    "code": "MSP",
+    "name": "Minneapolis–Saint Paul International Airport / Wold–Chamberlain Field",
+    "city": "Minneapolis",
+    "country": "US",
+    "latitude": 44.880081,
+    "longitude": -93.221741
+  },
+  "NRT": {
+    "code": "NRT",
+    "name": "Narita International Airport",
+    "city": "Narita",
+    "country": "JP",
+    "latitude": 35.76858,
+    "longitude": 140.388714
+  },
+  "OAK": {
+    "code": "OAK",
+    "name": "Oakland San Francisco Bay Airport",
+    "city": "Oakland",
+    "country": "US",
+    "latitude": 37.720085,
+    "longitude": -122.221184
+  },
+  "ORD": {
+    "code": "ORD",
+    "name": "Chicago O'Hare International Airport",
+    "city": "Chicago",
+    "country": "US",
+    "latitude": 41.9786,
+    "longitude": -87.9048
+  },
+  "PHL": {
+    "code": "PHL",
+    "name": "Philadelphia International Airport",
+    "city": "Philadelphia",
+    "country": "US",
+    "latitude": 39.871899,
+    "longitude": -75.241096
+  },
+  "PHX": {
+    "code": "PHX",
+    "name": "Phoenix Sky Harbor International Airport",
+    "city": "Phoenix",
+    "country": "US",
+    "latitude": 33.435302,
+    "longitude": -112.005905
+  },
+  "PIT": {
+    "code": "PIT",
+    "name": "Pittsburgh International Airport",
+    "city": "Pittsburgh",
+    "country": "US",
+    "latitude": 40.491501,
+    "longitude": -80.232903
+  },
+  "PPT": {
+    "code": "PPT",
+    "name": "Fa'a'ā International Airport",
+    "city": "Papeete",
+    "country": "PF",
+    "latitude": -17.553472,
+    "longitude": -149.606936
+  },
+  "SAN": {
+    "code": "SAN",
+    "name": "San Diego International Airport",
+    "city": "San Diego",
+    "country": "US",
+    "latitude": 32.733601,
+    "longitude": -117.190002
+  },
+  "SEA": {
+    "code": "SEA",
+    "name": "Seattle–Tacoma International Airport",
+    "city": "Seattle",
+    "country": "US",
+    "latitude": 47.447943,
+    "longitude": -122.310276
+  },
+  "SFO": {
+    "code": "SFO",
+    "name": "San Francisco International Airport",
+    "city": "San Francisco",
+    "country": "US",
+    "latitude": 37.619806,
+    "longitude": -122.374821
+  },
+  "SJC": {
+    "code": "SJC",
+    "name": "Mineta San Jose International Airport",
+    "city": "San Jose",
+    "country": "US",
+    "latitude": 37.362452,
+    "longitude": -121.929188
+  },
+  "SLC": {
+    "code": "SLC",
+    "name": "Salt Lake City International Airport",
+    "city": "Salt Lake City",
+    "country": "US",
+    "latitude": 40.78886,
+    "longitude": -111.979866
+  },
+  "SMF": {
+    "code": "SMF",
+    "name": "Sacramento International Airport",
+    "city": "Sacramento",
+    "country": "US",
+    "latitude": 38.6954,
+    "longitude": -121.591003
+  },
+  "YYZ": {
+    "code": "YYZ",
+    "name": "Toronto Pearson International Airport",
+    "city": "Toronto",
+    "country": "CA",
+    "latitude": 43.675935,
+    "longitude": -79.629421
+  },
+  "ZRH": {
+    "code": "ZRH",
+    "name": "Zürich Airport",
+    "city": "Zurich",
+    "country": "CH",
+    "latitude": 47.458056,
+    "longitude": 8.548056
+  }
+}

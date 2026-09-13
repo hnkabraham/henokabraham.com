@@ -40,3 +40,6 @@ next-env.d.ts
 # generated
 __pycache__/
 *.tsbuildinfo
+
+# Private travel exports
+FlightyExport*.csv

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, Plane } from 'lucide-react';
-import { personalFlights } from './personal-flights';
+import { personalFlights, flightLogImport } from './personal-flights';
 import {
   flightLogStats,
   mapPoint,
@@ -27,8 +27,10 @@ const dateLabel = (date: string | null) =>
 
 export default function AviationLogbook() {
   const [year, setYear] = useState('all');
+  const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const root = useRef<HTMLElement>(null);
+  const list = useRef<HTMLFieldSetElement>(null);
   useEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -87,6 +89,14 @@ export default function AviationLogbook() {
     [flights],
   );
   const active = flights.find((f) => f.id === selected) ?? flights[0];
+  const pageSize = 20;
+  const pageCount = Math.ceil(flights.length / pageSize);
+  const changePage = (next: number) => {
+    const index = Math.max(0, Math.min(pageCount - 1, next));
+    setPage(index);
+    setSelected(flights[index * pageSize]?.id ?? null);
+    list.current?.scrollTo({ top: 0 });
+  };
   return (
     <section
       className="aviation-logbook"
@@ -106,7 +116,9 @@ export default function AviationLogbook() {
               value={year}
               onChange={(e) => {
                 setYear(e.target.value);
+                setPage(0);
                 setSelected(null);
+                list.current?.scrollTo({ top: 0 });
               }}
             >
               <option value="all">All flights</option>
@@ -119,7 +131,7 @@ export default function AviationLogbook() {
           </label>
         )}
         <span className="logbook-mark">
-          <Plane size={17} /> PERSONAL AIRSPACE
+          <Plane size={17} /> FLIGHTY · {years.at(-1)}–{years[0]}
         </span>
       </div>
       <figure className="logbook-atlas">
@@ -214,7 +226,7 @@ export default function AviationLogbook() {
         {[
           ['Flights', stats.flights],
           ['Airports', stats.airports],
-          ['Countries', stats.countries],
+          ['Countries / regions', stats.countries],
           ['Est. route miles', stats.miles],
         ].map(([label, value]) => (
           <div key={label}>
@@ -232,32 +244,74 @@ export default function AviationLogbook() {
           </div>
         ))}
       </dl>
+      {flightLogImport.canceled > 0 && (
+        <p className="logbook-data-note">
+          Full log excludes {flightLogImport.canceled} cancellations. Distances
+          are estimated between airports.
+        </p>
+      )}
       {active && (
         <div className="logbook-records">
-          <fieldset
-            className="logbook-flight-list"
-            aria-label="Choose a recorded flight"
-          >
-            {flights.map((flight) => (
-              <button
-                key={flight.id}
-                type="button"
-                aria-pressed={active.id === flight.id}
-                onClick={() => setSelected(flight.id)}
+          <div className="logbook-history">
+            <fieldset
+              className="logbook-flight-list"
+              ref={list}
+              aria-label="Choose a recorded flight"
+            >
+              {flights
+                .slice(page * pageSize, (page + 1) * pageSize)
+                .map((flight) => (
+                  <button
+                    key={flight.id}
+                    type="button"
+                    aria-pressed={active.id === flight.id}
+                    onClick={() => setSelected(flight.id)}
+                  >
+                    <span className="logbook-list-route">
+                      {flight.from.code}
+                      <Plane size={14} />
+                      {flight.to.code}
+                    </span>
+                    <time dateTime={flight.date ?? undefined}>
+                      {dateLabel(flight.date)}
+                    </time>
+                    <span>
+                      {flight.flightNumber || flight.airline || 'Flight'}
+                      {flight.scheduledTo && (
+                        <small className="logbook-diverted-label">
+                          Diverted
+                        </small>
+                      )}
+                    </span>
+                    <ArrowUpRight size={16} />
+                  </button>
+                ))}
+            </fieldset>
+            {pageCount > 1 && (
+              <nav
+                className="logbook-pagination"
+                aria-label="Flight history pages"
               >
-                <span className="logbook-list-route">
-                  {flight.from.code}
-                  <Plane size={14} />
-                  {flight.to.code}
+                <button
+                  type="button"
+                  disabled={page === 0}
+                  onClick={() => changePage(page - 1)}
+                >
+                  ← Newer
+                </button>
+                <span aria-live="polite">
+                  {page + 1} / {pageCount}
                 </span>
-                <time dateTime={flight.date ?? undefined}>
-                  {dateLabel(flight.date)}
-                </time>
-                <span>{flight.flightNumber || flight.airline || 'Flight'}</span>
-                <ArrowUpRight size={16} />
-              </button>
-            ))}
-          </fieldset>
+                <button
+                  type="button"
+                  disabled={page === pageCount - 1}
+                  onClick={() => changePage(page + 1)}
+                >
+                  Older →
+                </button>
+              </nav>
+            )}
+          </div>
           <article
             className="logbook-pass"
             aria-live="polite"
@@ -270,14 +324,26 @@ export default function AviationLogbook() {
             <div className="logbook-pass-route">
               <div>
                 <strong>{active.from.code}</strong>
-                <span>{active.from.name}</span>
+                <span title={active.from.name}>
+                  {active.from.city || active.from.name}
+                </span>
               </div>
               <span>→</span>
               <div>
                 <strong>{active.to.code}</strong>
-                <span>{active.to.name}</span>
+                <span title={active.to.name}>
+                  {active.to.city || active.to.name}
+                </span>
               </div>
             </div>
+            {active.scheduledTo && (
+              <p className="logbook-diversion">
+                {active.from.code === active.to.code
+                  ? `Returned to ${active.to.code}`
+                  : `Diverted to ${active.to.code}`}{' '}
+                · scheduled for {active.scheduledTo.code}
+              </p>
+            )}
             <dl>
               <div>
                 <dt>Date</dt>
@@ -297,7 +363,11 @@ export default function AviationLogbook() {
               )}
               <div>
                 <dt>Est. distance</dt>
-                <dd>{number(Math.round(routeMiles(active)))} mi</dd>
+                <dd>
+                  {active.from.code === active.to.code
+                    ? 'Not available'
+                    : `${number(Math.round(routeMiles(active)))} mi`}
+                </dd>
               </div>
             </dl>
             <div className="logbook-pass-stub">

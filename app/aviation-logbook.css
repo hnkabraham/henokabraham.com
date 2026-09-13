@@ -331,3 +331,53 @@
     animation: none;
   }
 }
+
+.logbook-data-note {
+  margin: 21px 0 0;
+  font-size: 0.7rem;
+  color: #acc6d5;
+  line-height: 1.5;
+}
+.logbook-diverted-label {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.65rem;
+  color: #ffc49c;
+}
+.logbook-diversion {
+  margin: 0 23px 18px;
+  padding: 9px 11px;
+  background: #e7d9c6;
+  border-radius: 3px;
+  color: #663e21;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.logbook-history {
+  min-width: 0;
+}
+.logbook-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 13px;
+  font-size: 0.75rem;
+  color: #bed5e2;
+}
+.logbook-pagination button {
+  min-height: 44px;
+  padding: 7px 12px;
+  border: 1px solid #517083;
+  border-radius: 5px;
+  color: #d8e7ef;
+  background: transparent;
+}
+.logbook-pagination button:not(:disabled):hover {
+  background: #24485a;
+}
+.logbook-pagination button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

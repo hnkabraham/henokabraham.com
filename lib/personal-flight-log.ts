@@ -1,6 +1,7 @@
 export type LogAirport = {
   code: string;
   name: string;
+  city?: string;
   country: string;
   latitude: number;
   longitude: number;
@@ -12,6 +13,8 @@ export type PersonalFlight = {
   date: string | null;
   from: LogAirport;
   to: LogAirport;
+  /** Original destination when the recorded flight diverted elsewhere. */
+  scheduledTo?: LogAirport;
   airline?: string;
   flightNumber?: string;
   aircraft?: string;

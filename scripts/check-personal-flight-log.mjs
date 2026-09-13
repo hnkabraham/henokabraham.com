@@ -94,7 +94,28 @@ for (const item of personalFlights) {
       Number.isFinite(point.longitude) && Math.abs(point.longitude) <= 180,
     );
   }
-  assert.ok(!('seat' in item) && !('bookingReference' in item));
+  const allowed = new Set([
+    'id',
+    'date',
+    'from',
+    'to',
+    'scheduledTo',
+    'airline',
+    'flightNumber',
+    'aircraft',
+  ]);
+  assert.ok(
+    Object.keys(item).every((key) => allowed.has(key)),
+    'Only public flight fields are shipped',
+  );
+  if (item.scheduledTo) {
+    assert.match(item.scheduledTo.code, /^[A-Z0-9]{3,4}$/);
+    assert.notEqual(
+      item.scheduledTo.code,
+      item.to.code,
+      'A diversion retains a different scheduled airport',
+    );
+  }
 }
 console.log(
   `Passed: distance totals, repeated routes, date-line and antipodal paths, polar coordinates, empty-state totals, and ${personalFlights.length} supplied records.`,
