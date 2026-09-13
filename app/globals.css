@@ -106,10 +106,11 @@ a:focus-visible,
   align-items: center;
   justify-content: space-between;
   gap: 25px;
-  background: #f5f5f0;
-  border-bottom: 1px solid #d4dce0;
-  position: relative;
+  background: transparent;
+  position: absolute;
+  inset: 0 0 auto;
   z-index: 3;
+  color: #163448;
 }
 .brand {
   display: flex;
@@ -126,7 +127,7 @@ a:focus-visible,
   letter-spacing: 0.17em;
   font-weight: 400;
   margin-top: 5px;
-  color: #74838b;
+  color: #244b63;
 }
 .brand-symbol {
   display: grid;
@@ -154,7 +155,9 @@ a:focus-visible,
   color: #1a3344;
 }
 .terminal-header nav a:hover {
-  color: #d34d24;
+  color: #0b293c;
+  text-decoration: underline;
+  text-underline-offset: 5px;
 }
 .terminal-id {
   font-size: 0.75rem;
@@ -995,10 +998,10 @@ a:focus-visible,
   gap: 9px;
   font-size: 0.75rem;
   white-space: nowrap;
-  color: #496371;
+  color: #244b63;
 }
 .station-clock > span:last-child {
-  color: #8b969a;
+  color: #315970;
   font-size: 0.75rem;
 }
 .station-clock time {
@@ -1006,10 +1009,10 @@ a:focus-visible,
 }
 .terminal-header nav a {
   font-size: 0.875rem;
-  color: #2b4758;
+  color: #163448;
 }
 .terminal-header nav a .nav-number {
-  color: #8b969d;
+  color: #315970;
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.75rem;
 }
@@ -1953,6 +1956,7 @@ a:focus-visible,
 }
 /* Depth is driven by the pointer and real scene layers, without moving the reading surface far. */
 .airport {
+  position: relative;
   --look-x: 0;
   --look-y: 0;
 }

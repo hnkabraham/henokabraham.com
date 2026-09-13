@@ -932,3 +932,24 @@
     );
   }
 }
+
+/* The opening header shares the actual moving sky, then yields to flight controls. */
+.dreamliner-journey .bay-flight-label,
+.dreamliner-journey .bay-skip {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+.dreamliner-journey[data-opening='false'] .bay-flight-label,
+.dreamliner-journey[data-opening='false'] .bay-skip {
+  opacity: 1;
+  visibility: visible;
+}
+.dreamliner-journey:not([data-opening='false']) .bay-story {
+  top: max(19%, 112px);
+}
+@media (max-width: 800px) {
+  .dreamliner-journey:not([data-opening='false']) .bay-story {
+    top: max(13%, 100px);
+  }
+}
