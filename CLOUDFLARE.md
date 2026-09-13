@@ -54,10 +54,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `e46cfd89-e03b-4320-93dc-fa11310b771c`
+- Cloudflare version: `a7e02827-9d66-4716-bd8c-75a269d23694`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: all 14 flown airline logos beneath the chronological passport flags, source `1ee6f84` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
-- Current validation: airline counts reconcile with the historical records in all 12 summary periods. The component renders all 14 logos, 13 country flags and 13 international airport labels. TypeScript, summary/privacy checks, the production build, Cloudflare dry run and deployment passed. The live homepage returns HTTP 200 with 14 airline controls; all 14 logos and the stylesheet match local SHA-256 hashes. All 27 public code/data files were checked for individual flight IDs and none were found. This release did not include browser QA.
+- Current release: transparent airline logos with representative brand colors and clear spacing, source `035e597` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
+- Current validation: TypeScript, summary/asset/privacy checks, the production build and deployment passed. The live homepage returns HTTP 200 with all 14 airline logos; the stylesheet and all 14 logo files match local SHA-256 hashes. American’s three-color SVG and the isolated Frontier mark were inspected as standalone assets. Airline totals, country order and individual-flight exclusions remain unchanged. This release did not include browser QA.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
 
@@ -172,3 +172,7 @@ The map labels international airports with local flags. Thirteen circular flags 
 Source `1ee6f84` adds a compact airline-logo strip below the country flags. The 14 airlines are sorted by aggregate flight count within the selected year or complete log. Selecting a logo shows the airline name and total; changing the year clears the selection. The public summary adds only carrier names, local logo paths and counts, with individual flights still excluded.
 
 Ten SVG logos are sourced from Soaring Symbols and four PNG logos from Kiwi’s airline image collection. All are served locally; source URLs, the collection license and the Wingo/Aero Republica naming source are recorded in `public/credits/airline-logos.txt`. No runtime logo service is required.
+
+## Transparent airline marks and brand colors
+
+Sources `54faff3` and `035e597` remove the white tiles and replace American, Frontier and Spirit’s boxed PNGs with transparent SVGs. The final layout uses spaced marks and wraps on narrow screens; the country flags continue to overlap. American uses blue, silver and red, Spirit yellow, and United blue. Other airlines retain their representative colors, with dark blue ink brightened for the navy surface. Hover, keyboard focus, selection and year filtering are retained. Updated asset provenance is in `public/credits/airline-logos.txt`.
