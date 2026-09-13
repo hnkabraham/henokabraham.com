@@ -28,6 +28,7 @@
     "out/**",
     "build/**",
     "dist/**",
+    "public/draco/**",
     "coverage/**",
     "next-env.d.ts"
   ],
