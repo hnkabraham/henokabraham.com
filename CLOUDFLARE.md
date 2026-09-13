@@ -54,10 +54,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `da78fcec-2f92-4168-ae91-c298de7f21bf`
+- Cloudflare version: `979f7e67-cd5c-4af0-9fb4-2d9b36369545`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: locally hosted Google Sans throughout the UI, source `5283b88` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
-- Current validation: TypeScript, font character/variable-axis integrity, local font references, production build and Cloudflare dry run passed. Cloudflare confirmed deployment to both existing hostnames with the schedule and service bindings preserved. The live homepage, fonts and stylesheet return HTTP 200; fonts and stylesheet match the production build by SHA-256. Both fonts have the expected MIME type and immutable cache headers. This typography update did not include a new browser QA pass.
+- Current release: portfolio scroll stops, concise copy and personal flight atlas, source `3815107` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
+- Current validation: TypeScript, focused lint, Dreamliner lifecycle/modal pause/resume, camera/quality checks, performance checks, retained flight/link checks and flight-map geometry/data checks passed. The production build and Cloudflare dry run passed; the final deployment preserved both hostnames, bindings and schedule. The live homepage returns HTTP 200 with current content; the map and stylesheet match local SHA-256 hashes. This release did not include a new browser QA pass.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
 
@@ -147,3 +147,10 @@ Source `86d819a` positions the transparent header over the existing moving sky, 
 ## Google Sans typography
 
 Source `5283b88` replaces the previous UI fonts with Google Sans from the owner's supplied download. Normal and italic WOFF2 subsets retain the weight (400–700), optical-size and grade axes. The normal font is 133,964 bytes and preloaded; the 142,504-byte italic face loads when used. Both use content-hashed URLs and one-year immutable caching. Text uses `font-display: swap` with a system fallback. The font license and reproducible preparation script are included; no third-party font request is required.
+
+
+## Portfolio stops and personal flight atlas
+
+Source `3815107` shortens the native scroll journey from 680svh to 420svh and reveals the first project at 18% progress. The stops preview Downshift, the iPhone–Wear OS bridge, the flight log and the rest of the portfolio. Project buttons open the existing briefings without leaving the tour. Opening a briefing pauses rendering/clouds and closing it restores focus without scrolling. Project descriptions, about text, section introductions and repeated camera captions were shortened.
+
+The new flight atlas uses a local 49 KB Natural Earth map with selectable great-circle routes, year filtering, estimated distance totals and boarding-pass details. Date-line crossings are split, repeated trips count correctly and large totals use compact labels. The user's actual flight records are still pending: `app/personal-flights.ts` is empty and the live view says “Routes coming soon,” with unknown totals. No sample trips or the earlier site-reference notes are presented as personal history. See README for the public data shape.
