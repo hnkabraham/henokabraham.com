@@ -1,0 +1,34 @@
+# The same validation README lists, on every push and pull request. Deploys
+# stay local: scripts/deploy-cloudflare.mjs reads credentials from
+# .env.cloudflare.local, which never leaves the workstation.
+name: Checks
+on:
+  push:
+  pull_request:
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Types
+        run: npx tsc --noEmit -p .
+      - name: Lint
+        run: npx oxlint
+      - name: Build for Cloudflare
+        run: npm run build:cloudflare
+      # The scheduled-handler and flight-log checks load the built Worker.
+      - name: Scene, edge and data checks
+        run: |
+          for check in scripts/check-*.mjs; do
+            echo "== $check"
+            node "$check"
+          done
