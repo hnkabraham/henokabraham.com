@@ -18,13 +18,16 @@ const card = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://henokabraham.com'),
   alternates: { canonical: '/' },
-  icons: { icon: '/favicon.svg' },
+  // Messages and Safari take the 180 px touch icon for their small previews.
+  icons: { icon: '/favicon.svg', apple: '/apple-touch-icon.png' },
   title,
   description:
     'Welcome to the personal airspace of Henok Abraham. An aviation-inspired journey through iOS apps, flight tracking, connected hardware, and curious experiments.',
   openGraph: {
     title,
     description: summary,
+    siteName: 'Henok Abraham',
+    locale: 'en_US',
     type: 'website',
     url: '/',
     images: [card],
