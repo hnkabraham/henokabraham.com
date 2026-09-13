@@ -35,7 +35,7 @@ node scripts/check-bay-rendering.mjs
 npm run build
 ```
 
-`npx oxlint` passes for the whole repository: the starter kit is down to the dialog and button the project modal uses, and the vendored Draco decoder under `public/draco/` is excluded. `.github/workflows/checks.yml` runs this same list, every `scripts/check-*.mjs` and the Cloudflare build on each push and pull request; deploys stay local. The scene checks run offline and never fetch or modify tile imagery.
+`npx oxlint` passes for the whole repository: the starter kit is down to the dialog and button the project modal uses, and the vendored Draco decoder under `public/draco/` is excluded. `.github/workflows/checks.yml` runs this same list, every `scripts/check-*.mjs` and the Cloudflare build on each push and pull request; deploys stay local. The scene checks run offline and never fetch or modify tile imagery; `check-scheduled.mjs` runs the built Worker's cron in Miniflare against canned weather, GitHub and reachability upstreams, and `node scripts/check-scheduled.mjs --live` exercises the real feeds instead.
 
 ## Earlier Bay terrain experiment
 
