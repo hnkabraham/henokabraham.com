@@ -54,10 +54,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `1ac1b8d5-211a-4719-abec-a8279bd58548`
+- Cloudflare version: `da78fcec-2f92-4168-ae91-c298de7f21bf`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to the owner inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: navigation over the moving sky, source `86d819a` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
-- Current validation: TypeScript, existing Dreamliner model/camera checks, production build and Cloudflare dry run passed. Cloudflare confirmed deployment to both existing hostnames with the schedule and service bindings preserved. The live homepage returns HTTP 200 and the published stylesheet matches the production build by SHA-256. This CSS-only update did not include a new browser QA pass.
+- Current release: locally hosted Google Sans throughout the UI, source `5283b88` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
+- Current validation: TypeScript, font character/variable-axis integrity, local font references, production build and Cloudflare dry run passed. Cloudflare confirmed deployment to both existing hostnames with the schedule and service bindings preserved. The live homepage, fonts and stylesheet return HTTP 200; fonts and stylesheet match the production build by SHA-256. Both fonts have the expected MIME type and immutable cache headers. This typography update did not include a new browser QA pass.
 - Deployment credentials are read from the owner-only, Git-ignored `.env.cloudflare.local`, as requested. They are excluded from the application build and Worker bindings.
 
 
@@ -142,3 +142,8 @@ The opening stays free of WebGL draws until scrolling, with a bounded wake-up th
 ## Header integrated into the sky
 
 Source `86d819a` positions the transparent header over the existing moving sky, removing the white band and border. Darker navigation text keeps the links readable. The flight label and secondary project shortcut appear after the header has scrolled away; opening text keeps clearance below the header on desktop and mobile. The reduced-motion and unavailable-scene fallbacks retain the same header clearance without revealing duplicate controls.
+
+
+## Google Sans typography
+
+Source `5283b88` replaces the previous UI fonts with Google Sans from the owner's supplied download. Normal and italic WOFF2 subsets retain the weight (400–700), optical-size and grade axes. The normal font is 133,964 bytes and preloaded; the 142,504-byte italic face loads when used. Both use content-hashed URLs and one-year immutable caching. Text uses `font-display: swap` with a system fallback. The font license and reproducible preparation script are included; no third-party font request is required.
