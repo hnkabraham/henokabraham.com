@@ -1,6 +1,5 @@
 # Scene assets
 
-
 ## Current airborne Dreamliner showcase
 
 - `public/models/dreamliner-787-9.glb` (1,308,580 bytes Draco-compressed, 105,359 triangles, ten material groups) derives from [FlightGear 787-family, commit 02626b5](https://github.com/IskenderWang/787-family/tree/02626b5b659d89b9399943ee167bbb0b46f0c871): `Models/787-9.ac`, `Models/GEnx.ac`, the matching 787-9 white paint map, GEnx texture and wing texture. **GPL-2.0**, authors as listed in upstream `Authors.md`; acknowledgements include Joshua W, Omega95, MSA-S23, Jonathan Redpath, Pilot2938 and the current maintainers.
@@ -53,7 +52,7 @@ Elevation uses [Mapzen/Terrarium](https://github.com/tilezen/joerd/blob/master/d
 
 ## Audio and project image
 
-Optional jet/wind ambience is synthesized locally with Web Audio. No third-party recordings. The Downshift screenshot is an optimized copy of the user’s `Developer/RevMatchApp/docs/images/downshift-dashboard.png`, explicitly labeled as simulator mode.
+Optional jet/wind ambience is synthesized locally with Web Audio. No third-party recordings. The Downshift screenshot is an optimized copy of my own `Developer/RevMatchApp/docs/images/downshift-dashboard.png` (690×1500, re-exported from the 828×1800 source), explicitly labeled as simulator mode. Both the scroll-card teaser and the project briefing show it inside an iPhone 17 Pro frame in Cosmic Orange (`app/iphone-mockup.tsx` and `.css`) built from CSS gradients and shapes only, percentage-sized so the same markup scales from a small teaser to the larger briefing image — no Apple render or third-party mockup asset, since neither would be mine to redistribute under this repo's MIT licence.
 
 ## Design reference
 

@@ -1,0 +1,109 @@
+/* iPhone 17 Pro frame, Cosmic Orange. All geometry is percentage-based
+   against the component's own fixed aspect ratio, so the same markup reads
+   as a phone from the ~25px scroll-card teaser up to the ~170px project
+   briefing image — only the drop shadow (which can't be expressed in %)
+   swaps to a lighter preset via the compact modifier. */
+.iphone-mockup {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 719 / 1500;
+}
+.iphone-mockup-shape {
+  position: absolute;
+  inset: 0;
+  border-radius: 20%;
+  overflow: hidden;
+  background: linear-gradient(
+    155deg,
+    #eab486 0%,
+    #d9895a 24%,
+    #bd6c3c 52%,
+    #96502a 78%,
+    #7a3f20 100%
+  );
+  box-shadow:
+    0 20px 34px -14px #1e0e0473,
+    inset 0 0 0 1px #ffdcbe59;
+}
+.iphone-mockup--compact .iphone-mockup-shape {
+  box-shadow:
+    0 3px 6px -3px #1e0e0466,
+    inset 0 0 0 1px #ffdcbe59;
+}
+.iphone-mockup-shape::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    #ffffff59 0%,
+    #ffffff00 30%,
+    #ffffff00 70%,
+    #ffffff1f 100%
+  );
+  mix-blend-mode: overlay;
+}
+.iphone-mockup-screen {
+  position: absolute;
+  top: 1.8%;
+  bottom: 1.8%;
+  left: 3.7%;
+  right: 3.7%;
+  border-radius: 17.6%;
+  overflow: hidden;
+  background: #000;
+}
+.iphone-mockup-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.iphone-mockup-island {
+  position: absolute;
+  top: 2.9%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 27%;
+  height: 2.9%;
+  border-radius: 999px;
+  background: #000;
+  box-shadow: inset 0 0 0 1px #ffffff14;
+}
+.iphone-mockup-button {
+  position: absolute;
+  width: 1.75%;
+  background: linear-gradient(180deg, #7a3f20, #5c2f18);
+  box-shadow: inset 0 0 0 1px #ffffff26;
+}
+.iphone-mockup-action {
+  left: -1.2%;
+  top: 19.5%;
+  height: 6.7%;
+  border-radius: 2px 0 0 2px;
+}
+.iphone-mockup-volume-up {
+  left: -1.2%;
+  top: 29%;
+  height: 8.4%;
+  border-radius: 2px 0 0 2px;
+}
+.iphone-mockup-volume-down {
+  left: -1.2%;
+  top: 39%;
+  height: 8.4%;
+  border-radius: 2px 0 0 2px;
+}
+.iphone-mockup-camera-control {
+  right: -1.2%;
+  top: 62.7%;
+  height: 10%;
+  border-radius: 0 2px 2px 0;
+}
+.iphone-mockup-power {
+  right: -1.2%;
+  top: 22.3%;
+  height: 12.8%;
+  border-radius: 0 2px 2px 0;
+}

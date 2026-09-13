@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import IPhoneMockup from './iphone-mockup';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -340,13 +340,11 @@ export default function TerminalExperience() {
                   </div>
                   {flight.image && (
                     <figure className="briefing-image">
-                      <Image
+                      <IPhoneMockup
                         src={flight.image}
-                        unoptimized
-                        loading="lazy"
-                        alt="Downshift’s simulated driving dashboard with RPM and shift coaching"
-                        width={414}
-                        height={900}
+                        alt="Downshift’s simulated driving dashboard with RPM and shift coaching, running on an iPhone 17 Pro"
+                        width={690}
+                        height={1500}
                       />
                       <figcaption className="mono">SIMULATOR MODE</figcaption>
                     </figure>

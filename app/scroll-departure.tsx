@@ -88,7 +88,7 @@ import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
 import { replaceFlightLink } from '@/lib/flight-links';
-import Image from 'next/image';
+import IPhoneMockup from './iphone-mockup';
 import { flightAtlas } from './flight-atlas';
 
 const copy: Record<BayPhase, [string, string, string]> = {
@@ -340,13 +340,12 @@ export default function ScrollDeparture({
               onClick={() => onProject('downshift')}
             >
               <span className="tour-preview-art">
-                <Image
+                <IPhoneMockup
                   src="/images/downshift-dashboard.jpg"
-                  alt="Downshift driving dashboard"
-                  width={92}
-                  height={108}
-                  loading="lazy"
-                  unoptimized
+                  alt="Downshift driving dashboard, running on an iPhone 17 Pro"
+                  width={690}
+                  height={1500}
+                  compact
                 />
               </span>
               <span>
@@ -462,10 +461,7 @@ export default function ScrollDeparture({
                     <span>
                       <Maximize2 size={15} /> IMMERSIVE VIEW
                     </span>
-                    <DialogClose
-                      className="close-briefing"
-                      aria-label="Close"
-                    >
+                    <DialogClose className="close-briefing" aria-label="Close">
                       <X size={18} />
                     </DialogClose>
                   </div>

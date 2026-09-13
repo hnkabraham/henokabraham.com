@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './bay-departure.css';
 import './airport-services.css';
+import './iphone-mockup.css';
 
 // The aircraft and its lighting are fetched by the scene itself once it has
 // decided to run, so visitors on reduced motion or a metered connection
