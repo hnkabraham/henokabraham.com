@@ -10,17 +10,26 @@ import {
 } from 'react';
 import {
   ArrowDown,
+  ArrowRight,
   ArrowUpRight,
+  Globe2,
   Maximize2,
   Minimize2,
   RotateCcw,
+  Smartphone,
   Volume2,
   VolumeX,
-  Smartphone,
   Watch,
-  Globe2,
-  ArrowRight,
+  X,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { clamp01, type BayPhase } from '@/lib/bay-flight';
 import { createBayAudio } from '@/lib/bay-audio';
 // The renderer, its shader helpers and their slice of three.js arrive in a
@@ -48,14 +57,23 @@ const readImmersive = () => {
   const d = document as FullscreenDocument;
   return Boolean(d.fullscreenElement || d.webkitFullscreenElement);
 };
-const readFullscreenOffered = () => {
+// What the Immersive control can do here: enter fullscreen where the API
+// exists (desktop, Android, iPad), or on an iPhone, where WebKit has never
+// let a page fill the screen (WebKit bug 206854), explain the one route
+// that does, a Home Screen launch. From the Home Screen there is nothing
+// left to hide.
+type ImmersiveMode = 'none' | 'fullscreen' | 'install';
+const readImmersiveMode = (): ImmersiveMode => {
   const d = document as FullscreenDocument;
   const standalone =
     matchMedia('(display-mode: standalone)').matches ||
     (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  return !standalone && Boolean(d.fullscreenEnabled || d.webkitFullscreenEnabled);
+  if (standalone) return 'none';
+  if (d.fullscreenEnabled || d.webkitFullscreenEnabled) return 'fullscreen';
+  return /iPhone|iPod/.test(navigator.userAgent) ? 'install' : 'none';
 };
 const never = () => false;
+const noMode = (): ImmersiveMode => 'none';
 function toggleImmersive() {
   const d = document as FullscreenDocument;
   const root = document.documentElement as FullscreenRoot;
@@ -135,10 +153,10 @@ export default function ScrollDeparture({
     readImmersive,
     never,
   );
-  const fullscreenOffered = useSyncExternalStore(
+  const immersiveMode = useSyncExternalStore(
     subscribeFullscreen,
-    readFullscreenOffered,
-    never,
+    readImmersiveMode,
+    noMode,
   );
   useLayoutEffect(() => {
     const section = root.current;
@@ -412,7 +430,7 @@ export default function ScrollDeparture({
             {status === 'loading' && (
               <output className="bay-loading mono">Loading 787</output>
             )}
-            {fullscreenOffered && (
+            {immersiveMode === 'fullscreen' && (
               <button
                 className="mono bay-immersive"
                 aria-pressed={immersive}
@@ -426,6 +444,47 @@ export default function ScrollDeparture({
                 {immersive ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                 <span>{immersive ? 'EXIT' : 'IMMERSIVE'}</span>
               </button>
+            )}
+            {immersiveMode === 'install' && (
+              <Dialog>
+                <DialogTrigger
+                  className="mono bay-immersive"
+                  aria-label="Immersive view: how to fill the screen"
+                >
+                  <Maximize2 size={15} />
+                  <span>IMMERSIVE</span>
+                </DialogTrigger>
+                <DialogContent
+                  className="immersive-dialog"
+                  showCloseButton={false}
+                >
+                  <div className="immersive-dialog-top mono">
+                    <span>
+                      <Maximize2 size={15} /> IMMERSIVE VIEW
+                    </span>
+                    <DialogClose
+                      className="close-briefing"
+                      aria-label="Close"
+                    >
+                      <X size={18} />
+                    </DialogClose>
+                  </div>
+                  <DialogTitle className="immersive-title">
+                    Fill the screen from your Home Screen.
+                  </DialogTitle>
+                  <DialogDescription className="immersive-description">
+                    Safari on iPhone keeps its own bars around every page, and
+                    no page can hide them; they only shrink as you scroll. For
+                    the full view, open the Share menu, choose{' '}
+                    <strong>Add to Home Screen</strong>, and open the site from
+                    there. It launches edge to edge with no browser controls.
+                  </DialogDescription>
+                  <p className="immersive-note">
+                    Added it before? Remove that icon and add it again to pick
+                    up the full-screen launch.
+                  </p>
+                </DialogContent>
+              </Dialog>
             )}
             <button
               className="mono"

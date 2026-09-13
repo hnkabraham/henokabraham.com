@@ -7,6 +7,11 @@
 .bay-sticky {
   position: sticky;
   top: 0;
+  /* Safari 26 on iPhone ignores theme-color and tints its glass bars from
+     the background-color of the fixed or sticky element at each screen
+     edge; with none declared here it fell back to its own dark grey. The
+     poster covers this colour, so only the bars ever show it. */
+  background-color: #6398cf;
   /* The frame fills the large viewport, so the sky and the aircraft reach
      the screen edge once Safari's bars collapse; the controls below are
      anchored to the small viewport, so they stay above the bars. */
@@ -479,12 +484,15 @@
   --landmark-x: 0.17;
   --landmark-y: 0.9;
   --landmark-h: 0.33;
+  /* The row of the sprite (0 top, 1 bottom) that sits at --landmark-y. */
+  --landmark-anchor: 1;
+  --landmark-ratio: 373 / 892;
   position: absolute;
   left: calc(50cqw + (var(--landmark-x) - 0.5) * var(--sky-w));
   top: calc(50cqh + (var(--landmark-y) - 0.5) * var(--sky-h));
   height: calc(var(--landmark-h) * var(--sky-h));
-  aspect-ratio: 373 / 892;
-  transform: translate(-50%, -100%);
+  aspect-ratio: var(--landmark-ratio);
+  transform: translate(-50%, calc(-100% * var(--landmark-anchor)));
   background: url('/images/golden-gate.png') center / contain no-repeat;
   background-image: image-set(
     url('/images/golden-gate.avif') type('image/avif'),
@@ -492,11 +500,24 @@
   );
   pointer-events: none;
 }
+/* Portrait shows only the photo's middle third, where the aerial sprite
+   stacked its towers and floated the far one above the cloud horizon. This
+   sprite is rendered from just above the tower tops instead, and its eye
+   level (7% of its height above the crop) is pinned to the photo's horizon,
+   so both towers stand on the cloud deck and the span climbs up and to the
+   right from the lower left, clear of the chapter bar. */
 @media (max-width: 800px) {
   .bay-landmark {
-    --landmark-x: 0.4;
-    --landmark-y: 0.7;
-    --landmark-h: 0.22;
+    --landmark-x: 0.42;
+    --landmark-y: 0.56;
+    --landmark-h: 0.2;
+    --landmark-anchor: -0.074;
+    --landmark-ratio: 616 / 796;
+    background-image: url('/images/golden-gate-portrait.png');
+    background-image: image-set(
+      url('/images/golden-gate-portrait.avif') type('image/avif'),
+      url('/images/golden-gate-portrait.png') type('image/png')
+    );
   }
 }
 .bay-opening-cloud {
@@ -1234,4 +1255,52 @@
   .bay-immersive span {
     display: none;
   }
+}
+/* The iPhone Immersive control opens a card instead of fullscreen. */
+.immersive-dialog {
+  width: min(calc(100vw - 32px), 430px) !important;
+  border-radius: 12px !important;
+  padding: 18px 20px 22px !important;
+  gap: 0 !important;
+  background: #0f2233f2 !important;
+  color: #eef4f8 !important;
+  border: 1px solid #ffffff2a;
+  box-shadow: 0 30px 100px #08151e80;
+}
+.immersive-dialog-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: #9fc3dc;
+}
+.immersive-dialog-top span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.immersive-title {
+  margin: 0 0 12px !important;
+  font-size: 1.5rem !important;
+  line-height: 1.15 !important;
+  font-weight: 470 !important;
+  letter-spacing: -0.03em;
+}
+.immersive-description {
+  color: #c8d9e6 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.7 !important;
+}
+.immersive-description strong {
+  color: #fff;
+  font-weight: 560;
+}
+.immersive-note {
+  margin: 14px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #9fc3dc;
 }

@@ -2,9 +2,11 @@
 // scripts/prepare-golden-gate.swift wrote, against a transparent background,
 // with a three-quarter aerial camera and the sky's warm upper-right light.
 // Only meshes that rise above the fog floor are loaded; the deck, piers and
-// landscape never show. Writes <out>.png and <out>.json (screen rows of
-// world heights at each tower, which the sprite script uses for the fog).
+// landscape never show. Writes <out>.png, <out>-data.png (height and
+// distance per pixel for the sprite's fog and haze) and <out>.json (camera,
+// horizon row and tower rows, so the sprite can be pinned to a horizon).
 // Usage: node scripts/render-golden-gate.mjs <buffers dir> <out base>
+//   [--camera=x,y,z] [--target=x,y,z] [--fov=30] [--size=1400x2000]
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -12,8 +14,12 @@ import { execSync } from 'node:child_process';
 import { join, resolve, extname } from 'node:path';
 import { build } from 'esbuild';
 
-const [dir = 'archive/models/golden-gate', out = 'archive/models/golden-gate/render'] =
-  process.argv.slice(2);
+const positional = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const options = Object.fromEntries(
+  process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => a.slice(2).split('=')),
+);
+const [dir = 'archive/models/golden-gate', out = 'archive/models/golden-gate/render'] = positional;
+const numbers = (text, fallback) => (text ? text.split(/[,x]/).map(Number) : fallback);
 const require = createRequire(import.meta.url);
 const { chromium } = require(
   join(execSync('npm root -g').toString().trim(), 'playwright'),
@@ -64,7 +70,14 @@ window.renderModelBridge = async function (opts) {
   });
   r.toneMapping = T.NoToneMapping; r.outputColorSpace = T.LinearSRGBColorSpace;
   r.render(stage, camera);
-  return { png: beauty, data: canvas.toDataURL('image/png'), meshes: keep.length, triangles: total / 3 };
+  // Where the eye level (the horizon of this camera) and the tower tops
+  // land in the image, so the sprite can be anchored to the sky's horizon.
+  const project = (x, y, z) => { const v = new T.Vector3(x, y, z).project(camera); return { x: ((v.x + 1) / 2) * W, y: ((1 - v.y) / 2) * H }; };
+  const flat = new T.Vector3(...opts.target).sub(camera.position); flat.y = 0;
+  flat.normalize().multiplyScalar(1e6).add(camera.position);
+  const horizon = project(flat.x, flat.y, flat.z).y;
+  const towers = [453, -476].map((x) => ({ x, top: project(x, 165, 0), fog: project(x, opts.fogTop, 0) }));
+  return { png: beauty, data: canvas.toDataURL('image/png'), meshes: keep.length, triangles: total / 3, horizon, towers };
 };`;
 const types = { '.bin': 'application/octet-stream', '.json': 'application/json' };
 const server = createServer(async (req, res) => {
@@ -88,10 +101,17 @@ await page.goto(`http://127.0.0.1:${server.address().port}/`);
 // 165; towers at x -476 and 453. The camera sits beyond the north end,
 // 330 m up and a little to the ocean side, looking down the span, so the
 // near tower stands large at the bottom and the bridge recedes upward.
-const result = await page.evaluate((o) => window.renderModelBridge(o), {
-  width: 1400, height: 2000, minTop: 45,
-  camera: [1350, 330, -100], target: [-150, 90, 0],
-});
+// Options override the aerial defaults: --camera=x,y,z --target=x,y,z
+// --fov=30 --size=1400x2000. The portrait sprite uses a camera below the
+// tower tops so the towers rise above the horizon.
+const [width, height] = numbers(options.size, [1400, 2000]);
+const shot = {
+  width, height, minTop: 45, fov: Number(options.fov ?? 30), fogTop: 66,
+  camera: numbers(options.camera, [1350, 330, -100]),
+  target: numbers(options.target, [-150, 90, 0]),
+};
+const result = await page.evaluate((o) => window.renderModelBridge(o), shot);
+await writeFile(`${out}.json`, JSON.stringify({ ...shot, horizon: result.horizon, towers: result.towers }, null, 1));
 await writeFile(`${out}.png`, Buffer.from(result.png.split(',')[1], 'base64'));
 await writeFile(`${out}-data.png`, Buffer.from(result.data.split(',')[1], 'base64'));
 console.log(`${out}.png: ${result.meshes} meshes, ${result.triangles.toLocaleString()} triangles`);

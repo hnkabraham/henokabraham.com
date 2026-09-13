@@ -290,6 +290,31 @@ assert.match(stylesheet, /\.bay-poster \{[^}]*container-type: size/);
 assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-x: 0\.17/);
 assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-y: 0\.9/);
 assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-h: 0\.33/);
+// Portrait swaps in a sprite rendered from just above the tower tops and
+// pins its eye level to the photo's horizon, so both towers stand on the
+// cloud deck instead of the far one floating above it.
+const portrait = await Promise.all(
+  ['golden-gate-portrait.avif', 'golden-gate-portrait.png'].map(
+    async (name) =>
+      (await fs.stat(new URL(`../public/images/${name}`, import.meta.url)))
+        .size,
+  ),
+);
+assert.ok(portrait[0] < 45_000, 'The portrait landmark AVIF stays under 45 KB');
+assert.ok(portrait[1] < 200_000, 'The portrait landmark PNG stays under 200 KB');
+const portraitRule = stylesheet.match(
+  /@media \(max-width: 800px\) \{\s*\.bay-landmark \{([^}]*)\}/,
+)?.[1];
+assert.ok(portraitRule, 'Portrait restyles the landmark');
+for (const declaration of [
+  '--landmark-y: 0.56',
+  '--landmark-anchor: -0.074',
+  '--landmark-ratio: 616 / 796',
+  "url('/images/golden-gate-portrait.avif') type('image/avif')",
+])
+  assert.ok(portraitRule.includes(declaration), `Portrait sets ${declaration}`);
+// Safari 26 on iPhone tints its bars from the sticky frame's colour.
+assert.match(stylesheet, /\.bay-sticky \{[^}]*background-color: #6398cf/);
 for (const file of ['../app/scroll-departure.tsx', '../app/not-found.tsx'])
   assert.ok(
     (await fs.readFile(new URL(file, import.meta.url), 'utf8')).includes(
@@ -297,6 +322,21 @@ for (const file of ['../app/scroll-departure.tsx', '../app/not-found.tsx'])
     ),
     `${file} places the landmark inside the poster`,
   );
+// The Immersive control: fullscreen where the API exists, the Home Screen
+// card on an iPhone (WebKit has no element fullscreen there), nothing once
+// launched from the Home Screen.
+const departure = await fs.readFile(
+  new URL('../app/scroll-departure.tsx', import.meta.url),
+  'utf8',
+);
+for (const line of [
+  "if (standalone) return 'none';",
+  "if (d.fullscreenEnabled || d.webkitFullscreenEnabled) return 'fullscreen';",
+  "return /iPhone|iPod/.test(navigator.userAgent) ? 'install' : 'none';",
+  "{immersiveMode === 'install' && (",
+  '<strong>Add to Home Screen</strong>',
+])
+  assert.ok(departure.includes(line), `The Immersive control handles: ${line}`);
 console.log(
   `Passed: phone aircraft ${phoneBytes.length.toLocaleString()} bytes with the desktop mesh; AVIF sky and cloud with fallbacks; Golden Gate landmark ${landmark[0].toLocaleString()} bytes.`,
 );
