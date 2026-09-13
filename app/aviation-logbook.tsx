@@ -33,7 +33,9 @@ export default function AviationLogbook() {
           to: flightAtlas.airports[to],
         };
         return { ...route, key: `${from}:${to}`, path: routePath(route) };
-      }),
+      })
+      // A return to the departure airport is a flight with no arc to draw.
+      .filter((route) => route.path),
     [period],
   );
   // Stagger nearby international labels, keeping the dense Europe cluster legible.
@@ -110,13 +112,20 @@ export default function AviationLogbook() {
         <figcaption className="sr-only">
           {stats.flights} flights connecting {stats.airports} airports across{' '}
           {stats.countries} countries and regions. International airports are
-          labeled with their country flags.
+          labeled with their country flags. Airports on the map:{' '}
+          {airports
+            .map(
+              (airport) =>
+                `${airport.code} ${airport.city || airport.name}, ${countryName(airport.country)}`,
+            )
+            .join('; ')}
+          .
         </figcaption>
-        <svg
+        {/* An inline map with live route paths cannot be an <img>; its airports are named in the caption above. */}
+        {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+        <svg role="img" aria-label="Travel route map with international destination flags"
           viewBox="0 0 1000 500"
           className="logbook-map"
-          role="img"
-          aria-label="Travel route map with international destination flags"
         >
           <defs>
             <pattern
@@ -229,8 +238,9 @@ export default function AviationLogbook() {
                 title={countryName(code)}
                 onClick={() => setCountry(country === code ? null : code)}
               >
-                <img
-                  src={countryFlag(code)}
+                {/* A 44 px local SVG mark gains nothing from next/image, and the atlas check renders this view outside the framework. */}
+                {/* oxlint-disable-next-line next/no-img-element */}
+                <img src={countryFlag(code)}
                   alt=""
                   width="44"
                   height="44"
@@ -265,8 +275,8 @@ export default function AviationLogbook() {
                     setAirline(airline === item.code ? null : item.code)
                   }
                 >
-                  <img
-                    src={brand.logo}
+                  {/* oxlint-disable-next-line next/no-img-element */}
+                  <img src={brand.logo}
                     alt=""
                     width="48"
                     height="48"

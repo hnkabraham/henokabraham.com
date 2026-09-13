@@ -14,6 +14,9 @@ const load = async (path) => {
     `data:text/javascript;base64,${Buffer.from(code).toString('base64')}`
   );
 };
+// The default sort's code-unit order, made explicit so the generated module
+// stays byte-identical and the intent is visible.
+const codeUnits = (a, b) => (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0);
 const { personalFlights } = await load('./data/personal-flights.ts');
 const { flightLogStats } = await load('../lib/personal-flight-log.ts');
 const airports = Object.fromEntries(
@@ -21,14 +24,14 @@ const airports = Object.fromEntries(
     ...new Map(
       personalFlights.flatMap((f) => [f.from, f.to]).map((a) => [a.code, a]),
     ).entries(),
-  ].sort(),
+  ].sort(codeUnits),
 );
 const years = [
   ...new Set(
     personalFlights.flatMap((f) => (f.date ? [f.date.slice(0, 4)] : [])),
   ),
 ]
-  .sort()
+  .sort(codeUnits)
   .reverse();
 const airlines = {};
 for (const flight of personalFlights) {
@@ -65,9 +68,9 @@ for (const period of ['all', ...years]) {
     ],
     airportCodes: [
       ...new Set(flights.flatMap((f) => [f.from.code, f.to.code])),
-    ].sort(),
+    ].sort(codeUnits),
     routes: [...new Set(flights.map((f) => `${f.from.code}:${f.to.code}`))]
-      .sort()
+      .sort(codeUnits)
       .map((route) => route.split(':')),
   };
 }

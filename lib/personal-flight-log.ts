@@ -90,7 +90,9 @@ export function routePath(flight: Pick<PersonalFlight, 'from' | 'to'>) {
       y = ((90 - lat) / 180) * 500;
     const command =
       previousX === null || Math.abs(x - previousX) > 500 ? 'M' : 'L';
-    segments.push(`${command}${x.toFixed(2)},${y.toFixed(2)}`);
+    // A tenth of a map unit is a tenth of a pixel at the native 1000 × 500;
+    // the 104 inline arcs were most of the document at two decimals.
+    segments.push(`${command}${x.toFixed(1)},${y.toFixed(1)}`);
     previousX = x;
   }
   return segments.join(' ');

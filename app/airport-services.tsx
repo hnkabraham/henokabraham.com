@@ -340,6 +340,12 @@ export function ContactTower() {
         throw new Error(
           result.error || 'Your message could not be sent. Please try again.',
         );
+      // The verification container unmounts with the form, so drop the widget
+      // now rather than reset it below, or remove it later, on missing DOM.
+      if (widget.current) {
+        window.turnstile?.remove(widget.current);
+        widget.current = null;
+      }
       setSent(true);
       form.reset();
       setMessage('Message sent. Thanks for saying hello!');

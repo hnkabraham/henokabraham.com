@@ -107,9 +107,14 @@ const { default: View } = await import(uri(code));
 const html = renderToStaticMarkup(createElement(View));
 const count = (pattern) => (html.match(pattern) ?? []).length;
 assert.equal(count(/<option /g), flightAtlas.years.length + 1);
+// A return to the departure airport is a flight with no arc to draw.
 assert.equal(
   count(/class="logbook-route"/g),
-  flightAtlas.periods.all.routes.length,
+  flightAtlas.periods.all.routes.filter(([from, to]) => from !== to).length,
+);
+assert.ok(
+  flightAtlas.periods.all.routes.some(([from, to]) => from === to),
+  'The self-route case is exercised by the data',
 );
 assert.equal(
   count(/class="logbook-country"/g),
@@ -167,7 +172,7 @@ for (const country of new Set(
 // in the densest all-time view without a browser or screenshot dependency.
 const positions = [
   ...html.matchAll(
-    /class="logbook-destination"><title>.*?<\/title><path[^>]*><\/path><g transform="translate\(([^,]+),([^\)]+)\)"/g,
+    /class="logbook-destination"><title>.*?<\/title><path[^>]*><\/path><g transform="translate\(([^,]+),([^)]+)\)"/g,
   ),
 ].map((m) => [+m[1], +m[2]]);
 assert.equal(positions.length, international.length);
