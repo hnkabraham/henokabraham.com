@@ -1,24 +1,26 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile, mkdir, cp, appendFile } from 'node:fs/promises';
+import { readFile, mkdir, cp, rm, appendFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Everything the airborne tour fetches at runtime, and nothing else. The
+// earlier terrain experiment's tiles and scenery stay in the repository for
+// its scripts and checks, but no page requests them, so the build drops them
+// from dist rather than upload 145 MB of unused imagery with every deploy.
+export const SCENE_FILES = [
+  'models/dreamliner-787-9.glb',
+  'scenery/daylight.hdr',
+  'draco/draco_wasm_wrapper.js',
+  'draco/draco_decoder.wasm',
+];
+const PUBLIC_FOLDERS = ['models', 'scenery', 'tiles', 'draco'];
+
 export async function sceneVersion(root) {
   const hash = createHash('sha256');
-  async function visit(folder) {
-    const entries = await readdir(resolve(root, 'public', folder), {
-      withFileTypes: true,
-    });
-    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      const path = `${folder}/${entry.name}`;
-      if (entry.isDirectory()) await visit(path);
-      else if (entry.isFile()) {
-        hash.update(path + '\0');
-        hash.update(await readFile(resolve(root, 'public', path)));
-      }
-    }
+  for (const path of SCENE_FILES) {
+    hash.update(path + '\0');
+    hash.update(await readFile(resolve(root, 'public', path)));
   }
-  for (const folder of ['models', 'scenery', 'tiles']) await visit(folder);
   return hash.digest('hex').slice(0, 16);
 }
 
@@ -26,14 +28,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = process.cwd();
   const version = await sceneVersion(root);
   const destination = resolve(root, 'dist/client/scene', version);
-  await mkdir(destination, { recursive: true });
-  for (const folder of ['models', 'scenery', 'tiles']) {
-    await cp(resolve(root, 'public', folder), resolve(destination, folder), {
-      recursive: true,
-    });
+  for (const path of SCENE_FILES) {
+    await mkdir(resolve(destination, path, '..'), { recursive: true });
+    await cp(resolve(root, 'public', path), resolve(destination, path));
   }
-  // Plain URLs stay available for older tabs and existing links. Only paths
-  // containing the content version receive immutable browser caching.
+  // Vite copies all of public/; the plain copies are not referenced by the
+  // built page, whose asset URLs all carry the content version.
+  for (const folder of PUBLIC_FOLDERS)
+    await rm(resolve(root, 'dist/client', folder), {
+      recursive: true,
+      force: true,
+    });
   await appendFile(
     resolve(root, 'dist/client/_headers'),
     '\n/scene/*\n  Cache-Control: public, max-age=31536000, immutable\n',

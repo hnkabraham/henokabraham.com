@@ -7,6 +7,24 @@ import { pruneMetrics } from './server/metrics';
 // Aircraft preloads stay in the document with their motion preference and
 // low priority; no terrain data is needed by the airborne tour.
 const EARLY_HINTS = '</images/cruise-sky.jpg>; rel=preload; as=image';
+// Static assets take their headers from public/_headers; the document is
+// rendered here, so its transport and embedding policy is set here. No
+// script or connect directives: the page carries inline framework scripts
+// and Cloudflare's Turnstile frame, and this policy must not break either.
+const PAGE_HEADERS: [string, string][] = [
+  ['Strict-Transport-Security', 'max-age=31536000'],
+  ['X-Content-Type-Options', 'nosniff'],
+  ['X-Frame-Options', 'DENY'],
+  ['Referrer-Policy', 'strict-origin-when-cross-origin'],
+  [
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  ],
+  [
+    'Content-Security-Policy',
+    "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  ],
+];
 
 interface Env extends EdgeEnv {
   CONTACT_EMAIL?: SendEmail;
@@ -15,9 +33,7 @@ function encodedBody(text: string) {
   const bytes = new TextEncoder().encode(text);
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary)
-    .match(/.{1,76}/g)!
-    .join('\r\n');
+  return (btoa(binary).match(/.{1,76}/g) ?? []).join('\r\n');
 }
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
@@ -55,6 +71,7 @@ const worker = {
         return page;
       const hinted = new Response(page.body, page);
       hinted.headers.append('Link', EARLY_HINTS);
+      for (const [name, value] of PAGE_HEADERS) hinted.headers.set(name, value);
       return hinted;
     } catch {
       console.error('edge_request_failed');

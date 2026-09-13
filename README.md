@@ -9,8 +9,8 @@ Native scrolling works with wheel, trackpad, touch and keyboard. Five chapter bu
 - `app/dreamliner-scene.tsx`: transparent Three.js renderer, HDR illumination, self-shadows, turning fans, wing flex, adaptive resolution and deterministic resource cleanup.
 - `lib/dreamliner-tour.ts`: camera choreography and portrait framing. The original chapter IDs remain valid: `preflight` → Open sky, `roll` → Apps, `liftoff` → Devices, `bay` → Flight log, `cruise` → Explore. The underlying engine/wing/tail camera choreography stays intact.
 - `app/scroll-departure.tsx` reveals Downshift, the iPhone–Wear OS bridge, the flight-log link and portfolio links across a 420svh native-scroll journey. Its first project appears at 18% progress. Optional project dialogs pause the renderer and clouds, then restore keyboard focus without moving the page. The earlier aircraft-only captions remain in `lib/dreamliner-annotations.ts` as an unused reference.
-- `public/models/dreamliner-787-9.glb`: FlightGear 787-family exterior, 105,622 triangles in ten material groups, 4K fuselage and engine textures, 5,272,964 bytes. `scripts/prepare-dreamliner.py` reproduces it from a pinned upstream source. GPL-2.0 credits and the corresponding editable source are served at `/credits/dreamliner.html`.
-- The old SFO/Bay scenery is retained as a previous experiment, but its modules and terrain preloads are absent from the active tour. Current rendering resources are spent on the aircraft.
+- `public/models/dreamliner-787-9.glb`: FlightGear 787-family exterior, 105,359 triangles in ten material groups, 4K fuselage and engine textures, Draco-compressed to 1,308,580 bytes (positions keep 16 bits, about a millimetre, because the livery and wing-flex shaders sample them in metres). `scripts/prepare-dreamliner.py` reproduces the plain model from a pinned upstream source and `scripts/compress-dreamliner.mjs` compresses it; the decoder is served beside it from `public/draco/`. GPL-2.0 credits and the corresponding editable source are served at `/credits/dreamliner.html`.
+- The old SFO/Bay scenery is retained as a previous experiment, but its modules and terrain preloads are absent from the active tour. Current rendering resources are spent on the aircraft. `scripts/scene-assets.mjs` versions and deploys only the four files the tour fetches; the retired tiles and scenery stay in `public/` for the experiment's scripts and checks and are dropped from `dist/`. The aircraft and its lighting are fetched by the scene once it decides to run, so reduced-motion visitors and browsers asking to save data download neither, and the lighting map never delays the aircraft.
 
 ## Develop
 
@@ -34,7 +34,7 @@ node scripts/check-bay-rendering.mjs
 npm run build
 ```
 
-Focused lint passes for the current application changes, including the project terminal. Unrelated starter UI components still have the previously documented full-repository lint findings. The scene checks run offline and never fetch or modify tile imagery.
+`npx oxlint app lib scripts` passes. Unrelated starter UI components still have the previously documented full-repository lint findings. The scene checks run offline and never fetch or modify tile imagery.
 
 ## Earlier Bay terrain experiment
 
@@ -59,7 +59,7 @@ npm run check:cloudflare
 npm run deploy:cloudflare
 ```
 
-`npm start` serves the same build locally in workerd. JavaScript and CSS under `/_next/static/` and versioned scenery under `/scene/<content-hash>/` use immutable browser caching. Original model/scenery/tile URLs remain available for existing links. The build computes the scenery version from all asset names and bytes; changes produce new URLs.
+`npm start` serves the same build locally in workerd. JavaScript and CSS under `/_next/static/` and versioned scenery under `/scene/<content-hash>/` use immutable browser caching. The build computes that version from the names and bytes of the four tour files; changes produce new URLs. Plain `/models/`, `/scenery/` and `/tiles/` paths are no longer deployed. The document carries HSTS, `nosniff`, a frame-ancestors policy and a referrer policy from `worker.ts`; static files get `nosniff` from `public/_headers`.
 
 Retain the existing Sites project ID in `.openai/hosting.json` when publishing there. `vite.config.ts` retains the direct Cloudflare custom domain for `henokabraham.com`.
 
