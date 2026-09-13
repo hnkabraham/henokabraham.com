@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -9,7 +10,6 @@ import {
   CodeXml,
   Check,
   X,
-  Compass,
   Radio,
 } from 'lucide-react';
 import { useAirspaceDepth } from './use-airspace-depth';
@@ -22,7 +22,6 @@ import {
   useAirportLive,
   LiveAtSfo,
   ProjectUpdate,
-  SourceUpdate,
   ContactTower,
   FlightMeasurements,
 } from './airport-services';
@@ -57,6 +56,7 @@ export default function TerminalExperience() {
   const live = useAirportLive();
   const [selected, setSelected] = useState(0);
   const [projectOpen, setProjectOpen] = useState(false);
+  const projectReturnFocus = useRef<HTMLElement | null>(null);
   const flight = flights[selected];
   const root = useRef<HTMLDivElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -111,7 +111,7 @@ export default function TerminalExperience() {
           <a href="#departures">
             <span className="nav-number">01</span> Departures
           </a>
-          <a href="#about">
+          <a href="#logbook">
             <span className="nav-number">02</span> Flight log
           </a>
           <a
@@ -126,7 +126,21 @@ export default function TerminalExperience() {
       </header>
       <FlightMeasurements />
       <main>
-        <ScrollDeparture reducedMotion={reducedMotion} entry={entry} />
+        <ScrollDeparture
+          reducedMotion={reducedMotion}
+          entry={entry}
+          paused={projectOpen}
+          onProject={(id) => {
+            const index = flights.findIndex((item) => item.id === id);
+            if (index < 0) return;
+            projectReturnFocus.current =
+              document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+            selectFlight(index);
+            setProjectOpen(true);
+          }}
+        />
         <LiveAtSfo {...live} />
         <section
           className="terminal-section"
@@ -137,15 +151,10 @@ export default function TerminalExperience() {
             <div className="terminal-section-label">
               <span className="section-marker">01</span>
               <div>
-                <p className="eyebrow">CHOOSE YOUR NEXT STOP</p>
+                <p className="eyebrow">SELECTED WORK</p>
                 <h2 id="departures-title">Departures</h2>
               </div>
             </div>
-            <p className="terminal-caption">
-              Every project starts with a little “what if.”
-              <br />
-              Pick a destination. See where it went.
-            </p>
           </div>
           <div className="departure-layout">
             <div
@@ -155,7 +164,7 @@ export default function TerminalExperience() {
             >
               <div className="board-title">
                 <span>
-                  <PlaneTakeoff size={20} /> PROJECT DEPARTURES
+                  <PlaneTakeoff size={20} /> PROJECTS
                 </span>
                 <span className="mono">{flights.length} DESTINATIONS</span>
               </div>
@@ -165,11 +174,7 @@ export default function TerminalExperience() {
                 <span>GATE</span>
                 <span>STATUS</span>
               </div>
-              <div
-                className="flight-list"
-                role="group"
-                aria-label="Choose a project"
-              >
+              <fieldset className="flight-list" aria-label="Choose a project">
                 {flights.map((item, index) => (
                   <button
                     key={item.id}
@@ -192,11 +197,10 @@ export default function TerminalExperience() {
                     </span>
                   </button>
                 ))}
-              </div>
+              </fieldset>
               <div className="board-bottom mono">
                 <span>
-                  <span className="signal-dot" /> ALL DEPARTURES ARE PERSONAL
-                  PROJECTS
+                  <span className="signal-dot" /> BUILT BY HENOK
                 </span>
                 <span>SELECT A ROW →</span>
               </div>
@@ -215,7 +219,7 @@ export default function TerminalExperience() {
                 aria-label="Selected project"
               >
                 <div className="ticket-heading mono">
-                  <span>YOUR NEXT DESTINATION</span>
+                  <span>PROJECT PREVIEW</span>
                   <Plane size={18} />
                 </div>
                 <div className="ticket-body" key={flight.id}>
@@ -226,29 +230,19 @@ export default function TerminalExperience() {
                     <h3>{flight.name}</h3>
                     <p className="ticket-summary">{flight.summary}</p>
                   </div>
-                  <div className="ticket-route">
-                    <div>
-                      <small className="mono">FROM</small>
-                      <strong>IDEA</strong>
-                    </div>
-                    <div className="ticket-route-line">
-                      <span />
-                      <Plane size={20} />
-                      <span />
-                    </div>
-                    <div>
-                      <small className="mono">GATE</small>
-                      <strong>{flight.gate}</strong>
-                    </div>
-                  </div>
                   <ProjectUpdate
                     item={live.data?.projects?.projects.find(
                       (item) => item.id === flight.id,
                     )}
                     now={live.now}
                   />
-                  <DialogTrigger className="ticket-button">
-                    Explore this project <ArrowRight size={16} />
+                  <DialogTrigger
+                    className="ticket-button"
+                    onClick={(event) => {
+                      projectReturnFocus.current = event.currentTarget;
+                    }}
+                  >
+                    View project <ArrowRight size={16} />
                   </DialogTrigger>
                 </div>
                 <div className="ticket-tear" />
@@ -260,7 +254,15 @@ export default function TerminalExperience() {
                   <div className="barcode" aria-hidden="true" />
                 </div>
               </aside>
-              <DialogContent className="project-dialog" showCloseButton={false}>
+              <DialogContent
+                className="project-dialog"
+                showCloseButton={false}
+                finalFocus={() => {
+                  if (projectReturnFocus.current?.isConnected)
+                    projectReturnFocus.current.focus({ preventScroll: true });
+                  return false;
+                }}
+              >
                 <div className="project-dialog-top mono">
                   <span>
                     <PlaneTakeoff size={17} /> PROJECT BRIEFING
@@ -329,8 +331,10 @@ export default function TerminalExperience() {
                   </div>
                   {flight.image && (
                     <figure className="briefing-image">
-                      <img
+                      <Image
                         src={flight.image}
+                        unoptimized
+                        loading="lazy"
                         alt="Downshift’s simulated driving dashboard with RPM and shift coaching"
                         width={414}
                         height={900}
@@ -347,14 +351,7 @@ export default function TerminalExperience() {
             </Dialog>
           </div>
         </section>
-        <AviationLogbook
-          onProject={(id) => {
-            const index = flights.findIndex((item) => item.id === id);
-            if (index < 0) return;
-            selectFlight(index);
-            setProjectOpen(true);
-          }}
-        />
+        <AviationLogbook />
         <section
           className="open-hangar"
           data-reveal
@@ -362,19 +359,15 @@ export default function TerminalExperience() {
           aria-labelledby="hangar-title"
         >
           <div className="hangar-intro">
-            <p className="eyebrow">THE HANGAR DOORS ARE OPEN</p>
-            <h2 id="hangar-title">
-              Take a look
-              <br />
-              under the cowling.
-            </h2>
+            <p className="eyebrow">OPEN SOURCE</p>
+            <h2 id="hangar-title">In the open.</h2>
             <a
               href="https://github.com/hnkabraham?tab=repositories"
               target="_blank"
               rel="noopener noreferrer"
               className="hangar-link"
             >
-              All public repositories <ArrowUpRight size={16} />
+              GitHub <ArrowUpRight size={16} />
             </a>
           </div>
           <div className="source-list">
@@ -391,11 +384,6 @@ export default function TerminalExperience() {
                   <h3>{repo.name}</h3>
                   <p>{repo.detail}</p>
                   <span className="source-stack mono">{repo.stack}</span>
-                  <SourceUpdate
-                    item={live.data?.projects?.projects.find(
-                      (item) => item.repo === repo.repo,
-                    )}
-                  />
                 </div>
                 <ArrowUpRight size={21} strokeWidth={1.4} />
               </a>
@@ -409,73 +397,37 @@ export default function TerminalExperience() {
           aria-labelledby="about-title"
         >
           <div className="about-heading">
-            <p className="eyebrow">
-              <span className="section-marker">02</span> THE FLIGHT LOG
-            </p>
-            <h2 id="about-title">
-              Good things happen
-              <br />
-              when you follow
-              <br />
-              <em>your curiosity.</em>
-            </h2>
-            <div className="crew-signature">
-              <span className="brand-symbol">
-                <Compass size={22} strokeWidth={1.4} />
-              </span>
-              <span>
-                Henok Abraham
-                <small>DEVELOPER · BUILDER · AVIATION ENTHUSIAST</small>
-              </span>
-            </div>
+            <p className="eyebrow">ABOUT ME</p>
+            <h2 id="about-title">Curiosity, put to work.</h2>
           </div>
           <div className="about-story">
             <p>
-              My projects tend to start where things don’t quite connect. A
-              watch and a phone from different ecosystems. A car full of data
-              that’s hard to use. A 3D model that still needs to become a real
-              object.
-            </p>
-            <p>
-              I like getting into those gaps and building something useful. That
-              takes me from native iOS apps and Bluetooth protocols to web
-              experiences, 3D tools, and the servers that keep them running.
+              I’m Henok. I build apps, connect devices, and make things in 3D.
             </p>
             <p className="about-last">
-              Aviation is one of the threads connecting it all: complex systems,
-              small details, and the possibility of going somewhere new.
+              Usually chasing a good idea. Occasionally a window seat.
             </p>
-            <div
-              className="flight-process mono"
-              aria-label="My process: curiosity, build, test, repeat"
-            >
-              <span>CURIOSITY</span>
-              <ArrowRight size={13} />
-              <span>BUILD</span>
-              <ArrowRight size={13} />
-              <span>TEST</span>
-              <ArrowRight size={13} />
-              <span>REPEAT</span>
-            </div>
+            <a className="hangar-link" href="#contact">
+              Say hello <ArrowUpRight size={16} />
+            </a>
           </div>
         </section>
         <section
           className="contact-section"
+          id="contact"
           data-reveal
           aria-labelledby="contact-title"
         >
           <div className="contact-top mono">
             <span>
-              <Radio size={15} /> TOWER, THIS IS HENOK.
+              <Radio size={15} /> GET IN TOUCH
             </span>
             <span>OPEN FREQUENCY</span>
           </div>
           <div className="contact-main">
             <div className="contact-intro">
               <h2 id="contact-title">
-                The next great thing
-                <br />
-                starts with a <em>hello.</em>
+                Say <em>hello.</em>
               </h2>
               <a
                 className="contact-link"
@@ -493,8 +445,8 @@ export default function TerminalExperience() {
             <ContactTower />
           </div>
           <div className="contact-bottom mono">
-            <span>THANK YOU FOR FLYING THROUGH.</span>
-            <a href="#flight">BACK TO THE OPEN SKY ↑</a>
+            <span>THANKS FOR STOPPING BY.</span>
+            <a href="#flight">BACK TO TOP ↑</a>
           </div>
         </section>
       </main>

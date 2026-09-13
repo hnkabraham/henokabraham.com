@@ -4,13 +4,13 @@ export type TourPoint = [number, number, number];
 // Keep the original phase IDs so existing shared links still open a chapter.
 export const TOUR_CHAPTERS: { at: number; label: string; phase: BayPhase }[] = [
   { at: 0, label: 'Open sky', phase: 'preflight' },
-  { at: 0.37, label: 'Engine', phase: 'roll' },
-  { at: 0.59, label: 'Wing', phase: 'liftoff' },
-  { at: 0.78, label: 'Tail', phase: 'bay' },
-  { at: 0.97, label: 'Airspace', phase: 'cruise' },
+  { at: 0.37, label: 'Apps', phase: 'roll' },
+  { at: 0.59, label: 'Devices', phase: 'liftoff' },
+  { at: 0.78, label: 'Flight log', phase: 'bay' },
+  { at: 0.97, label: 'Explore', phase: 'cruise' },
 ];
 export function tourPhase(p: number): BayPhase {
-  return p < 0.29
+  return p < 0.18
     ? 'preflight'
     : p < 0.49
       ? 'roll'

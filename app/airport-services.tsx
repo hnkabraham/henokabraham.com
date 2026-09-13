@@ -151,13 +151,11 @@ export function LiveAtSfo({
       ) : (
         <output className="sfo-feed-note">
           {failed || data
-            ? 'Conditions are temporarily unavailable. The aircraft tour is ready to explore.'
-            : 'Tuning in to the latest airport report…'}
+            ? 'Weather temporarily unavailable.'
+            : 'Loading weather…'}
         </output>
       )}
-      <p className="sfo-scene-note">
-        The aircraft showcase uses cinematic clear-sky conditions.
-      </p>
+      <p className="sfo-scene-note">Scene weather is cinematic.</p>
     </section>
   );
 }
@@ -344,7 +342,7 @@ export function ContactTower() {
         );
       setSent(true);
       form.reset();
-      setMessage('Message received by the tower. Thanks for getting in touch.');
+      setMessage('Message sent. Thanks for saying hello!');
     } catch (e) {
       setMessage(
         e instanceof Error
@@ -393,7 +391,7 @@ export function ContactTower() {
             </label>
           </div>
           <label>
-            What are you thinking about?
+            Message
             <textarea
               name="message"
               rows={4}

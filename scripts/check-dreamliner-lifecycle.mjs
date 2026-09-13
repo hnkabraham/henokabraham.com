@@ -166,6 +166,7 @@ try {
   for (const mode of ['reduced', 'unmount-fetch', 'unmount-parse', 'active']) {
     constructed = draws = released = 0;
     frames.clear();
+    refs.length = 0;
     const h = (globalThis.tourHarness = makeHarness());
     install('fetch', (path) =>
       path.includes('.hdr') ? h.hdrFetch.promise : h.modelFetch.promise,
@@ -238,6 +239,24 @@ try {
     tick(232);
     tick(248);
     assert.ok(draws > 0, 'The first scroll wakes a settled opening');
+    // The modal changes the pause ref and wakes the existing renderer, without
+    // tearing down or downloading the model again.
+    const paused = refs[2],
+      wake = refs[3];
+    paused.current = true;
+    wake.current();
+    assert.equal(frames.size, 0, 'A project briefing pauses scheduled draws');
+    const beforePause = draws;
+    tick(264);
+    assert.equal(draws, beforePause);
+    paused.current = false;
+    wake.current();
+    tick(280);
+    assert.ok(
+      draws > beforePause,
+      'Closing a project briefing resumes the same scene',
+    );
+    assert.equal(constructed, 1, 'A project briefing does not recreate WebGL');
     document.hidden = true;
     documentEvents.dispatchEvent(new Event('visibilitychange'));
     assert.equal(frames.size, 0, 'Hidden documents stop all scheduled draws');
@@ -249,7 +268,7 @@ try {
     assert.equal(frames.size, 0);
   }
   console.log(
-    'Passed: reduced motion skips WebGL; unmount during fetch and parsing; late HDR completion; opening has no draws or idle RAF; first-scroll wake ordering; hidden-document suspension; resources disposed once.',
+    'Passed: reduced motion skips WebGL; unmount during fetch and parsing; late HDR completion; opening has no draws or idle RAF; first-scroll wake ordering; project modal pause/resume; hidden-document suspension; resources disposed once.',
   );
 } finally {
   for (const [k, v] of saved) globalThis[k] = v;

@@ -1,14 +1,14 @@
 # Henok Abraham — Personal Airspace
 
-A personal portfolio opening with an airborne Boeing 787-9. The page begins with a moving blue sky; scrolling brings the aircraft into frame, then carries the camera past its engine, wing and tail before pulling back into open sky. The flight leads into the project departure board, project briefings, aviation logbook, public repositories, biography and contact form.
+A personal portfolio opening with an airborne Boeing 787-9. The page begins with a moving blue sky; scrolling brings the aircraft into frame, then carries the camera past its engine, wing and tail before pulling back into open sky. The flight reveals project previews and the flight log along the way, then leads into the full project board, route atlas, open-source work and contact form.
 
 Native scrolling works with wheel, trackpad, touch and keyboard. Five chapter buttons follow the same camera path. Visitors can skip directly to projects, return to the open sky, or enable synthesized jet ambience. Reduced motion and WebGL/asset failure show a static sky with direct access to the portfolio. The initial sky does not run a WebGL render loop; drawing and sound suspend offscreen or in a hidden document.
 
 ## Airborne showcase
 
 - `app/dreamliner-scene.tsx`: transparent Three.js renderer, HDR illumination, self-shadows, turning fans, wing flex, adaptive resolution and deterministic resource cleanup.
-- `lib/dreamliner-tour.ts`: camera choreography and portrait framing. The original chapter IDs remain valid: `preflight` → Open sky, `roll` → Engine, `liftoff` → Wing, `bay` → Tail, `cruise` → Airspace.
-- `lib/dreamliner-annotations.ts`: short detail captions. `app/scroll-departure.tsx` connects the tour to native scroll and the portfolio.
+- `lib/dreamliner-tour.ts`: camera choreography and portrait framing. The original chapter IDs remain valid: `preflight` → Open sky, `roll` → Apps, `liftoff` → Devices, `bay` → Flight log, `cruise` → Explore. The underlying engine/wing/tail camera choreography stays intact.
+- `app/scroll-departure.tsx` reveals Downshift, the iPhone–Wear OS bridge, the flight-log link and portfolio links across a 420svh native-scroll journey. Its first project appears at 18% progress. Optional project dialogs pause the renderer and clouds, then restore keyboard focus without moving the page. The earlier aircraft-only captions remain in `lib/dreamliner-annotations.ts` as an unused reference.
 - `public/models/dreamliner-787-9.glb`: FlightGear 787-family exterior, 105,622 triangles in ten material groups, 4K fuselage and engine textures, 5,272,964 bytes. `scripts/prepare-dreamliner.py` reproduces it from a pinned upstream source. GPL-2.0 credits and the corresponding editable source are served at `/credits/dreamliner.html`.
 - The old SFO/Bay scenery is retained as a previous experiment, but its modules and terrain preloads are absent from the active tour. Current rendering resources are spent on the aircraft.
 
@@ -26,6 +26,7 @@ npx tsc --noEmit -p .
 npx oxlint app lib scripts
 node scripts/check-dreamliner-tour.mjs
 node scripts/check-dreamliner-lifecycle.mjs
+node scripts/check-personal-flight-log.mjs
 node scripts/check-bay-performance.mjs
 node scripts/check-bay-flight.mjs
 node scripts/check-bay-scenery.mjs
@@ -33,7 +34,7 @@ node scripts/check-bay-rendering.mjs
 npm run build
 ```
 
-Oxlint currently reports two known errors in `app/terminal-experience.tsx` (`prefer-tag-over-role` and `no-img-element`); changes must add none. The scene checks run offline and never fetch or modify tile imagery.
+Focused lint passes for the current application changes, including the project terminal. Unrelated starter UI components still have the previously documented full-repository lint findings. The scene checks run offline and never fetch or modify tile imagery.
 
 ## Earlier Bay terrain experiment
 
@@ -68,7 +69,11 @@ Project selection and scroll chapters use replace-only query parameters, for exa
 
 In the earlier terrain experiment, `lib/bay-annotations.ts` schedules six sparse DOM annotations from scroll progress: brake release, rotation, gear retraction, wing flex, San Bruno Mountain and the Golden Gate. Each is labelled as cinematic scene data rather than real flight data. They appear only with a ready scene and are hidden at widths of 1100 px or less, heights of 700 px or less, and for reduced motion. Rapid scrolling can put these scroll-scheduled notes ahead of the rate-limited aircraft; inspect their timing in visual QA.
 
-`app/aviation-logbook-data.ts` is a typed local dataset rendered beneath the project terminal. The initial entries are explicitly site references: the featured 787-9/SFO scene and the existing United Flight Tracker/aviation biography. They assert no personal flights or dates. Add verified personal entries with `kind: 'personal-entry'`; mark demonstrations with `kind: 'sample'`, which visibly labels them as samples to replace. Keep unknown dates `null`. Photo arrays start empty; future local photos require alt text and intrinsic dimensions and load lazily. Related-project buttons open the corresponding briefing and update the selected project URL.
+`app/personal-flights.ts` contains the public flight records used by the interactive atlas in `app/aviation-logbook.tsx`. It is intentionally empty until the owner supplies their actual flight log; the published view says “Routes coming soon” and shows unknown totals, rather than sample flights. The old site-reference notes remain in `app/aviation-logbook-data.ts` but are no longer displayed as a flight log.
+
+Each verified record uses the `PersonalFlight` type from `lib/personal-flight-log.ts`: a stable ID, a date (or `null`), origin/destination airport codes, names, country labels, latitude/longitude, and optional airline, flight number and aircraft. Keep booking references, seats, and other private fields out. Do not infer personal trips from project names or the site's SFO reference.
+
+Once populated, the atlas filters by year, highlights selected great-circle routes and shows boarding-pass details. Route miles are estimates between airport coordinates, not actual track miles. Repeated trips count separately in totals and share a map arc; date-line crossings split into separate segments. The 49 KB world map is local Natural Earth public-domain land data, credited in `public/credits/flight-log-map.txt`. SVG route animation pauses offscreen and in hidden tabs and respects reduced motion. The regression checks use synthetic geometry fixtures that never enter the public dataset.
 
 ## Deploy to your Cloudflare account
 

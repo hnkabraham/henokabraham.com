@@ -16,6 +16,7 @@ import type { createBayAudio } from '@/lib/bay-audio';
 type Props = {
   progress: RefObject<number>;
   reducedMotion: boolean;
+  paused?: boolean;
   audio: RefObject<ReturnType<typeof createBayAudio> | null>;
   onStatus: (value: 'loading' | 'ready' | 'unavailable') => void;
 };
@@ -23,11 +24,18 @@ type Props = {
 export default function DreamlinerScene({
   progress,
   reducedMotion,
+  paused = false,
   audio,
   onStatus,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const status = useRef(onStatus);
+  const pausedRef = useRef(paused);
+  const wakeRef = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => {
+    pausedRef.current = paused;
+    wakeRef.current?.();
+  }, [paused]);
   useEffect(() => {
     status.current = onStatus;
   }, [onStatus]);
@@ -284,7 +292,14 @@ export default function DreamlinerScene({
       let wakeFrames = 0;
       const render = (now: number) => {
         frame = 0;
-        if (disposed || !renderer || !ready || !visible || document.hidden)
+        if (
+          disposed ||
+          !renderer ||
+          !ready ||
+          !visible ||
+          document.hidden ||
+          pausedRef.current
+        )
           return;
         const dt = Math.min(0.05, previous ? (now - previous) / 1000 : 1 / 60);
         previous = now;
@@ -362,7 +377,7 @@ export default function DreamlinerScene({
           frame = requestAnimationFrame(render);
       };
       const wake = () => {
-        if (!visible || document.hidden) {
+        if (!visible || document.hidden || pausedRef.current) {
           cancelAnimationFrame(frame);
           frame = 0;
           previous = 0;
@@ -375,6 +390,10 @@ export default function DreamlinerScene({
         wakeFrames = 2;
         if (!frame) frame = requestAnimationFrame(render);
       };
+      wakeRef.current = wake;
+      cleanups.push(() => {
+        wakeRef.current = undefined;
+      });
       const visibility = new IntersectionObserver(([entry]) => {
         visible = entry.isIntersecting;
         wake();

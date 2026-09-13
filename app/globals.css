@@ -2483,3 +2483,40 @@ a:focus-visible,
     transition: none !important;
   }
 }
+
+/* Compact sections let projects and the flight atlas carry the story. */
+.ticket-summary {
+  min-height: 0;
+  margin-bottom: 22px;
+}
+.about-section {
+  padding-block: 62px;
+}
+.about-heading h2 {
+  max-width: 340px;
+  margin-bottom: 0;
+}
+.about-story {
+  padding-top: 0;
+}
+.about-story p {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  margin-bottom: 13px;
+}
+.about-story .hangar-link {
+  margin-top: 10px;
+}
+@media (max-width: 800px) {
+  .about-section {
+    padding-block: 40px;
+    gap: 22px;
+  }
+}
+
+fieldset.flight-list {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}

@@ -1,99 +1,333 @@
 .aviation-logbook {
-  border-top: 1px solid var(--border);
+  padding: 68px 7% 54px;
+  background: #102c3e;
+  color: #edf5fa;
+  position: relative;
+}
+.logbook-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+}
+.logbook-heading .eyebrow {
+  color: #a8c4d3;
+  margin: 0 0 10px;
 }
 .aviation-logbook h2 {
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
-  margin: 8px 0 0;
-  letter-spacing: -0.04em;
-}
-.logbook-entries {
-  border-top: 1px solid var(--border);
-}
-.logbook-entry {
-  display: grid;
-  grid-template-columns: minmax(150px, 0.65fr) minmax(0, 2fr) minmax(
-      80px,
-      0.5fr
-    );
-  gap: 28px;
-  padding: 30px 0;
-  border-bottom: 1px solid var(--border);
-}
-.logbook-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-.logbook-meta span:first-child {
-  color: var(--primary);
-}
-.logbook-note h3 {
-  font-size: 1.35rem;
-  margin: 0 0 16px;
-}
-.logbook-note dl {
-  margin: 0 0 18px;
-  font-size: 0.875rem;
-}
-.logbook-note dl div {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 12px;
-  margin: 5px 0;
-}
-.logbook-note dt,
-.logbook-note small,
-.logbook-photo-empty {
-  color: var(--muted-foreground);
-}
-.logbook-note dd {
   margin: 0;
+  font-size: clamp(2.5rem, 4.4vw, 4rem);
+  font-weight: 440;
+  letter-spacing: -0.055em;
+  line-height: 1.1;
 }
-.logbook-note p {
-  font-size: 1rem;
-  line-height: 1.7;
-  margin: 0 0 12px;
+.logbook-mark {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: #a8c4d3;
 }
-.logbook-note small {
-  font-size: 0.75rem;
+.logbook-filter {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: #bbd2de;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
-.logbook-project {
+.logbook-filter select {
+  padding: 10px 16px;
+  border: 1px solid #54768a;
+  color: #fff;
+  background: #183b50;
+  border-radius: 30px;
+  font: inherit;
+}
+.logbook-atlas {
+  position: relative;
+  margin: 27px 0 0;
+  height: clamp(260px, 39vw, 500px);
+  background: radial-gradient(ellipse at 50% 45%, #254b6133, transparent 70%);
+}
+.logbook-map {
   display: block;
-  color: var(--primary);
-  font-size: 0.875rem;
-  min-height: 44px;
-  margin-top: 10px;
-  cursor: pointer;
-  text-align: left;
-}
-.logbook-project:hover {
-  text-decoration: underline;
-}
-.logbook-photo-empty {
-  font-size: 0.75rem;
-}
-.logbook-photos figure {
-  margin: 0 0 16px;
-}
-.logbook-photos img {
   width: 100%;
-  height: auto;
+  height: 100%;
+}
+.logbook-route {
+  fill: none;
+  stroke: #b6d0df;
+  stroke-width: 1.1;
+  opacity: 0.3;
+}
+.logbook-route.selected {
+  stroke: #f39061;
+  stroke-width: 2.3;
+  opacity: 1;
+  stroke-dasharray: 7 5;
+  animation: logbook-route-flow 5s linear infinite paused;
+}
+.aviation-logbook[data-active='true'] .logbook-route.selected {
+  animation-play-state: running;
+}
+@keyframes logbook-route-flow {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+.logbook-airport circle {
+  fill: #95b5c7;
+}
+.logbook-airport.selected circle {
+  fill: #ffd5ac;
+  stroke: #ec9364;
+  stroke-width: 2;
+}
+.logbook-airport text {
+  font-size: 12px;
+  font-weight: 600;
+  fill: #fff;
+  paint-order: stroke;
+  stroke: #102c3e;
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.logbook-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  background: radial-gradient(
+    ellipse,
+    #102c3ef2,
+    #102c3e50 55%,
+    transparent 75%
+  );
+}
+.logbook-empty > svg {
+  color: #f29468;
+  transform: rotate(-15deg);
+}
+.logbook-empty p {
+  font-size: clamp(2rem, 3.2vw, 3.2rem);
+  font-weight: 420;
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+  margin: 14px 0;
+}
+.logbook-empty em {
+  font-style: normal;
+  color: #c3dbe8;
+}
+.logbook-empty > span {
+  color: #a8c4d3;
+  font-size: 0.82rem;
+}
+.logbook-map-credit {
+  position: absolute;
+  bottom: 10px;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 0.65rem;
+  color: #9cb8c8;
+}
+.logbook-route-caption {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+  letter-spacing: 0.09em;
+}
+.logbook-route-caption > svg {
+  color: #f29468;
+}
+.logbook-route-dash {
+  height: 1px;
+  width: 28px;
+  background: #7899ac;
+}
+.logbook-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0;
+  border-top: 1px solid #54768a66;
+  padding-top: 26px;
+  gap: 25px;
+}
+.logbook-stats dd {
+  margin: 0 0 4px;
+  font-size: clamp(2rem, 3.3vw, 3rem);
+  font-weight: 440;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+.logbook-stats dt {
+  font-size: 0.78rem;
+  color: #acc6d5;
+}
+.logbook-records {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 32px;
+  margin-top: 36px;
+  align-items: start;
+}
+.logbook-flight-list {
+  border: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  max-height: 380px;
+  overflow-y: auto;
+  scrollbar-color: #668596 #173547;
+}
+.logbook-flight-list button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.8fr 18px;
+  gap: 15px;
+  align-items: center;
+  padding: 19px 14px;
+  border: 0;
+  border-bottom: 1px solid #48667a66;
+  background: transparent;
+  color: #c2d7e2;
+  text-align: left;
+  font-size: 0.76rem;
+}
+.logbook-flight-list button[aria-pressed='true'] {
+  background: #21465b;
+  color: #fff;
+  box-shadow: inset 2px 0 #ee8c5e;
+}
+.logbook-flight-list button:hover {
+  background: #24485a;
+}
+.logbook-list-route {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.93rem;
+  white-space: nowrap;
+}
+.logbook-list-route svg {
+  color: #ee9e77;
+}
+.logbook-pass {
+  color: #193c50;
+  background: #f0f1e9;
   border-radius: 4px;
 }
-.logbook-photos figcaption {
-  font-size: 0.75rem;
-  margin-top: 6px;
+.logbook-pass-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 23px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  border-bottom: 1px solid #c9d2d6;
+}
+.logbook-pass-route {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 22px 23px 15px;
+}
+.logbook-pass-route > div {
+  flex: 1;
+  min-width: 0;
+}
+.logbook-pass-route > div:last-child {
+  text-align: right;
+}
+.logbook-pass-route strong {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: 470;
+  letter-spacing: -0.035em;
+}
+.logbook-pass-route span {
+  font-size: 0.76rem;
+  color: #526d7c;
+}
+.logbook-pass > dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  padding: 0 23px 22px;
+}
+.logbook-pass dt {
+  font-size: 0.7rem;
+  color: #587182;
+  margin-bottom: 4px;
+}
+.logbook-pass dd {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.logbook-pass-stub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 23px;
+  gap: 20px;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  border-top: 1px dashed #9eaeb6;
 }
 @media (max-width: 800px) {
-  .logbook-entry {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
+  .aviation-logbook {
+    padding: 44px 6% 38px;
   }
-  .logbook-meta {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
+  .logbook-heading {
+    align-items: center;
+  }
+  .logbook-mark {
+    display: none;
+  }
+  .logbook-atlas {
+    margin: 15px -4% 0;
+    height: 270px;
+  }
+  .logbook-stats {
+    gap: 15px;
+    padding-top: 20px;
+  }
+  .logbook-stats dd {
+    font-size: clamp(1.4rem, 6vw, 1.9rem);
+  }
+  .logbook-stats dt {
+    font-size: 0.67rem;
+  }
+  .logbook-records {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .logbook-flight-list {
+    max-height: 250px;
+  }
+  .logbook-flight-list button {
+    grid-template-columns: 1.2fr 1fr 18px;
+    gap: 8px;
+    padding-inline: 10px;
+  }
+  .logbook-flight-list button > span:nth-child(3) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logbook-route.selected {
+    animation: none;
   }
 }
