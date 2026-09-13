@@ -1,4 +1,4 @@
-Personal flight records: owner-supplied Flighty CSV, imported 2026-09-13.
+Personal flight records: my own Flighty CSV export, imported 2026-09-13.
 Only public historical flight details are included; the original CSV is not published.
 
 Airport names, cities, country/territory codes and coordinates: OurAirports, public domain.

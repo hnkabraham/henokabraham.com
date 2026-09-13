@@ -18,10 +18,15 @@ function run(command, args, env) {
 
 const localFile = resolve(root, '.env.cloudflare.local');
 let credentials;
+// The contact form's destination address: a build input, not a Wrangler
+// credential, so it is added to buildEnv below rather than stripped with
+// the account credentials.
+let contactTo = process.env.CONTACT_TO;
 if (!dryRun) {
   const local = existsSync(localFile)
     ? parseEnv(readFileSync(localFile, 'utf8'))
     : {};
+  contactTo ||= local.CONTACT_TO;
   const token = process.env.CLOUDFLARE_API_TOKEN || local.CLOUDFLARE_API_TOKEN;
   const apiKey = process.env.CLOUDFLARE_API_KEY || local.CLOUDFLARE_API_KEY;
   const email = process.env.CLOUDFLARE_EMAIL || local.CLOUDFLARE_EMAIL;
@@ -56,12 +61,15 @@ if (!dryRun) {
 }
 
 // Deployment credentials are only supplied to Wrangler, never to the build.
+// CONTACT_TO is the opposite case: vite.config.ts reads it while building,
+// to embed the send_email binding and destination address.
 const buildEnv = {
   ...process.env,
   DEPLOY_TARGET: 'cloudflare',
   WRANGLER_SEND_METRICS: 'false',
   WRANGLER_WRITE_LOGS: 'false',
   WRANGLER_LOG_PATH: resolve(root, '.wrangler/logs'),
+  ...(contactTo ? { CONTACT_TO: contactTo } : {}),
 };
 for (const key of [
   'CLOUDFLARE_API_TOKEN',

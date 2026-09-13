@@ -1,7 +1,13 @@
 {
-  "name": "sites-project",
+  "name": "henokabraham-com",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hnkabraham/henokabraham.com.git"
+  },
+  "homepage": "https://henokabraham.com",
   "engines": {
     "node": ">=22.13.0"
   },

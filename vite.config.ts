@@ -14,6 +14,14 @@ const directCloudflare = process.env.DEPLOY_TARGET === 'cloudflare';
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
 
+// The contact form's destination address is a build-time secret, not a
+// literal in this file: unset (a plain checkout, a fork, CI) simply builds
+// a Worker with no send_email binding, and the API reports contactEnabled
+// false rather than failing. Deploying with a real inbox happens through
+// scripts/deploy-cloudflare.mjs, which reads CONTACT_TO from the git-ignored
+// .env.cloudflare.local and passes it into this build's environment.
+const contactTo = process.env.CONTACT_TO || '';
+
 const localBindingConfig = {
   name: 'henokabraham-com',
   main: directCloudflare ? './worker.ts' : 'vinext/server/fetch-handler',
@@ -100,18 +108,20 @@ export default defineConfig(async ({ command }) => {
                     simple: { limit: 30, period: 60 },
                   },
                 ],
-                send_email: [
-                  {
-                    name: 'CONTACT_EMAIL',
-                    destination_address: 'REDACTED-EMAIL',
-                  },
-                ],
+                send_email: contactTo
+                  ? [
+                      {
+                        name: 'CONTACT_EMAIL',
+                        destination_address: contactTo,
+                      },
+                    ]
+                  : [],
                 triggers: { crons: ['*/15 * * * *'] },
                 observability: { enabled: true, head_sampling_rate: 0.1 },
                 vars: {
                   TURNSTILE_SITE_KEY: '0x4AAAAAAEulQFo5cYQJ5FfZ',
                   WEB_ANALYTICS_TOKEN: '17fd51eeb5b141c09edde8089ecda2ca',
-                  CONTACT_TO: 'REDACTED-EMAIL',
+                  ...(contactTo ? { CONTACT_TO: contactTo } : {}),
                 },
                 preview_urls: false,
                 routes: [

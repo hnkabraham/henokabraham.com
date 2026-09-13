@@ -471,7 +471,7 @@
   /* A size container, so the landmark can follow the photo's cover scaling. */
   container-type: size;
 }
-/* The Golden Gate seen down its span, from the owner's model: the near
+/* The Golden Gate seen down its span, from my own model: the near
    tower stands at the lower left and the bridge recedes up the left edge
    into the haze. Anchored to the sky photograph in image fractions (the
    sprite's bottom centre at x, y; height as a share of the photo), so it

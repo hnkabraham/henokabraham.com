@@ -1,4 +1,4 @@
-Airline logos identify carriers in the owner’s historical travel log.
+Airline logos identify carriers in my historical travel log.
 All airline names and marks belong to their respective owners.
 
 Soaring Symbols source revision: 2e97859ed3e7aba051d5696ff59c97c3de36823b

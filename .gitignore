@@ -46,3 +46,8 @@ FlightyExport*.csv
 
 # Intermediate buffers and render of the Golden Gate sprite (scripts/prepare-golden-gate.swift)
 archive/models/golden-gate/
+
+# Source model with an unknown licence (see ASSETS.md); only the rendered
+# sprite under public/images/ is redistributed. Supply your own to reproduce
+# scripts/prepare-golden-gate.swift.
+archive/models/golden-gate-bridge.usdz

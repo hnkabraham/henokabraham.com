@@ -1,4 +1,5 @@
-// Exports the owner's Golden Gate Bridge model (archive/models/golden-gate-bridge.usdz)
+// Exports my own Golden Gate Bridge model (archive/models/golden-gate-bridge.usdz,
+// not committed to this repository — its source and licence are unknown to me)
 // to world-space buffers for scripts/render-golden-gate.mjs: positions and
 // triangle indices as little-endian float32/uint32, plus a JSON list of meshes
 // with their index ranges and bounds. Uses Apple's Model I/O, so it needs
