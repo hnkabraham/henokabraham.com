@@ -161,7 +161,7 @@
 }
 .bay-chapters button span:nth-child(2) {
   width: 76px;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-google-sans);
   white-space: nowrap;
 }
 .bay-chapters button span:first-child {
@@ -204,7 +204,7 @@
 }
 .bay-scroll-cue small {
   display: block;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-google-sans);
   font-size: 0.875rem;
   letter-spacing: 0;
   margin-top: 6px;

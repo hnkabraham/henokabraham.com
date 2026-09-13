@@ -2,12 +2,27 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import './aviation-logbook.css';
+/* Local variable fonts; the italic face loads only when it is used. */
+@font-face {
+  font-family: 'Google Sans';
+  src: url('/fonts/google-sans-regular-7d5c767caf2d.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Google Sans';
+  src: url('/fonts/google-sans-italic-078a2bc3eff3.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
 @custom-variant dark (&:is(.dark *));
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-google-sans);
+  --font-mono: var(--font-google-sans);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-muted: var(--muted);
@@ -23,6 +38,7 @@
 }
 :root,
 .dark {
+  --font-google-sans: 'Google Sans', Arial, sans-serif;
   --background: #eeefec;
   --foreground: #162d3d;
   --card: #fff;
@@ -53,7 +69,8 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family: var(--font-google-sans);
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
 }
 button,
@@ -80,7 +97,8 @@ a:focus-visible,
 }
 .mono,
 .eyebrow {
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-google-sans);
+  font-variant-numeric: tabular-nums;
 }
 .eyebrow {
   font-size: 0.75rem;
@@ -122,7 +140,7 @@ a:focus-visible,
 }
 .brand small {
   display: block;
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-google-sans);
   font-size: 0.75rem;
   letter-spacing: 0.17em;
   font-weight: 400;
@@ -1013,7 +1031,7 @@ a:focus-visible,
 }
 .terminal-header nav a .nav-number {
   color: #315970;
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-google-sans);
   font-size: 0.75rem;
 }
 .brand small {
@@ -1434,7 +1452,7 @@ a:focus-visible,
 }
 .crew-signature small {
   display: block;
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-google-sans);
   font-size: 0.75rem;
   color: #85939a;
   line-height: 1.65;

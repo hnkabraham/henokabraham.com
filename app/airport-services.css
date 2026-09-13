@@ -74,7 +74,7 @@
   color: #c5d6dd;
 }
 .sfo-source details p {
-  font-family: var(--font-geist-mono);
+  font-family: var(--font-google-sans);
   font-size: 0.8rem;
   margin-top: 0.6rem;
   overflow-wrap: anywhere;

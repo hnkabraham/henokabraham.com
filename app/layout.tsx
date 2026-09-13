@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import './bay-departure.css';
 import './airport-services.css';
@@ -13,11 +12,6 @@ const OPENING_ASSETS: [string, 'fetch' | 'image'][] = [
   ['/models/dreamliner-787-9.glb', 'fetch'],
   ['/scenery/daylight.hdr', 'fetch'],
 ];
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
 export const metadata: Metadata = {
   icons: { icon: '/favicon.svg' },
   title: 'Henok Abraham — Personal Airspace',
@@ -35,6 +29,13 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <link
+        rel="preload"
+        href="/fonts/google-sans-regular-7d5c767caf2d.woff2"
+        as="font"
+        type="font/woff2"
+        crossOrigin="anonymous"
+      />
       {OPENING_ASSETS.map(([path, as]) => (
         <link
           key={path}
@@ -46,9 +47,7 @@ export default function RootLayout({
           media="(prefers-reduced-motion: no-preference)"
         />
       ))}
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
