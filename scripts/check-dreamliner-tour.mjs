@@ -287,7 +287,8 @@ assert.ok(
   'The landmark is offered as AVIF through image-set()',
 );
 assert.match(stylesheet, /\.bay-poster \{[^}]*container-type: size/);
-assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-x: 0\.57/);
+assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-x: 0\.33/);
+assert.match(stylesheet, /\.bay-landmark \{[^}]*--landmark-y: 0\.72/);
 for (const file of ['../app/scroll-departure.tsx', '../app/not-found.tsx'])
   assert.ok(
     (await fs.readFile(new URL(file, import.meta.url), 'utf8')).includes(

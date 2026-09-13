@@ -467,17 +467,21 @@
   container-type: size;
 }
 /* The Golden Gate's towers above the fog, from the owner's model, anchored
-   to the sky photograph in image fractions (x 0.57, fog line y 0.6) so it
-   sits on the haze band at every aspect ratio and drifts with the poster.
-   Portrait centres it: the cover crop keeps only the photo's middle third. */
+   to the sky photograph in image fractions so it keeps its place in the
+   cloud deck at every aspect ratio and drifts with the poster: lower left,
+   fog line at y 0.72, nearer than the horizon and so a little larger.
+   Portrait keeps it in the photo's middle third, which is all the cover
+   crop shows, and above the chapter bar. */
 .bay-landmark {
   --sky-w: max(100cqw, 100cqh * 2048 / 1152);
   --sky-h: max(100cqh, 100cqw * 1152 / 2048);
-  --landmark-x: 0.57;
+  --landmark-x: 0.33;
+  --landmark-y: 0.72;
+  --landmark-w: 0.3;
   position: absolute;
   left: calc(50cqw + (var(--landmark-x) - 0.5) * var(--sky-w));
-  top: calc(50cqh + 0.1 * var(--sky-h));
-  width: calc(0.25 * var(--sky-w));
+  top: calc(50cqh + (var(--landmark-y) - 0.5) * var(--sky-h));
+  width: calc(var(--landmark-w) * var(--sky-w));
   aspect-ratio: 781 / 246;
   transform: translate(-50%, -100%);
   background: url('/images/golden-gate.png') center / contain no-repeat;
@@ -489,8 +493,9 @@
 }
 @media (max-width: 800px) {
   .bay-landmark {
-    --landmark-x: 0.5;
-    width: calc(0.21 * var(--sky-w));
+    --landmark-x: 0.47;
+    --landmark-y: 0.66;
+    --landmark-w: 0.24;
   }
 }
 .bay-opening-cloud {
