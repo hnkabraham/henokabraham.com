@@ -10,6 +10,16 @@ const title = 'Henok Abraham — Personal Airspace';
 // Sampled from the opening sky under the header, so Safari's tab bar and
 // Android's toolbar continue the sky instead of framing it in white.
 const skyColor = '#6398cf';
+// Edge to edge on phones: the page extends under the notch and the home
+// indicator (the stylesheets keep controls inside the safe areas), and from
+// the Home Screen it opens without browser chrome behind a translucent
+// status bar.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: skyColor,
+};
 // What search engines may attach to the name; only facts the page states.
 const person = {
   '@context': 'https://schema.org',
@@ -32,6 +42,12 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
   // Messages and Safari take the 180 px touch icon for their small previews.
   icons: { icon: '/favicon.svg', apple: '/apple-touch-icon.png' },
+  manifest: '/site.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'Henok Abraham',
+    statusBarStyle: 'black-translucent',
+  },
   title,
   description:
     'Welcome to the personal airspace of Henok Abraham. An aviation-inspired journey through iOS apps, flight tracking, connected hardware, and curious experiments.',
@@ -56,7 +72,8 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <meta name="theme-color" content={skyColor} />
+      {/* The framework writes the standard name; iOS still reads this one. */}
+      <meta name="apple-mobile-web-app-capable" content="yes" />
       <link
         rel="preload"
         href="/fonts/google-sans-regular-7d5c767caf2d.woff2"

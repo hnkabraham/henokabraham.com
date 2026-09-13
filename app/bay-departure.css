@@ -7,7 +7,11 @@
 .bay-sticky {
   position: sticky;
   top: 0;
+  /* The frame fills the large viewport, so the sky and the aircraft reach
+     the screen edge once Safari's bars collapse; the controls below are
+     anchored to the small viewport, so they stay above the bars. */
   height: 100svh;
+  height: 100lvh;
   min-height: 560px;
   overflow: hidden;
   isolation: isolate;
@@ -46,8 +50,8 @@
 }
 .bay-flight-label {
   position: absolute;
-  left: 4.5%;
-  top: 31px;
+  left: max(4.5%, env(safe-area-inset-left));
+  top: calc(31px + env(safe-area-inset-top));
   display: flex;
   gap: 12px;
   align-items: center;
@@ -67,8 +71,8 @@
 }
 .bay-skip {
   position: absolute;
-  top: 25px;
-  right: 4.5%;
+  top: calc(25px + env(safe-area-inset-top));
+  right: max(4.5%, env(safe-area-inset-right));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -77,7 +81,7 @@
 }
 .bay-story {
   position: absolute;
-  left: 7%;
+  left: max(7%, env(safe-area-inset-left));
   top: 17%;
   max-width: 560px;
   pointer-events: none;
@@ -182,11 +186,13 @@
   width: 32px;
   opacity: 1;
 }
+/* --bars: how far the large viewport outgrows the small one (0 on desktop). */
 .bay-bottom {
+  --bars: calc(100lvh - 100svh);
   position: absolute;
-  bottom: 35px;
-  left: 4.5%;
-  right: 4.5%;
+  bottom: calc(35px + var(--bars) + env(safe-area-inset-bottom));
+  left: max(4.5%, env(safe-area-inset-left));
+  right: max(4.5%, env(safe-area-inset-right));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -386,9 +392,9 @@
     width: 26px;
   }
   .bay-bottom {
-    left: 7%;
-    right: 7%;
-    bottom: 29px;
+    left: max(7%, env(safe-area-inset-left));
+    right: max(7%, env(safe-area-inset-right));
+    bottom: calc(29px + var(--bars) + env(safe-area-inset-bottom));
     gap: 10px;
   }
   .bay-scroll-cue {
@@ -893,7 +899,7 @@
 }
 .dreamliner-journey[data-reduced='true'],
 .dreamliner-journey[data-status='unavailable'] {
-  height: 100svh;
+  height: 100lvh;
 }
 @media (prefers-reduced-motion: reduce) {
   .dreamliner-journey {
@@ -1075,7 +1081,7 @@
 }
 .dreamliner-journey[data-reduced='true'],
 .dreamliner-journey[data-status='unavailable'] {
-  height: 100svh;
+  height: 100lvh;
 }
 @media (max-width: 800px) {
   .tour-preview {
@@ -1142,25 +1148,35 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .dreamliner-journey {
-    height: 100svh;
+    height: 100lvh;
   }
 }
 @media (scripting: none) {
   .dreamliner-journey {
-    height: 100svh;
+    height: 100lvh;
   }
 }
 
 @media (max-height: 600px) and (orientation: landscape) {
   #flight .bay-sticky {
-    min-height: 100svh;
+    min-height: 100lvh;
   }
   #flight .bay-story {
     top: 64px;
     max-width: 43%;
   }
   #flight:not([data-opening='false']) .bay-story {
-    top: 104px;
+    top: 90px;
+  }
+  /* A phone on its side: the preview card must clear the chapter bar. The
+     class raises specificity over the narrow-width rules further down. */
+  #flight.dreamliner-journey .tour-preview {
+    margin-top: 10px;
+    padding: 8px 14px 8px 8px;
+  }
+  #flight.dreamliner-journey .tour-preview-art {
+    height: 48px;
+    flex-basis: 48px;
   }
   #flight .bay-story h1 {
     font-size: 2.2rem;
@@ -1182,10 +1198,10 @@
     flex-basis: 52px;
   }
   #flight .bay-chapters {
-    bottom: 24px;
+    bottom: calc(24px + (100lvh - 100svh) + env(safe-area-inset-bottom));
   }
   #flight .bay-bottom {
-    bottom: 22px;
+    bottom: calc(22px + var(--bars) + env(safe-area-inset-bottom));
   }
   #flight .bay-scroll-cue {
     display: none;

@@ -1,7 +1,7 @@
 /* The 404 page: the tour's opening sky (bay-departure.css) behind one card. */
 .diverted {
   position: relative;
-  min-height: 100svh;
+  min-height: 100lvh;
   overflow: hidden;
   display: grid;
   place-items: center;
