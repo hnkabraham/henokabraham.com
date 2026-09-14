@@ -899,9 +899,19 @@
   .dreamliner-journey .bay-chapters {
     bottom: 118px;
   }
+  /* The base ≤800px rule makes every button an equal flex:1 share of the
+     bar, sized for the digit-only label it was designed for; with full
+     words back (below) that stretched "Apps" into a big, unbalanced pill
+     and forced "Flight log" into a box too narrow for its own 76px label
+     span. Sized to content instead, each pill hugs its own word. */
+  .dreamliner-journey .bay-chapters button {
+    flex: 0 1 auto;
+    padding: 8px 11px;
+  }
   .dreamliner-journey .bay-chapters button span:nth-child(2) {
     display: inline;
-    font-size: 0.62rem;
+    width: auto;
+    font-size: 0.68rem;
   }
   .dreamliner-journey .bay-chapters button span:first-child {
     display: none;
