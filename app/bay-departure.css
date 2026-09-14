@@ -988,16 +988,21 @@
 .dreamliner-journey .bay-chapters {
   z-index: 2;
 }
+/* No flat panel dimming the sky at the Apps/Devices stops on mobile — the
+   same soft white halo used on the headline (below) now also carries the
+   flight label, skip link and eyebrow/caption, so each line stays legible
+   over the fuselage without flattening the photo behind it. */
 @media (max-width: 800px) {
-  .dreamliner-journey[data-phase='roll'] .bay-scrim::after,
-  .dreamliner-journey[data-phase='liftoff'] .bay-scrim::after {
-    background: linear-gradient(
-      180deg,
-      #a7c7ebf2 0%,
-      #b9d7efee 30%,
-      #d6e8f373 35%,
-      transparent 41%
-    );
+  .dreamliner-journey[data-phase='roll'] .bay-flight-label,
+  .dreamliner-journey[data-phase='roll'] .bay-skip,
+  .dreamliner-journey[data-phase='roll'] .bay-story,
+  .dreamliner-journey[data-phase='liftoff'] .bay-flight-label,
+  .dreamliner-journey[data-phase='liftoff'] .bay-skip,
+  .dreamliner-journey[data-phase='liftoff'] .bay-story {
+    text-shadow:
+      0 0 1px #ffffffee,
+      0 0 8px #ffffffd9,
+      0 1px 16px #ffffffa6;
   }
 }
 
