@@ -988,17 +988,15 @@
 .dreamliner-journey .bay-chapters {
   z-index: 2;
 }
-/* No flat panel dimming the sky at the Apps/Devices stops on mobile — the
-   same soft white halo used on the headline (below) now also carries the
-   flight label, skip link and eyebrow/caption, so each line stays legible
-   over the fuselage without flattening the photo behind it. */
+/* No flat panel dimming the sky, at any stop, on mobile — every line gets
+   the same soft white halo the headline already carries at the Apps/Devices
+   stops, so text stays legible over the photo at phone brightness/contrast
+   without a panel flattening the scene behind it. The more specific
+   roll/liftoff headline rule above still wins for h1 there. */
 @media (max-width: 800px) {
-  .dreamliner-journey[data-phase='roll'] .bay-flight-label,
-  .dreamliner-journey[data-phase='roll'] .bay-skip,
-  .dreamliner-journey[data-phase='roll'] .bay-story,
-  .dreamliner-journey[data-phase='liftoff'] .bay-flight-label,
-  .dreamliner-journey[data-phase='liftoff'] .bay-skip,
-  .dreamliner-journey[data-phase='liftoff'] .bay-story {
+  .dreamliner-journey .bay-flight-label,
+  .dreamliner-journey .bay-skip,
+  .dreamliner-journey .bay-story {
     text-shadow:
       0 0 1px #ffffffee,
       0 0 8px #ffffffd9,

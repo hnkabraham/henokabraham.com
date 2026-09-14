@@ -846,6 +846,13 @@ a:focus-visible,
     padding-inline: max(5%, env(safe-area-inset-left))
       max(5%, env(safe-area-inset-right));
     gap: 15px;
+    /* This header always floats, transparent, over the sky photo behind
+       it; a soft white halo (matching the journey's own text below it)
+       keeps it legible at phone brightness/contrast. */
+    text-shadow:
+      0 0 1px #ffffffee,
+      0 0 8px #ffffffd9,
+      0 1px 16px #ffffffa6;
   }
   .terminal-header nav {
     gap: 20px;
