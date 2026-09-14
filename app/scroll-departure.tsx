@@ -333,19 +333,53 @@ export default function ScrollDeparture({
               <ArrowDown size={15} /> Scroll to explore
             </p>
           )}
-          {phase === 'roll' && (
-            <picture className="tour-mockup">
-              <source
-                srcSet="/images/downshift-mockup.avif"
-                type="image/avif"
-              />
-              <img
-                src="/images/downshift-mockup.png"
-                alt="Downshift's dashboard, performance and settings screens, each on its own iPhone"
-                loading="lazy"
-              />
-            </picture>
-          )}
+          {phase === 'roll' &&
+            (reducedMotion ? (
+              <picture className="tour-mockup">
+                <source
+                  srcSet="/images/downshift-mockup-static.avif"
+                  type="image/avif"
+                />
+                <img
+                  src="/images/downshift-mockup-static.png"
+                  alt="Downshift's dashboard, performance and settings screens, each on its own iPhone"
+                  loading="lazy"
+                />
+              </picture>
+            ) : (
+              <span className="tour-mockup">
+                <picture>
+                  <source
+                    srcSet="/images/downshift-mockup.avif"
+                    type="image/avif"
+                  />
+                  <img
+                    src="/images/downshift-mockup.png"
+                    alt="Downshift's performance and settings screens, each on its own iPhone"
+                    loading="lazy"
+                  />
+                </picture>
+                <span
+                  className="tour-mockup-video"
+                  style={{
+                    left: '10.23%',
+                    top: '15.96%',
+                    width: '35.6%',
+                    height: '79.35%',
+                    transform: 'rotate(-14.06deg)',
+                  }}
+                >
+                  <video
+                    src="/video/downshift-dashboard-loop.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    aria-label="Downshift's dashboard running live"
+                  />
+                </span>
+              </span>
+            ))}
           {phase === 'liftoff' && (
             <button
               className="tour-preview"

@@ -66,3 +66,6 @@ archive/models/golden-gate-bridge.usdz
 # scripts/make-downshift-mockup.py.
 public/images/downshift-mockup.avif
 public/images/downshift-mockup.png
+public/images/downshift-mockup-video-mask.png
+public/images/downshift-mockup-static.avif
+public/images/downshift-mockup-static.png

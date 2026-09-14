@@ -1017,14 +1017,32 @@
   height: 420svh;
 }
 .tour-mockup {
+  position: relative;
   display: block;
   margin: 18px 0 0 -14px;
   height: clamp(150px, 30svh, 320px);
+  aspect-ratio: 1100 / 1068;
 }
 .tour-mockup img {
   display: block;
+  width: 100%;
   height: 100%;
-  width: auto;
+}
+.tour-mockup-video {
+  position: absolute;
+  overflow: hidden;
+  -webkit-mask-image: url('/images/downshift-mockup-video-mask.png');
+  mask-image: url('/images/downshift-mockup-video-mask.png');
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.tour-mockup-video video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .tour-preview {
   display: flex;

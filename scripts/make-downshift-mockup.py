@@ -125,6 +125,7 @@ def main():
     parser.add_argument("psd", type=Path)
     parser.add_argument("--hue-shift", type=float, default=0.0, help="degrees added to the phone body's hue (~41 turns this PSD's Burgundy into orange)")
     parser.add_argument("--out", default="downshift-mockup", help="output filename stem, written under public/images/")
+    parser.add_argument("--video-slot", type=int, default=None, help="leave this screen index (0-based) transparent in the background image, and export its flat mask + placement geometry for a <video> overlay instead of a static screenshot")
     args = parser.parse_args()
 
     psd = PSDImage.open(args.psd)
@@ -143,8 +144,16 @@ def main():
     left, top, *_ = mockup.bbox
     canvas.alpha_composite(body, (left, top))
 
-    for layer, screen_path in zip(layers, SCREENS):
+    video_slot_geometry = None
+    for index, (layer, screen_path) in enumerate(zip(layers, SCREENS)):
         comp = layer.composite().convert("RGBA")
+        if index == args.video_slot:
+            # Skip pasting a static screen here; record where the video
+            # overlay needs to sit instead (computed below, once the
+            # final crop/scale is known).
+            comp_alpha = np.array(comp)[..., 3]
+            video_slot_geometry = (mask_geometry(comp_alpha), comp, layer.bbox)
+            continue
         placed = place_screen(comp, screen_path)
         lb = layer.bbox
         canvas.alpha_composite(placed, (lb[0], lb[1]))
@@ -183,6 +192,46 @@ def main():
     print(f"wrote {png_path} ({png_path.stat().st_size} bytes) size={resized.size}")
     if avif_path:
         print(f"wrote {avif_path} ({avif_path.stat().st_size} bytes)")
+
+    if video_slot_geometry:
+        (cx, cy, w, h, angle), comp, lb = video_slot_geometry
+        # Flat (unrotated) screen shape: undo the mask's own rotation so it
+        # can be used as a CSS mask on an unrotated <video>, which then gets
+        # the same rotate() transform the content would have received.
+        comp_alpha = Image.fromarray((np.array(comp)[..., 3] > 128).astype(np.uint8) * 255)
+        flat = comp_alpha.rotate(angle, expand=True, resample=Image.BICUBIC, center=(cx, cy))
+        farr = np.array(flat)
+        fys, fxs = np.where(farr > 128)
+        fx0, fx1 = fxs.min(), fxs.max()
+        fy0, fy1 = fys.min(), fys.max()
+        flat_mask = flat.crop((fx0, fy0, fx1 + 1, fy1 + 1))
+        mask_path = out_dir / f"{args.out}-video-mask.png"
+        flat_mask.save(mask_path, optimize=True)
+
+        # cx, cy are in the *pre-crop* canvas; convert to the final
+        # cropped+scaled image's own percentage coordinates. Use the flat
+        # mask's own tight crop for width/height (not the minAreaRect w/h
+        # used above), so the overlay box's aspect ratio exactly matches
+        # the mask image it's paired with.
+        final_cx = (lb[0] + cx - x0) * scale
+        final_cy = (lb[1] + cy - y0) * scale
+        final_w = flat_mask.width * scale
+        final_h = flat_mask.height * scale
+        canvas_w, canvas_h = resized.size
+        geometry = {
+            "leftPct": (final_cx - final_w / 2) / canvas_w * 100,
+            "topPct": (final_cy - final_h / 2) / canvas_h * 100,
+            "widthPct": final_w / canvas_w * 100,
+            "heightPct": final_h / canvas_h * 100,
+            # PIL rotate() turns counter-clockwise for +θ; CSS rotate()
+            # turns clockwise for +θ. place_screen() uses PIL rotate(-angle)
+            # to match the frame, so the equivalent CSS transform is the
+            # unnegated angle (verify visually; this sign is easy to flip).
+            "angleDeg": angle,
+            "maskAspect": flat_mask.width / flat_mask.height,
+        }
+        print(f"wrote {mask_path} size={flat_mask.size}")
+        print("video overlay geometry:", geometry)
 
 
 if __name__ == "__main__":
