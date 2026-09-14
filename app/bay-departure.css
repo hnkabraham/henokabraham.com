@@ -1037,6 +1037,8 @@
   mask-size: 100% 100%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
 }
 .tour-mockup-video video {
   display: block;

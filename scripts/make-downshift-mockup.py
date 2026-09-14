@@ -197,10 +197,20 @@ def main():
         (cx, cy, w, h, angle), comp, lb = video_slot_geometry
         # Flat (unrotated) screen shape: undo the mask's own rotation so it
         # can be used as a CSS mask on an unrotated <video>, which then gets
-        # the same rotate() transform the content would have received.
-        comp_alpha = Image.fromarray((np.array(comp)[..., 3] > 128).astype(np.uint8) * 255)
+        # the same rotate() transform the content would have received. CSS
+        # mask-image defaults to *alpha* mode for a raster source (unlike an
+        # SVG <mask>, which defaults to luminance), so the shape has to live
+        # in the alpha channel — a plain white-on-black grayscale PNG has no
+        # alpha channel at all (fully opaque everywhere), which masks
+        # nothing and left the video's bare rectangle showing past the
+        # frame's rounded corners and notch.
+        shape = (np.array(comp)[..., 3] > 128).astype(np.uint8) * 255
+        rgba = np.zeros((*shape.shape, 4), dtype=np.uint8)
+        rgba[..., :3] = 255
+        rgba[..., 3] = shape
+        comp_alpha = Image.fromarray(rgba, "RGBA")
         flat = comp_alpha.rotate(angle, expand=True, resample=Image.BICUBIC, center=(cx, cy))
-        farr = np.array(flat)
+        farr = np.array(flat)[..., 3]
         fys, fxs = np.where(farr > 128)
         fx0, fx1 = fxs.min(), fxs.max()
         fy0, fy1 = fys.min(), fys.max()
