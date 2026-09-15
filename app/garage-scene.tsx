@@ -108,6 +108,38 @@ function roadTexture(T: typeof import('@/lib/garage-three')) {
   return texture;
 }
 
+// The visible backdrop, drawn on a canvas rather than sampled from the real
+// daylight HDR used for reflections below. That HDR is a real (if tiny,
+// 512x256) sky dome, but from this camera's low, ground-level vantage --
+// framing a parked car, not looking up at the sky -- the only slice of it
+// ever in view is the hazy band right at the horizon, which reads as flat
+// gray regardless of how the background blur/intensity are tuned; the
+// actual blue only exists higher up in the dome than this camera ever
+// points. A dedicated gradient, in the same blue the aircraft tour's own
+// sky photo uses, reliably reads as sky instead. It doesn't rotate with
+// the camera (a plain 2D texture, not an environment map), but the car
+// only orbits at a fairly constant, shallow elevation, so a static gradient
+// behind it is indistinguishable from a real one within that range.
+function skyTexture(T: typeof import('@/lib/garage-three')) {
+  const width = 2;
+  const height = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, '#5b8fc9');
+  gradient.addColorStop(0.55, '#9cc7e9');
+  gradient.addColorStop(1, '#dde8f2');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+  const texture = new T.Texture(canvas);
+  texture.needsUpdate = true;
+  texture.colorSpace = T.SRGBColorSpace;
+  return texture;
+}
+
 const fetchAsset = async (path: string, signal: AbortSignal) => {
   const response = await fetch(sceneAsset(path), {
     signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),
@@ -201,6 +233,11 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
         r.domElement.removeEventListener('webglcontextlost', lost),
       );
       const scene = new T.Scene();
+      const sky = skyTexture(T);
+      if (sky) {
+        scene.background = sky;
+        textures.add(sky);
+      }
       const camera = new T.PerspectiveCamera(36, 1, 0.1, 50);
       camera.position.set(4.6, 1.9, 5.4);
       scene.add(new T.HemisphereLight(0xdfe6ea, 0x33363c, 0.9));
@@ -279,18 +316,11 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
           texture.needsUpdate = true;
           const pmrem = new T.PMREMGenerator(r);
           const environment = pmrem.fromEquirectangular(texture);
+          // The same daylight dome the aircraft tour uses, sampled for
+          // reflections only -- see skyTexture above for why the visible
+          // backdrop is a separate, dedicated gradient rather than this.
           scene.environment = environment.texture;
           scene.environmentIntensity = 0.6;
-          // The same daylight dome the aircraft tour uses, now shown as the
-          // backdrop too (not just sampled for reflections). A heavier blur
-          // was tried first to read as soft ambience rather than a literal
-          // sky, but blurring an equirectangular map averages in the hazier
-          // band near the horizon and washes the blue out to gray; a light
-          // blur keeps it soft without losing the color, and the road below
-          // now gives the car something to sit on instead of float over.
-          scene.background = environment.texture;
-          scene.backgroundIntensity = 1.0;
-          scene.backgroundBlurriness = 0.1;
           texture.dispose();
           pmrem.dispose();
           cleanups.push(() => environment.dispose());
