@@ -13,6 +13,7 @@ export {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
+  PlaneGeometry,
   PMREMGenerator,
   RGBAFormat,
   Scene,

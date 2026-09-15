@@ -43,6 +43,71 @@ function floorTexture(T: typeof import('@/lib/garage-three')) {
   return texture;
 }
 
+// A stretch of asphalt the car sits on, drawn on a canvas rather than
+// shipped as a photo -- same "generate it, don't fetch it" reasoning as
+// floorTexture above. The canvas's horizontal axis maps to the plane's
+// width (the car's X) and its vertical axis to the plane's length (the
+// car's Z, receding toward the horizon), so the lane lines below are drawn
+// as straight rectangles once rather than needing a seamless tiling
+// pattern; real 3D perspective foreshortens them correctly on its own.
+const ROAD_WIDTH = 40;
+const ROAD_LENGTH = 80;
+const ROAD_PX_PER_METER = 20;
+
+function roadTexture(T: typeof import('@/lib/garage-three')) {
+  const width = ROAD_WIDTH * ROAD_PX_PER_METER;
+  const height = ROAD_LENGTH * ROAD_PX_PER_METER;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const base = ctx.createLinearGradient(0, 0, 0, height);
+  base.addColorStop(0, '#3b3e43');
+  base.addColorStop(1, '#292b2f');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, width, height);
+  // Aggregate speckle: a scatter of small flecks reads as asphalt grain
+  // much faster than a per-pixel noise pass, and looks more like real
+  // aggregate than uniform static would.
+  for (let i = 0; i < 6000; i++) {
+    const gray = 40 + Math.random() * 60;
+    ctx.fillStyle = `rgba(${gray},${gray},${gray + 4},${0.15 + Math.random() * 0.2})`;
+    const size = 1 + Math.random() * 2;
+    ctx.fillRect(Math.random() * width, Math.random() * height, size, size);
+  }
+  // Faint tire-wear paths, a shade darker than the surrounding asphalt.
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = '#000000';
+  const trackOffset = 0.85 * ROAD_PX_PER_METER;
+  const trackWidth = 0.5 * ROAD_PX_PER_METER;
+  for (const sign of [-1, 1]) {
+    ctx.fillRect(
+      width / 2 + sign * trackOffset - trackWidth / 2,
+      0,
+      trackWidth,
+      height,
+    );
+  }
+  ctx.globalAlpha = 1;
+  // Sun-faded lane edge lines, a car's width apart plus a little clearance.
+  ctx.fillStyle = '#c9c9c0';
+  const laneHalfWidth = 1.9 * ROAD_PX_PER_METER;
+  const lineWidth = 0.18 * ROAD_PX_PER_METER;
+  for (const sign of [-1, 1]) {
+    ctx.fillRect(
+      width / 2 + sign * laneHalfWidth - lineWidth / 2,
+      0,
+      lineWidth,
+      height,
+    );
+  }
+  const texture = new T.Texture(canvas);
+  texture.needsUpdate = true;
+  texture.colorSpace = T.SRGBColorSpace;
+  return texture;
+}
+
 const fetchAsset = async (path: string, signal: AbortSignal) => {
   const response = await fetch(sceneAsset(path), {
     signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),
@@ -279,8 +344,32 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
         mesh.material = finish;
         materials.add(finish);
       });
+      const road = roadTexture(T);
+      if (road) {
+        // The speckled grain aliases into a moire pattern at the shallow
+        // viewing angles a ground plane is seen at without this -- the
+        // GLB's own textures don't need it (the car's never seen edge-on).
+        road.anisotropy = r.capabilities.getMaxAnisotropy();
+        const asphalt = new T.Mesh(
+          new T.PlaneGeometry(ROAD_WIDTH, ROAD_LENGTH),
+          new T.MeshStandardMaterial({
+            map: road,
+            roughness: 0.95,
+            metalness: 0.02,
+          }),
+        );
+        asphalt.rotation.x = -Math.PI / 2;
+        scene.add(asphalt);
+        geometries.add(asphalt.geometry);
+        materials.add(asphalt.material);
+        textures.add(road);
+      }
       const floor = floorTexture(T);
       if (floor) {
+        // A soft contact shadow layered just above the asphalt, not a
+        // stand-in for the ground itself now that the road plane above is
+        // the actual surface -- without it the car reads as resting near
+        // the road rather than on it.
         const ground = new T.Mesh(
           new T.CircleGeometry(5.5, 48),
           new T.MeshBasicMaterial({
