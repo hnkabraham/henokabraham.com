@@ -124,7 +124,7 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       r.setClearColor(0x000000, 0);
       r.outputColorSpace = T.SRGBColorSpace;
       r.toneMapping = T.ACESFilmicToneMapping;
-      r.toneMappingExposure = 1.05;
+      r.toneMappingExposure = 0.85;
       element.appendChild(r.domElement);
       const lost = (e: Event) => {
         e.preventDefault();
@@ -137,11 +137,11 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       const scene = new T.Scene();
       const camera = new T.PerspectiveCamera(36, 1, 0.1, 50);
       camera.position.set(4.6, 1.9, 5.4);
-      scene.add(new T.HemisphereLight(0xdfe6ea, 0x33363c, 1.2));
-      const sun = new T.DirectionalLight(0xfff6e8, 2.4);
+      scene.add(new T.HemisphereLight(0xdfe6ea, 0x33363c, 0.9));
+      const sun = new T.DirectionalLight(0xfff6e8, 1.5);
       sun.position.set(-6, 8, 5);
       scene.add(sun);
-      const fill = new T.DirectionalLight(0xcfe0ff, 0.6);
+      const fill = new T.DirectionalLight(0xcfe0ff, 0.4);
       fill.position.set(6, 3, -6);
       scene.add(fill);
       requestRender = () => {
@@ -208,7 +208,7 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
           const pmrem = new T.PMREMGenerator(r);
           const environment = pmrem.fromEquirectangular(texture);
           scene.environment = environment.texture;
-          scene.environmentIntensity = 0.9;
+          scene.environmentIntensity = 0.5;
           texture.dispose();
           pmrem.dispose();
           cleanups.push(() => environment.dispose());
@@ -258,10 +258,10 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
         const finish = new T.MeshPhysicalMaterial();
         T.MeshStandardMaterial.prototype.copy.call(finish, original);
         finish.defines = { STANDARD: '', PHYSICAL: '' };
-        finish.roughness = 0.32;
-        finish.metalness = 0.15;
-        finish.clearcoat = 0.7;
-        finish.clearcoatRoughness = 0.15;
+        finish.roughness = 0.45;
+        finish.metalness = 0.1;
+        finish.clearcoat = 0.35;
+        finish.clearcoatRoughness = 0.25;
         mesh.material = finish;
         materials.add(finish);
       });
