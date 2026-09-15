@@ -282,12 +282,15 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
           scene.environment = environment.texture;
           scene.environmentIntensity = 0.6;
           // The same daylight dome the aircraft tour uses, now shown as the
-          // backdrop too (not just sampled for reflections) -- heavily
-          // blurred and dimmed so it reads as soft studio ambience rather
-          // than a literal sky the car is floating in.
+          // backdrop too (not just sampled for reflections). A heavier blur
+          // was tried first to read as soft ambience rather than a literal
+          // sky, but blurring an equirectangular map averages in the hazier
+          // band near the horizon and washes the blue out to gray; a light
+          // blur keeps it soft without losing the color, and the road below
+          // now gives the car something to sit on instead of float over.
           scene.background = environment.texture;
-          scene.backgroundIntensity = 0.55;
-          scene.backgroundBlurriness = 0.55;
+          scene.backgroundIntensity = 1.0;
+          scene.backgroundBlurriness = 0.1;
           texture.dispose();
           pmrem.dispose();
           cleanups.push(() => environment.dispose());
