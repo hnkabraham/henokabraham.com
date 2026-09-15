@@ -174,23 +174,24 @@ def _is_exhaust_tip(cx, cy, cz, u, v):
 # artist's own UV layout for this one panel gives the "stripe" cell nearly
 # the whole panel (verified by sampling the source PaintA texture at the
 # roof's actual UVs, bucketed by world X: black_band -- our stripe target --
-# covers roughly |x|<0.5 of a roof that's only 0.72 half-width, versus the
-# hood's own black_band band, sampled the same way, which is a narrow
-# |x|<0.18 out of a 0.88 half-width). Recoloring the texture can't fix a
-# per-panel UV authoring choice, so the roof is instead re-split completely
-# by world position -- gray outside the hood's own stripe offsets, stripe
-# color inside them -- reusing the hood's real stripe geometry (measured in
-# world meters, not rescaled) rather than inventing a new width.
+# covers roughly |x|<0.5 of a roof that's only 0.72 half-width). Recoloring
+# the texture can't fix a per-panel UV authoring choice, so the roof is
+# instead re-split completely by world position into a narrow stripe and
+# gray on either side -- not by whole-triangle classification (see
+# split_at_plane below), because parts of this panel's own triangulation are
+# coarse, elongated fan shapes several centimetres wide; classifying whole
+# triangles by centroid at any boundary that cuts through that fan produces
+# a jagged sawtooth edge, not a straight line, and picking a boundary wide
+# enough to dodge the fan entirely (the first fix this session shipped)
+# leaves the stripe looking like a solid two-tone panel next to the hood's
+# and trunk's much narrower double stripe. `split_at_plane` clips the
+# straddling triangles themselves at the exact x boundary, so the edge is
+# clean regardless of the source mesh's local resolution.
 _ROOF_Y_MIN = 1.15
 _ROOF_Z_RANGE = (-1.15, 0.35)
 _ROOF_X_MAX = 0.75
-_ROOF_STRIPE_OUTER = 0.19  # stripe's outer edge, from the hood
-
-# The hood's own two stripes have a thin gray pinstripe gap between them, but
-# the roof's triangles are coarse enough that a gap that thin has no triangle
-# boundary to fall on -- splitting on it produced a stray sliver, not a
-# clean line, so the roof gets one merged stripe at the same outer edge
-# instead of trying to reproduce a gap this mesh can't resolve.
+_ROOF_STRIPE_OUTER = 0.11  # each stripe's outer edge
+_ROOF_STRIPE_INNER = 0.02  # gray gap between the two stripes
 
 
 def _is_roof(cx, cy, cz, u, v):
@@ -201,12 +202,93 @@ def _is_roof(cx, cy, cz, u, v):
     )
 
 
-def _is_roof_stripe(cx, cy, cz, u, v):
-    return _is_roof(cx, cy, cz, u, v) and abs(cx) < _ROOF_STRIPE_OUTER
+def _clip_polygon(idx3, keep):
+    """Sutherland-Hodgman clip of one triangle (3 vertex indices, in their
+    original cyclic order, so winding is preserved) against a half-space:
+    `keep(vertex_index) -> bool`. Returns the output polygon (3 or 4
+    entries) as a list of either an existing vertex index, or a ('cut', a,
+    b) marker for a new vertex on edge a->b yet to be created."""
+    out = []
+    for i in range(3):
+        cur, nxt = idx3[i], idx3[(i + 1) % 3]
+        cur_in, nxt_in = keep(cur), keep(nxt)
+        if cur_in:
+            out.append(cur)
+            if not nxt_in:
+                out.append(('cut', cur, nxt))
+        elif nxt_in:
+            out.append(('cut', cur, nxt))
+    return out
 
 
-def _is_roof_gray(cx, cy, cz, u, v):
-    return _is_roof(cx, cy, cz, u, v) and abs(cx) >= _ROOF_STRIPE_OUTER
+def split_at_plane(tri_flat, positions, normals, uvs, boundary_x):
+    """Splits triangles (flat vertex-index array) at the plane x =
+    boundary_x into an inside set (x < boundary_x) and an outside set (x >=
+    boundary_x), clipping any triangle whose vertices straddle the plane
+    into 1-2 new sub-triangles with linearly interpolated normals/UVs at the
+    cut, rather than assigning whole triangles by centroid. Returns
+    (inside_flat, outside_flat, positions, normals, uvs); the attribute
+    arrays gain one new vertex per cut edge and are returned since the
+    caller's accessors are built from them afterwards."""
+    tri = tri_flat.reshape(-1, 3)
+    new_pos, new_nrm, new_uv = [], [], []
+    next_index = len(positions)
+    cut_cache = {}
+
+    def cut_vertex(a, b):
+        nonlocal next_index
+        key = (a, b) if a < b else (b, a)
+        if key in cut_cache:
+            return cut_cache[key]
+        t = (boundary_x - positions[a, 0]) / (positions[b, 0] - positions[a, 0])
+        new_pos.append(positions[a] + (positions[b] - positions[a]) * t)
+        new_nrm.append(normals[a] + (normals[b] - normals[a]) * t)
+        new_uv.append(uvs[a] + (uvs[b] - uvs[a]) * t)
+        cut_cache[key] = next_index
+        next_index += 1
+        return cut_cache[key]
+
+    def resolve(handle):
+        return cut_vertex(handle[1], handle[2]) if isinstance(handle, tuple) else handle
+
+    def fan(poly):
+        return [(poly[0], poly[i], poly[i + 1]) for i in range(1, len(poly) - 1)]
+
+    def is_inside(i):
+        return positions[i, 0] < boundary_x
+
+    inside_tris, outside_tris = [], []
+    for a, b, c in tri:
+        idx3 = (a, b, c)
+        flags = [is_inside(i) for i in idx3]
+        if all(flags):
+            inside_tris.append(idx3)
+        elif not any(flags):
+            outside_tris.append(idx3)
+        else:
+            inside_tris.extend(fan([resolve(h) for h in _clip_polygon(idx3, is_inside)]))
+            outside_tris.extend(fan([resolve(h) for h in _clip_polygon(idx3, lambda i: not is_inside(i))]))
+
+    if new_pos:
+        positions = np.vstack([positions, np.array(new_pos)])
+        normals = np.vstack([normals, np.array(new_nrm)])
+        uvs = np.vstack([uvs, np.array(new_uv)])
+    to_flat = lambda tris: np.array(tris, dtype=np.uint32).reshape(-1) if tris else np.zeros(0, dtype=np.uint32)
+    return to_flat(inside_tris), to_flat(outside_tris), positions, normals, uvs
+
+
+def split_bands(tri_flat, positions, normals, uvs, boundaries):
+    """Splits triangles into len(boundaries)+1 consecutive x-bands (ordered
+    most-negative to most-positive) via repeated split_at_plane calls."""
+    remaining = tri_flat
+    bands = []
+    for boundary in boundaries:
+        band, remaining, positions, normals, uvs = split_at_plane(
+            remaining, positions, normals, uvs, boundary
+        )
+        bands.append(band)
+    bands.append(remaining)
+    return bands, positions, normals, uvs
 
 
 # Each source material maps to a LIST of split rules, applied in order --
@@ -214,9 +296,10 @@ def _is_roof_gray(cx, cy, cz, u, v):
 # behind, so the predicates don't need to be mutually exclusive by
 # construction, only in practice (verified: the mirror caps sit well below
 # the roof's y threshold, so the two never compete for the same triangles).
-# "Paint" in a split's own name matters: the viewer (garage-scene.tsx) gives
-# any material whose name contains "paint" the same clearcoat finish as the
-# rest of the body, which the roof split pieces should get too.
+# The roof's own gray/stripe split is handled separately, by exact clipping,
+# right after this list is applied (see the main loop below) -- it isn't a
+# predicate rule because it needs to create new vertices along the cut,
+# which these simple whole-triangle rules don't.
 SPLIT_RULES = {
     'shFord_ShelbyGT350R_2016PaintA_Material1': [
         {
@@ -225,20 +308,6 @@ SPLIT_RULES = {
             'baseColorFactor': CARBON_DARK,
             'metallic': 0.3,
             'roughness': 0.35,
-        },
-        {
-            'predicate': _is_roof_stripe,
-            'name': 'RoofPaint_stripe',
-            'baseColorFactor': STRIPE_BLUE,
-            'metallic': 0.0,
-            'roughness': 0.5,
-        },
-        {
-            'predicate': _is_roof_gray,
-            'name': 'RoofPaint_gray',
-            'baseColorFactor': BODY_GRAY,
-            'metallic': 0.0,
-            'roughness': 0.5,
         },
     ],
     'shFord_ShelbyGT350R_2016Coloured_Material1': [
@@ -523,6 +592,55 @@ def _run(text, tex_src, out_dir):
             if len(split_tri):
                 splits.append((split_rule, split_tri.reshape(-1)))
         indices = tri.reshape(-1)
+
+        if mat_name == 'shFord_ShelbyGT350R_2016PaintA_Material1':
+            centroids = positions[tri].mean(axis=1)
+            roof_mask = np.array(
+                [_is_roof(c[0], c[1], c[2], 0, 0) for c in centroids]
+            )
+            roof_tri = tri[roof_mask].reshape(-1)
+            indices = tri[~roof_mask].reshape(-1)
+            boundaries = sorted(
+                [
+                    -_ROOF_STRIPE_OUTER,
+                    -_ROOF_STRIPE_INNER,
+                    _ROOF_STRIPE_INNER,
+                    _ROOF_STRIPE_OUTER,
+                ]
+            )
+            bands, positions, normals, uvs = split_bands(
+                roof_tri, positions, normals, uvs, boundaries
+            )
+            roof_gray = np.concatenate([bands[0], bands[2], bands[4]])
+            roof_stripe = np.concatenate([bands[1], bands[3]])
+            print(
+                f'  split {len(roof_tri)//3} roof tris out of {mat_name} '
+                f'-> RoofPaint_stripe ({len(roof_stripe)//3}) / RoofPaint_gray ({len(roof_gray)//3})'
+            )
+            if len(roof_stripe):
+                splits.append(
+                    (
+                        {
+                            'name': 'RoofPaint_stripe',
+                            'baseColorFactor': STRIPE_BLUE,
+                            'metallic': 0.0,
+                            'roughness': 0.5,
+                        },
+                        roof_stripe,
+                    )
+                )
+            if len(roof_gray):
+                splits.append(
+                    (
+                        {
+                            'name': 'RoofPaint_gray',
+                            'baseColorFactor': BODY_GRAY,
+                            'metallic': 0.0,
+                            'roughness': 0.5,
+                        },
+                        roof_gray,
+                    )
+                )
 
         pos_accessor = attr(positions, 'VEC3')
         nrm_accessor = attr(normals, 'VEC3')
