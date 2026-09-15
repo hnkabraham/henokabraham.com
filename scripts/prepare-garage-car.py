@@ -139,13 +139,30 @@ def recolor_coloured(path):
 
 
 def recolor_wheels(path):
-    # The atlas includes tire lettering and drilled rotors, not just swatches.
-    # A continuous levels curve keeps that detail and anchors the dark recesses.
+    # This atlas is a straight-on photo-style capture of the wheel face, so
+    # (verified by sampling radial profiles from its own center at eight
+    # angles, not assumed) it's concentric rings in pixel space: hub, vented
+    # disk, a recessed channel, the rim's outer lip, then tire -- and that
+    # last transition is sharp and consistent by angle, always by r=200 of
+    # 256. The tire tread's own molded block pattern is already in the
+    # unmodified source (present with brightening disabled entirely); a
+    # levels curve strong enough to lift the rim to gunmetal blows that
+    # pattern out into a harsh checkerboard if it also touches the tire, so
+    # the tire radius is masked out of the recolor rather than toned down --
+    # anything scaled down to look fine on the tire is too weak on the rim.
     im = Image.open(path).convert('RGB')
     levels = np.interp(
         np.arange(256), [0, 8, 60, 129, 255], [0, 8, 138, 208, 255]
     ).round().astype(np.uint8)
-    return im.point(levels.tolist() * 3)
+    recolored = im.point(levels.tolist() * 3)
+    w, h = im.size
+    yy, xx = np.mgrid[0:h, 0:w]
+    radius = np.hypot(xx - w / 2, yy - h / 2)
+    wheel_weight = np.clip((200 - radius) / (200 - 193) * 255, 0, 255).astype(
+        np.uint8
+    )
+    mask = Image.fromarray(wheel_weight, 'L')
+    return Image.composite(recolored, im, mask)
 
 
 # The Coloured prim also contains unrelated trim. This box matches only
