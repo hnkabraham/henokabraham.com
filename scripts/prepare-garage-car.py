@@ -169,21 +169,87 @@ def _is_exhaust_tip(cx, cy, cz, u, v):
     return 0.45 < abs(cx) < 0.85 and 0.2 < cy < 0.4 and -2.3 < cz < -2.0
 
 
+# The roof skin is the opposite problem from the mirror caps: it's not that
+# its UV unwrap accidentally lands in the wrong swatch cell, it's that the
+# artist's own UV layout for this one panel gives the "stripe" cell nearly
+# the whole panel (verified by sampling the source PaintA texture at the
+# roof's actual UVs, bucketed by world X: black_band -- our stripe target --
+# covers roughly |x|<0.5 of a roof that's only 0.72 half-width, versus the
+# hood's own black_band band, sampled the same way, which is a narrow
+# |x|<0.18 out of a 0.88 half-width). Recoloring the texture can't fix a
+# per-panel UV authoring choice, so the roof is instead re-split completely
+# by world position -- gray outside the hood's own stripe offsets, stripe
+# color inside them -- reusing the hood's real stripe geometry (measured in
+# world meters, not rescaled) rather than inventing a new width.
+_ROOF_Y_MIN = 1.15
+_ROOF_Z_RANGE = (-1.15, 0.35)
+_ROOF_X_MAX = 0.75
+_ROOF_STRIPE_OUTER = 0.19  # stripe's outer edge, from the hood
+
+# The hood's own two stripes have a thin gray pinstripe gap between them, but
+# the roof's triangles are coarse enough that a gap that thin has no triangle
+# boundary to fall on -- splitting on it produced a stray sliver, not a
+# clean line, so the roof gets one merged stripe at the same outer edge
+# instead of trying to reproduce a gap this mesh can't resolve.
+
+
+def _is_roof(cx, cy, cz, u, v):
+    return (
+        cy > _ROOF_Y_MIN
+        and _ROOF_Z_RANGE[0] < cz < _ROOF_Z_RANGE[1]
+        and abs(cx) < _ROOF_X_MAX
+    )
+
+
+def _is_roof_stripe(cx, cy, cz, u, v):
+    return _is_roof(cx, cy, cz, u, v) and abs(cx) < _ROOF_STRIPE_OUTER
+
+
+def _is_roof_gray(cx, cy, cz, u, v):
+    return _is_roof(cx, cy, cz, u, v) and abs(cx) >= _ROOF_STRIPE_OUTER
+
+
+# Each source material maps to a LIST of split rules, applied in order --
+# every rule only ever sees triangles the earlier rules in its list left
+# behind, so the predicates don't need to be mutually exclusive by
+# construction, only in practice (verified: the mirror caps sit well below
+# the roof's y threshold, so the two never compete for the same triangles).
+# "Paint" in a split's own name matters: the viewer (garage-scene.tsx) gives
+# any material whose name contains "paint" the same clearcoat finish as the
+# rest of the body, which the roof split pieces should get too.
 SPLIT_RULES = {
-    'shFord_ShelbyGT350R_2016PaintA_Material1': {
-        'predicate': _is_mirror_cap,
-        'name': 'MirrorCap_black',
-        'baseColorFactor': CARBON_DARK,
-        'metallic': 0.3,
-        'roughness': 0.35,
-    },
-    'shFord_ShelbyGT350R_2016Coloured_Material1': {
-        'predicate': _is_exhaust_tip,
-        'name': 'ExhaustTip_chrome',
-        'baseColorFactor': EXHAUST_CHROME,
-        'metallic': 0.9,
-        'roughness': 0.25,
-    },
+    'shFord_ShelbyGT350R_2016PaintA_Material1': [
+        {
+            'predicate': _is_mirror_cap,
+            'name': 'MirrorCap_black',
+            'baseColorFactor': CARBON_DARK,
+            'metallic': 0.3,
+            'roughness': 0.35,
+        },
+        {
+            'predicate': _is_roof_stripe,
+            'name': 'RoofPaint_stripe',
+            'baseColorFactor': STRIPE_BLUE,
+            'metallic': 0.0,
+            'roughness': 0.5,
+        },
+        {
+            'predicate': _is_roof_gray,
+            'name': 'RoofPaint_gray',
+            'baseColorFactor': BODY_GRAY,
+            'metallic': 0.0,
+            'roughness': 0.5,
+        },
+    ],
+    'shFord_ShelbyGT350R_2016Coloured_Material1': [
+        {
+            'predicate': _is_exhaust_tip,
+            'name': 'ExhaustTip_chrome',
+            'baseColorFactor': EXHAUST_CHROME,
+            'metallic': 0.9,
+            'roughness': 0.25,
+        },
+    ],
 }
 
 
@@ -436,10 +502,11 @@ def _run(text, tex_src, out_dir):
         indices = np.concatenate(indices)
         total_out_tris += len(indices) // 3
 
-        split_rule = SPLIT_RULES.get(mat_name)
-        split_indices = None
-        if split_rule:
-            tri = indices.reshape(-1, 3)
+        # Applied in order: each rule only sees triangles the earlier rules
+        # in this material's list didn't already claim.
+        splits = []
+        tri = indices.reshape(-1, 3)
+        for split_rule in SPLIT_RULES.get(mat_name, []):
             centroids = positions[tri].mean(axis=1)
             tri_uv = uvs[tri].mean(axis=1)
             match = np.array(
@@ -448,11 +515,14 @@ def _run(text, tex_src, out_dir):
                     for c, u in zip(centroids, tri_uv)
                 ]
             )
-            split_indices = tri[match].reshape(-1)
-            indices = tri[~match].reshape(-1)
+            split_tri = tri[match]
+            tri = tri[~match]
             print(
                 f'  split {match.sum()} tris out of {mat_name} -> {split_rule["name"]}'
             )
+            if len(split_tri):
+                splits.append((split_rule, split_tri.reshape(-1)))
+        indices = tri.reshape(-1)
 
         pos_accessor = attr(positions, 'VEC3')
         nrm_accessor = attr(normals, 'VEC3')
@@ -512,7 +582,7 @@ def _run(text, tex_src, out_dir):
         emit_primitive(mat_name, indices, pbr, normal_tex, alpha_blend)
         print(f'  {mat_name}: {len(positions)} verts, {len(indices)//3} tris, texture={bool(info.get("baseColorTexture"))}')
 
-        if split_rule is not None and len(split_indices):
+        for split_rule, split_indices in splits:
             lin = srgb_to_linear(np.array(split_rule['baseColorFactor'], dtype=np.float64))
             split_pbr = {
                 'baseColorFactor': [*lin.tolist(), 1.0],

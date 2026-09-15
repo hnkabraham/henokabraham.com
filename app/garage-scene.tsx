@@ -32,9 +32,10 @@ function floorTexture(T: typeof import('@/lib/garage-three')) {
     size / 2,
     size / 2,
   );
-  gradient.addColorStop(0, 'rgba(20,24,28,0.32)');
-  gradient.addColorStop(0.55, 'rgba(20,24,28,0.16)');
-  gradient.addColorStop(1, 'rgba(20,24,28,0)');
+  gradient.addColorStop(0, 'rgba(10,11,13,0.6)');
+  gradient.addColorStop(0.35, 'rgba(10,11,13,0.4)');
+  gradient.addColorStop(0.7, 'rgba(10,11,13,0.16)');
+  gradient.addColorStop(1, 'rgba(10,11,13,0)');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
   const texture = new T.Texture(canvas);
@@ -144,6 +145,12 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       const fill = new T.DirectionalLight(0xcfe0ff, 0.4);
       fill.position.set(6, 3, -6);
       scene.add(fill);
+      // A cool rim/kicker light from behind separates the car's silhouette
+      // from the (now visible, see below) sky backdrop -- without it the
+      // shaded side of the body reads as flat as the void it replaced.
+      const rim = new T.DirectionalLight(0xcfe3ff, 1.1);
+      rim.position.set(-1.5, 5, -7);
+      scene.add(rim);
       requestRender = () => {
         if (disposed || renderRequested) return;
         renderRequested = true;
@@ -208,7 +215,14 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
           const pmrem = new T.PMREMGenerator(r);
           const environment = pmrem.fromEquirectangular(texture);
           scene.environment = environment.texture;
-          scene.environmentIntensity = 0.5;
+          scene.environmentIntensity = 0.6;
+          // The same daylight dome the aircraft tour uses, now shown as the
+          // backdrop too (not just sampled for reflections) -- heavily
+          // blurred and dimmed so it reads as soft studio ambience rather
+          // than a literal sky the car is floating in.
+          scene.background = environment.texture;
+          scene.backgroundIntensity = 0.55;
+          scene.backgroundBlurriness = 0.55;
           texture.dispose();
           pmrem.dispose();
           cleanups.push(() => environment.dispose());
@@ -268,7 +282,7 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       const floor = floorTexture(T);
       if (floor) {
         const ground = new T.Mesh(
-          new T.CircleGeometry(3.6, 48),
+          new T.CircleGeometry(5.5, 48),
           new T.MeshBasicMaterial({
             map: floor,
             transparent: true,
