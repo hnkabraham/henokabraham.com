@@ -18,6 +18,7 @@ import { flights, openSource } from './flight-data';
 import { readFlightLink, replaceFlightLink } from '@/lib/flight-links';
 import type { BayPhase } from '@/lib/bay-flight';
 import AviationLogbook from './aviation-logbook';
+import GarageSection from './garage-section';
 import {
   useAirportLive,
   ProjectUpdate,
@@ -122,6 +123,9 @@ export default function TerminalExperience() {
           </a>
           <a href="#logbook">
             <span className="nav-number">02</span> Flight log
+          </a>
+          <a href="#garage">
+            <span className="nav-number">03</span> Garage
           </a>
           <a
             href="https://github.com/hnkabraham"
@@ -361,6 +365,7 @@ export default function TerminalExperience() {
           </div>
         </section>
         <AviationLogbook />
+        <GarageSection reducedMotion={reducedMotion} />
         <section
           className="open-hangar"
           data-reveal

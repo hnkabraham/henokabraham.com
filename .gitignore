@@ -69,3 +69,10 @@ public/images/downshift-mockup.png
 public/images/downshift-mockup-video-mask.png
 public/images/downshift-mockup-static.avif
 public/images/downshift-mockup-static.png
+
+# Source model, CC BY-NC-SA 4.0 (Ddiaz Design / Sketchfab, see ASSETS.md and
+# /credits/garage.html); the licence doesn't require withholding the source
+# file itself, but there's no reason to carry a 4 MB zip in history when the
+# merged/recoloured public/models/garage-gt350r.glb is what ships. Supply
+# your own copy to reproduce scripts/prepare-garage-car.py.
+archive/models/2016-ford-mustang-shelby-gt350r.usdz

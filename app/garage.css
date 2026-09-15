@@ -1,0 +1,93 @@
+.garage-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 25px;
+  align-items: start;
+}
+.garage-viewer-frame {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  overflow: hidden;
+  /* A dark studio floor rather than the site's usual light ground: the
+     WebGL canvas clears to transparent, so this shows straight through
+     behind the car once it loads, matching the poster underneath it. */
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    #363b46 0%,
+    #2b2f38 65%,
+    #22252c 100%
+  );
+  border: 1px solid #1c1f25;
+  cursor: grab;
+}
+.garage-viewer-frame:active {
+  cursor: grabbing;
+}
+.garage-poster,
+.garage-canvas {
+  position: absolute;
+  inset: 0;
+}
+.garage-poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.garage-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* The scene reports readiness once its first frame is compiled; the poster
+   crossfades out rather than popping, and pointer events wait for it too so
+   an OrbitControls drag never starts against the still-loading canvas. */
+.garage-viewer-frame[data-status='ready'] .garage-poster {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.garage-viewer-frame:not([data-status='ready']) .garage-canvas {
+  pointer-events: none;
+}
+.garage-details {
+  padding-top: 6px;
+}
+.garage-details h3 {
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+.garage-caption {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #718088;
+  margin: 0 0 16px;
+}
+.garage-credits {
+  font-size: 0.8125rem;
+  color: #4c6570;
+  border-bottom: 1px solid #4c657055;
+  padding-bottom: 2px;
+}
+.garage-credits:hover {
+  color: #1b3747;
+  border-color: #1b374799;
+}
+@media (max-width: 1100px) {
+  .garage-layout {
+    grid-template-columns: minmax(0, 1fr) 275px;
+    gap: 18px;
+  }
+}
+@media (max-width: 800px) {
+  .garage-layout {
+    grid-template-columns: 1fr;
+  }
+  .garage-viewer-frame {
+    aspect-ratio: 4 / 3;
+    border-radius: 5px;
+  }
+}
