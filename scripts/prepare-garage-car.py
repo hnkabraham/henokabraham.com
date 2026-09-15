@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Composites Henok's actual 2016 Shelby GT350R (gray, with blue racing
-stripes) from a downloaded Sketchfab model into a merged, Draco-ready GLB
+"""Represents Henok's 2017 Shelby GT350 (gray, with blue racing stripes)
+using a downloaded GT350R model in a merged, Draco-ready GLB
 for the site's Garage section.
 
 The source USDZ (2016 Ford Mustang Shelby GT350R by Ddiaz Design, Sketchfab,
@@ -14,7 +14,9 @@ plain white/gold in the source model are repainted carbon-dark; the mirror
 caps and exhaust tips, which share UV space with parts that must stay a
 different color, are split out into their own materials rather than
 recolored in place (see the module-level comments below for how each region
-was identified). This derivative remains CC BY-NC-SA 4.0: non-commercial
+was identified). The rear wing is removed and the detailed wheel atlas is
+brightened toward gunmetal; the remaining R-trim body and wheel geometry
+are an approximation of the non-R car. This derivative remains CC BY-NC-SA 4.0: non-commercial
 use, share-alike, with attribution -- see public/credits/garage.html.
 
 Geometry: world-space points already come out in real meters (see
@@ -134,6 +136,26 @@ def recolor_coloured(path):
         mask = dist < COLOURED_MATCH_DIST
         out_flat[mask] = COLOURED_TARGETS[name]
     return Image.fromarray(out.astype(np.uint8), 'RGB')
+
+
+def recolor_wheels(path):
+    # The atlas includes tire lettering and drilled rotors, not just swatches.
+    # A continuous levels curve keeps that detail and anchors the dark recesses.
+    im = Image.open(path).convert('RGB')
+    levels = np.interp(
+        np.arange(256), [0, 8, 60, 129, 255], [0, 8, 138, 208, 255]
+    ).round().astype(np.uint8)
+    return im.point(levels.tolist() * 3)
+
+
+# The Coloured prim also contains unrelated trim. This box matches only
+# its disconnected wing blade and two supports (1,428 triangles), including
+# the feet below y=1; the painted trunk deck belongs to PaintA and stays intact.
+def _is_rear_wing(cx, cy, cz, u, v):
+    return abs(cx) < 0.8 and 0.97 < cy < 1.2 and -2.33 < cz < -1.83
+
+
+DROP_RULES = {'shFord_ShelbyGT350R_2016Coloured_Material1': _is_rear_wing}
 
 
 # Geometric splits: some triangles of a merged material need a DIFFERENT
@@ -458,8 +480,13 @@ def _run(text, tex_src, out_dir):
                 'Merged 550 mesh prims into one primitive per material, world '
                 'transforms baked in. Body paint repainted gray with blue '
                 'stripes (Henok’s actual car) from the original flat-color '
-                'swatch. Textures re-encoded to WebP. Geometry/UV otherwise '
-                'unchanged from the Sketchfab source.'
+                'swatch. Rear wing and supports removed (1,428 triangles); '
+                'wheel atlas brightened toward gunmetal with a continuous '
+                'levels curve. Trim recolored; mirror caps and exhaust tips '
+                'split into separate finishes; roof stripes geometrically '
+                'clipped. Textures re-encoded to WebP. Represents a 2017 '
+                'Shelby GT350 (non-R), with remaining GT350R body and wheel '
+                'geometry retained as a cosmetic approximation.'
             ),
         },
         'scenes': [{'nodes': []}],
@@ -569,7 +596,14 @@ def _run(text, tex_src, out_dir):
         normals = np.vstack(normals)
         uvs = np.vstack(uvs)
         indices = np.concatenate(indices)
-        total_out_tris += len(indices) // 3
+        if predicate := DROP_RULES.get(mat_name):
+            tri = indices.reshape(-1, 3)
+            centroids = positions[tri].mean(axis=1)
+            drop = np.array([predicate(*c, 0, 0) for c in centroids])
+            print(f'  dropped {drop.sum()} rear-wing tris from {mat_name}')
+            used, indices = np.unique(tri[~drop].reshape(-1), return_inverse=True)
+            positions, normals, uvs = positions[used], normals[used], uvs[used]
+            indices = indices.astype(np.uint32)
 
         # Applied in order: each rule only sees triangles the earlier rules
         # in this material's list didn't already claim.
@@ -647,6 +681,8 @@ def _run(text, tex_src, out_dir):
         uv_accessor = attr(uvs, 'VEC2')
 
         def emit_primitive(name, idx_array, pbr, normal_tex=None, alpha_blend=False):
+            nonlocal total_out_tris
+            total_out_tris += len(idx_array) // 3
             material_entry = {'name': name, 'doubleSided': True, 'pbrMetallicRoughness': pbr}
             if normal_tex is not None:
                 material_entry['normalTexture'] = {'index': normal_tex}
@@ -679,6 +715,7 @@ def _run(text, tex_src, out_dir):
             recolor_fn = {
                 'shFord_ShelbyGT350R_2016PaintA_Material1': recolor_paint,
                 'shFord_ShelbyGT350R_2016Coloured_Material1': recolor_coloured,
+                'shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1': recolor_wheels,
             }.get(mat_name)
             gray_pack = None
             if info.get('roughnessTexture') and info.get('metallicTexture'):
@@ -715,7 +752,7 @@ def _run(text, tex_src, out_dir):
     gltf['buffers'] = [{'byteLength': len(binary)}]
     meta = json.dumps(gltf, separators=(',', ':')).encode()
     meta += b' ' * ((-len(meta)) % 4)
-    target = out_dir / "garage-gt350r-raw.glb"
+    target = out_dir / 'garage-gt350r-raw.glb'
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(
         struct.pack('<4sII', b'glTF', 2, 28 + len(meta) + len(binary))
@@ -724,7 +761,7 @@ def _run(text, tex_src, out_dir):
         + struct.pack('<II', len(binary), 0x004E4942)
         + binary
     )
-    print(f'wrote {target} ({target.stat().st_size:,} bytes), {total_out_tris} total tris, {len(by_mat)} materials')
+    print(f'wrote {target} ({target.stat().st_size:,} bytes), {total_out_tris} total tris, {len(gltf["materials"])} materials')
 
 
 if __name__ == '__main__':

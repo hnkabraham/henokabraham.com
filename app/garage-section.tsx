@@ -40,7 +40,7 @@ export default function GarageSection({
             <source srcSet="/images/garage-gt350r.avif" type="image/avif" />
             <img
               src="/images/garage-gt350r.png"
-              alt="2016 Shelby GT350R, gray with blue racing stripes, three-quarter view"
+              alt="2017 Shelby GT350, gray with blue racing stripes, three-quarter view"
               loading="lazy"
             />
           </picture>
@@ -51,7 +51,7 @@ export default function GarageSection({
           )}
         </div>
         <div className="garage-details">
-          <h3>2016 Shelby GT350R</h3>
+          <h3>2017 Shelby GT350</h3>
           <p className="garage-caption">Gray, with blue racing stripes.</p>
           <a
             className="garage-credits"
