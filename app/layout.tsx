@@ -7,9 +7,14 @@ import './airport-services.css';
 // decided to run, so visitors on reduced motion or a metered connection
 // download neither. A document preload would fetch them for everyone.
 const title = 'Henok Abraham — Personal Airspace';
-// Sampled from the opening sky under the header, so Safari's tab bar and
-// Android's toolbar continue the sky instead of framing it in white.
-const skyColor = '#6398cf';
+// The page's own light tone, which is what a browser's bars show at the top
+// of this page whatever it is told: Safari ignores this value and samples the
+// body, and the sections below the sky are this colour anyway. The sky is
+// faded into it at the edges on phones instead (`bay-departure.css`), so one
+// tone serves the whole page rather than matching the opening and clashing
+// with everything after it. The installed app still opens on sky: the
+// manifest keeps its own theme colour.
+const barColor = '#eeefec';
 // Edge to edge on phones: the page extends under the notch and the home
 // indicator (the stylesheets keep controls inside the safe areas), and from
 // the Home Screen it opens without browser chrome behind a translucent
@@ -18,7 +23,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: skyColor,
+  themeColor: barColor,
 };
 // What search engines may attach to the name; only facts the page states.
 const person = {

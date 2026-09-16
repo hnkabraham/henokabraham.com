@@ -319,6 +319,36 @@
     translate: 0 12px;
   }
 }
+/* Safari's bars sit at both ends of the sky and take their tint from a
+   declared colour rather than from the photograph. At the top of the
+   document that colour is the body's #eeefec — a sticky element is not yet
+   "stuck" there, so the frame's own colour never gets a say — and a near
+   white band meets a #5d8ac1 photograph at a hard line. Rather than chase
+   the exact band colour, which moves with the device and with the bars'
+   own collapse, the photograph is faded into it: strongest under the bar,
+   gone a little way into the frame, which is also where a real sky is
+   hazy. The wash rides the sky's own layer, beneath the aircraft and the
+   type, and only where those bars exist — not on a desktop, and not from
+   the Home Screen. The frame's sampled colour joins the body's here, so
+   the band stays one tone the whole way down the page. */
+@media (max-width: 800px) and (display-mode: browser) {
+  .bay-sticky {
+    background-color: #eeefec;
+  }
+  .bay-opening-sky::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(#eeefecf5, #eeefeccc 40px, #eeefec00 150px),
+      linear-gradient(
+        #c4d9e500 calc(100% - 150px),
+        #c4d9e58c calc(100% - 60px),
+        #c4d9e5cc
+      );
+  }
+}
 @media (max-width: 800px) {
   .bay-journey {
     height: 600svh;
