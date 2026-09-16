@@ -601,6 +601,12 @@ export default function ScrollDeparture({
           <i />
         </div>
       </div>
+      {/* The same candidate for the bar at the other end. It has to start its
+          life at the journey's own bottom to stay pinned there for the whole
+          scroll, which is what the frame around it arranges. */}
+      <div className="bay-bar-tint-frame" aria-hidden="true">
+        <div className="bay-bar-tint bay-bar-tint-bottom" />
+      </div>
     </section>
   );
 }

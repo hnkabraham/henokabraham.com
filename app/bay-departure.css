@@ -332,10 +332,25 @@
    sections below — which are the body's colour anyway — get the fallback
    they already match. Only where those bars exist: not on a desktop, and
    not from the Home Screen. */
-.bay-bar-tint {
+.bay-bar-tint,
+.bay-bar-tint-frame {
   display: none;
 }
 @media (max-width: 800px) and (display-mode: browser) {
+  /* The bottom bar wants the same treatment, and a sticky element only stays
+     at the bottom edge while its own place in the flow is still below it — so
+     this one's place is the journey's last six pixels, held there by a frame
+     that takes no space of its own. The colour is the cloud deck's average
+     over the strip of photograph the bar meets (#b6c6d2), where the bar has
+     been settling on a lighter, bluer #c4d9e5 of its own. */
+  .bay-bar-tint-frame {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
   .bay-bar-tint {
     display: block;
     position: sticky;
@@ -350,6 +365,12 @@
        except in the moment Safari collapses its bars. */
     z-index: 1;
     background-color: #5b8ec6;
+  }
+  .bay-bar-tint-bottom {
+    top: auto;
+    bottom: 0;
+    margin-bottom: 0;
+    background-color: #b6c6d2;
   }
 }
 @media (max-width: 800px) {

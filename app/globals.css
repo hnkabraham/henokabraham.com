@@ -1789,6 +1789,14 @@ a:focus-visible,
     font-size: 0.75rem;
     letter-spacing: 0.03em;
   }
+  /* Both lines of the wordmark wrapped at this size, which stacked the
+     signature four deep and pressed it against the top of the frame — where
+     a browser's own bar sits, so it read as running into it. Held to one
+     line each, the pair is half as tall and has room to breathe; the station
+     strip beside it gives up the width, and it scrolls. */
+  .brand > span {
+    white-space: nowrap;
+  }
   .brand small {
     font-size: 0.75rem;
     letter-spacing: 0.04em;
