@@ -319,34 +319,37 @@
     translate: 0 12px;
   }
 }
-/* Safari's bars sit at both ends of the sky and take their tint from a
-   declared colour rather than from the photograph. At the top of the
-   document that colour is the body's #eeefec — a sticky element is not yet
-   "stuck" there, so the frame's own colour never gets a say — and a near
-   white band meets a #5d8ac1 photograph at a hard line. Rather than chase
-   the exact band colour, which moves with the device and with the bars'
-   own collapse, the photograph is faded into it: strongest under the bar,
-   gone a little way into the frame, which is also where a real sky is
-   hazy. The wash rides the sky's own layer, beneath the aircraft and the
-   type, and only where those bars exist — not on a desktop, and not from
-   the Home Screen. The frame's sampled colour joins the body's here, so
-   the band stays one tone the whole way down the page. */
+/* Safari tints its bars from the background-color of a fixed or sticky
+   element within a few pixels of a screen edge, at least 80% of the width
+   and a few pixels tall; finding none, it takes the body's colour, which is
+   how a #eeefec band came to sit over a #628dc4 photograph. The frame
+   itself is never chosen — it fills the viewport rather than bordering it —
+   so this strip is the candidate instead: the photograph's own top colour,
+   six pixels tall, its height cancelled by a negative margin so the
+   journey's scroll length is untouched. Sticky rather than fixed, and a
+   child of the journey rather than of the page, so once the sky has
+   scrolled away it is no longer the nearest thing to the top edge and the
+   sections below — which are the body's colour anyway — get the fallback
+   they already match. Only where those bars exist: not on a desktop, and
+   not from the Home Screen. */
+.bay-bar-tint {
+  display: none;
+}
 @media (max-width: 800px) and (display-mode: browser) {
-  .bay-sticky {
-    background-color: #eeefec;
-  }
-  .bay-opening-sky::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      linear-gradient(#eeefecf5, #eeefeccc 40px, #eeefec00 150px),
-      linear-gradient(
-        #c4d9e500 calc(100% - 150px),
-        #c4d9e58c calc(100% - 60px),
-        #c4d9e5cc
-      );
+  .bay-bar-tint {
+    display: block;
+    position: sticky;
+    top: 0;
+    height: 6px;
+    margin-bottom: -6px;
+    /* Above the photograph, so nothing can occlude it from being sampled.
+       The photograph drifts, so its top row is not one colour: #628dc4 on
+       the phone that reported this, #538ec8 as it renders here. This sits
+       between them, which leaves the six pixels indistinguishable from the
+       sky either way — and they are behind the status bar regardless,
+       except in the moment Safari collapses its bars. */
+    z-index: 1;
+    background-color: #5b8ec6;
   }
 }
 @media (max-width: 800px) {

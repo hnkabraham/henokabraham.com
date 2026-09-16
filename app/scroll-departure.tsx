@@ -330,6 +330,10 @@ export default function ScrollDeparture({
       data-status={status}
       aria-label="Explore Henok’s work through a scrolling Boeing 787 journey"
     >
+      {/* What Safari tints its bars from while the sky is on screen; a real
+          element because it samples neither pseudo-elements nor anything
+          transparent. It carries no height of its own (bay-departure.css). */}
+      <div className="bay-bar-tint" aria-hidden="true" />
       <div className="bay-sticky">
         {sceneReady && !reducedMotion && (
           <Suspense fallback={null}>
