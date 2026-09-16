@@ -7,7 +7,9 @@ export const TOUR_CHAPTERS: { at: number; label: string; phase: BayPhase }[] = [
   { at: 0.37, label: 'Apps', phase: 'roll' },
   { at: 0.59, label: 'Devices', phase: 'liftoff' },
   { at: 0.78, label: 'Flight log', phase: 'bay' },
-  { at: 0.97, label: 'Explore', phase: 'cruise' },
+  // The last stop sits where the aircraft is crossing the right edge, not
+  // after it has gone: the rest of the scroll clears the sky and hands over.
+  { at: 0.9, label: 'Explore', phase: 'cruise' },
 ];
 export function tourPhase(p: number): BayPhase {
   return p < 0.18
@@ -52,9 +54,24 @@ export const TOUR_SHOTS: Shot[] = [
 // over the rest of the scroll, along a power curve so it leaves from a
 // standstill without a jerk, climbing gently and rolling into a shallow
 // left turn part-way out that shows the flexed wings from above and behind.
+// In the back half it rolls out of that turn and a little past it, so its
+// track crosses the lens's own and carries it out to the right rather than
+// shrinking into the middle of the sky (where, on a phone, the Golden Gate
+// stands and the two looked set to meet).
 const RANGE = 900;
 const TURN = 0.5;
-const heading = (departure: number) => TURN * ease((departure - 0.26) / 0.5);
+const ROLLOUT = 0.78;
+const heading = (departure: number) =>
+  TURN * ease((departure - 0.26) / 0.5) -
+  ROLLOUT * ease((departure - 0.52) / 0.44);
+// How far the aim falls behind the aircraft once it is running away, in half
+// frames: nothing while the aircraft is still being followed, then a run-out
+// with a cubic in it, so the aircraft leans out of frame through the last
+// chapter and is gone by the end of the scroll.
+const runOut = (departure: number) => {
+  const u = Math.max(0, Math.min(1, (departure - 0.42) / 0.58));
+  return 0.45 * u + 0.55 * u * u * u;
+};
 
 export function sampleDreamlinerTour(progress: number, aspect: number) {
   const p = Math.max(0, Math.min(1, progress));
@@ -96,15 +113,37 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   // exhaust to the fuselage (a touch to starboard of it, so the whole span
   // sits left of the frame's edge) as the aircraft comes into frame.
   const aim = ease((p - 0.24) / 0.14);
+  const fov = mix(a.fov, b.fov, t);
   if (p > 0.24)
     target = aircraft.map(
       (v, i) => v + mix([-3, 1, 9.4][i], [0, 1.5, -4][i], aim),
     ) as TourPoint;
-  // The bank leads the turn in and trails it out, as a coordinated turn does.
+  // Then the lens lets it go: the aim slides away along its own right axis,
+  // by a share of the frame's half width at that range, and the aircraft runs
+  // out to the right of frame. A narrow frame needs the larger share, since
+  // the aircraft sits closer to its centre and spans more of it.
+  const slide = mix(0.9, 1.6, portrait) * runOut(departure);
+  if (slide > 0) {
+    const fx = target[0] - camera[0],
+      fz = target[2] - camera[2];
+    const range = Math.hypot(fx, target[1] - camera[1], fz);
+    const flat = Math.hypot(fx, fz) || 1;
+    // right = normalize(forward × up); the aim moves left, the aircraft right.
+    const step =
+      (slide * Math.tan((fov * Math.PI) / 360) * aspect * range) / flat;
+    target = [target[0] + fz * step, target[1], target[2] - fx * step];
+  }
+  // The bank leads the turn in and trails it out, as a coordinated turn does,
+  // and reverses as the aircraft rolls out through its track.
   const bank =
     mix(-0.08, 0.025, arrival) +
     Math.sin(p * Math.PI * 2) * 0.025 +
-    0.3 * ease((departure - 0.18) / 0.16) * (1 - ease((departure - 0.7) / 0.2));
+    0.3 *
+      ease((departure - 0.18) / 0.16) *
+      (1 - ease((departure - 0.7) / 0.2)) -
+    0.22 *
+      ease((departure - 0.56) / 0.3) *
+      (1 - ease((departure - 0.92) / 0.1));
   return {
     camera,
     target,
@@ -113,7 +152,7 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     // Tip lift in metres: a cruise wing is always flexed, and it loads up
     // further as the aircraft climbs away.
     flex: 0.8 + 1.3 * ease((p - 0.22) / 0.4),
-    fov: mix(a.fov, b.fov, t),
+    fov,
     offsetX: mix(-0.18, 0, portrait),
     offsetY: mix(-0.035, -0.12, portrait),
     bank,

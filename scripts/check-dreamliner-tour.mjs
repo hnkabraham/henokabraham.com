@@ -153,19 +153,28 @@ for (const [width, height] of [
   };
   // The exhaust stays in frame through the hold, including on narrow screens
   // (the rest of the aircraft is intentionally cropped there), and the
-  // departing aircraft stays in frame at every later chapter stop.
+  // departing aircraft stays in frame at every chapter stop but the last.
   for (const [p, part, xyz] of [
     [0.2, 'exhaust', [-2.9, -1.13, 9.41]],
     [0.37, 'departing aircraft', [0, 1, 0]],
     [0.59, 'departing aircraft', [0, 1, 0]],
     [0.78, 'departing aircraft', [0, 1, 0]],
-    [0.97, 'departing aircraft', [0, 1, 0]],
   ]) {
     const c = cameraAt(p),
       v = plane.localToWorld(new T.Vector3(...xyz)).project(c);
     assert.ok(
       Math.abs(v.x) < 0.9 && Math.abs(v.y) < 0.85 && v.z > -1 && v.z < 1,
       `${width}x${height} ${String(part)} framing: ${v.toArray().join(',')}`,
+    );
+  }
+  // The last chapter is the leaving shot: the aircraft is out in the right of
+  // the frame, crossing its edge but not yet through it.
+  {
+    const c = cameraAt(0.9),
+      v = plane.localToWorld(new T.Vector3(0, 1, 0)).project(c);
+    assert.ok(
+      v.x > 0.45 && v.x < 1.1 && Math.abs(v.y) < 0.85 && v.z > -1 && v.z < 1,
+      `${width}x${height} leaving shot: ${v.toArray().join(',')}`,
     );
   }
   // The wing through the headline: somewhere in the opening (the caption
@@ -267,7 +276,7 @@ for (const [width, height] of [
       `${width}x${height} lens clears the airframe by ${nearest.toFixed(2)} m at ${nearestAt.toFixed(3)}`,
     );
   }
-  for (const p of [0.62, 0.97]) {
+  for (const p of [0.62, 0.78]) {
     const c = cameraAt(p);
     let extreme = 0;
     model.traverse((mesh) => {
@@ -284,6 +293,27 @@ for (const [width, height] of [
     assert.ok(
       extreme < 1,
       `${width}x${height} wide shot ${p} crops aircraft: ${extreme}`,
+    );
+  }
+  // And by the end of the scroll it has gone off the right of the frame: not
+  // one vertex is left inside it, on any screen.
+  {
+    const c = cameraAt(1);
+    let leftmost = Infinity;
+    model.traverse((mesh) => {
+      if (!mesh.isMesh) return;
+      const attr = mesh.geometry.attributes.position;
+      for (let i = 0; i < attr.count; i++) {
+        const v = new T.Vector3()
+          .fromBufferAttribute(attr, i)
+          .applyMatrix4(mesh.matrixWorld)
+          .project(c);
+        leftmost = Math.min(leftmost, v.x);
+      }
+    });
+    assert.ok(
+      leftmost > 1,
+      `${width}x${height} aircraft has not left the frame: ${leftmost}`,
     );
   }
   const ratios = [0, 1, 2].map((q) => tourPixelRatio(width, height, 3, q));
