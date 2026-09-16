@@ -509,3 +509,17 @@ Measured before shipping: the journey is 3028 px and the document 8927 px both w
 What cannot be checked here is whether Safari takes the strip at all: the sources agree it samples visible fixed and sticky elements, and disagree about invisible ones, which is why this version paints a real element over the sky rather than hiding it behind or setting `opacity: 0`. If the band does not follow on the device, `git revert 39c6292` restores the wash. The bottom bar was left alone: it measured #c4d9e5 against clouds at #c8d7e0, close enough to leave until the top is settled.
 
 TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `7ce79bcb-b0c6-46e1-bdce-e6952e2f337e`; the served stylesheet carries the strip and the document its sky theme colour.
+
+## The bottom bar too, and a wordmark with room
+
+"Top looks much better, words kinda cross over though. Can we also do the same for the bottom". Source `39514a0`.
+
+The strip works on the device. His screenshot puts the status band at #678cc1 against a sky of #628ec4 immediately below it — a difference of five, two and three — where it had been #eeefec against #5d8ac1. Reading the band's edge off that screenshot by row variance rather than by eye: flat from 0 to 20 css px, the status bar's own glyphs from 22 to 36, flat again to 55, and the page from 56 on.
+
+So the bottom bar gets the same treatment. A sticky element only stays at an edge while its own place in the flow is still past it, which is why the top strip works as the journey's first child and why this one cannot simply be its last: with the journey's height set in `svh`, its flow content ends barely a viewport in. Its place is instead the journey's final six pixels, held there by an absolutely positioned frame — `display: flex; justify-content: flex-end; inset: 0` — that takes no space of its own. Measured on a 395 px frame: pinned at 715..721 from the top of the scroll through to the end of the journey, un-pinning as the journey's own bottom arrives, and off screen by the sections, which keep the body colour they already match. Its colour is the cloud deck's average over the band of photograph the bar meets, #b6c6d2, sampled across the last ten css pixels of the frame; the bar had been settling on a lighter, bluer #c4d9e5 of its own.
+
+The wordmark was the other half of the report, and not a tint problem at all. At 12 px both of its lines wrapped — "HENOK / ABRAHAM" over "PERSONAL / AIRSPACE" — stacking the signature four deep in a 90 px header and leaving four pixels between its first line and the browser's bar, which is what read as crossing over. Held to one line each (`.brand > span { white-space: nowrap }`) it is 41 px instead of 76 and starts 18 px down. The station strip beside it gives up 59 px of its visible width for that, so two stops show instead of three; it scrolls, and it fades at the edge.
+
+Known cost, and easy to undo on its own: the bottom strip is a flat six pixels against clouds that are far less uniform than the sky at the top, so in the moment Safari collapses its bars it is more likely to be noticed there than at the top. The journey is 3028 px and the document 8927 px, unchanged by either strip, and the page does not scroll sideways.
+
+TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `61f6fd9f-eba0-4172-83e1-51660c9ed5d3`; the served stylesheet carries the frame, the bottom strip and the wordmark rule.
