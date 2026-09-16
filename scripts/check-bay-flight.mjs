@@ -312,7 +312,64 @@ console.log(
         '(max-width: 1100px), (max-height: 700px), (prefers-reduced-motion: reduce)',
       ),
   );
+  // The In service section: two cards, each a project the board also lists,
+  // each with a screenshot in both formats, and each actually watched by the
+  // scheduled probe, so a card cannot promise a live check nobody makes.
+  const { liveSites } = await importSource('../app/flight-data.ts');
+  const serverLive = await fs.readFile(
+    new URL('../server/live.ts', import.meta.url),
+    'utf8',
+  );
+  assert.ok(liveSites.length >= 2, 'The section shows a pair, not one site');
+  for (const site of liveSites) {
+    assert.ok(ids.includes(site.id), `${site.id} is also a board project`);
+    assert.equal(
+      new URL(site.url).host,
+      site.host,
+      'The printed host matches the link',
+    );
+    assert.ok(
+      serverLive.includes(`id: '${site.id}'`) &&
+        serverLive.includes(`${site.url}/`),
+      `${site.id} is probed by the scheduled handler`,
+    );
+    for (const extension of ['.avif', '.jpg'])
+      await fs.access(
+        new URL(`../public${site.image}${extension}`, import.meta.url),
+      );
+    assert.ok(site.alt.length > 40, `${site.id} describes its screenshot`);
+  }
+  // The header numbers the sections it links, and those numbers are what a
+  // new section shifts: 02 was the flight log's until the live sites took it.
+  const terminal = await fs.readFile(
+    new URL('../app/terminal-experience.tsx', import.meta.url),
+    'utf8',
+  );
+  const stops = [
+    ...terminal.matchAll(
+      /<a href="#([a-z-]+)">\s*<span className="nav-number">(\d+)<\/span>/g,
+    ),
+  ];
+  assert.equal(stops.length, 4, 'Four numbered stops in the header');
+  assert.deepEqual(
+    stops.map((stop) => stop[2]),
+    ['01', '02', '03', '04'],
+    'Header stops are numbered in order, without a gap or a repeat',
+  );
+  const sections = (
+    await Promise.all(
+      ['terminal-experience', 'aviation-logbook', 'garage-section'].map(
+        (file) =>
+          fs.readFile(new URL(`../app/${file}.tsx`, import.meta.url), 'utf8'),
+      ),
+    )
+  ).join('\n');
+  for (const [, anchor] of stops)
+    assert.ok(
+      sections.includes(`id="${anchor}"`),
+      `The ${anchor} stop points at a section that exists`,
+    );
   console.log(
-    'content check: current aircraft project, every project/chapter URL round trip, replace-only history, sparse scene annotations and honest logbook seeds',
+    'content check: current aircraft project, every project/chapter URL round trip, replace-only history, sparse scene annotations, honest logbook seeds and the In service pair',
   );
 }

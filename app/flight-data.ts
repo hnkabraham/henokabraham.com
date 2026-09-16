@@ -183,6 +183,35 @@ export const flights: Flight[] = [
     ],
   },
 ];
+/**
+ * The two projects anyone can open right now, shown side by side with a
+ * screenshot each. The ids match the board's and the scheduled probe's, so a
+ * card carries the same reachability check the briefing does. The captures
+ * are framed to leave out each site's live chrome — a flight count is
+ * plausible on any day, but a "data through" date would age the page.
+ */
+export const liveSites = [
+  {
+    id: 'flight-tracker',
+    name: 'United Flight Tracker',
+    host: 'unitedflighttracker.com',
+    url: 'https://unitedflighttracker.com',
+    detail:
+      'Every United and United Express aircraft in the air, on a 3D globe, with fleet, schedule and on-time views behind it. An independent project.',
+    image: '/images/live-united-flight-tracker',
+    alt: 'United Flight Tracker: hundreds of aircraft over North America on a 3D globe, beside a list of active flights',
+  },
+  {
+    id: 'routeloads',
+    name: 'routeloads',
+    host: 'routeloads.com',
+    url: 'https://routeloads.com',
+    detail:
+      'How full every US route runs, from the DOT’s monthly filings: seat occupancy, fares and on-time rates across 70,000+ route pairs.',
+    image: '/images/live-routeloads',
+    alt: 'routeloads: the question “How full are flight routes in America?” beside a ranked list of the emptiest routes',
+  },
+];
 export const openSource = [
   {
     name: 'iPhone ↔ Wear OS',

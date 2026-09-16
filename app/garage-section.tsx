@@ -21,7 +21,7 @@ export default function GarageSection({
     >
       <div className="terminal-section-top" data-reveal>
         <div className="terminal-section-label">
-          <span className="section-marker">03</span>
+          <span className="section-marker">04</span>
           <div>
             <p className="eyebrow">PERSONAL FLEET</p>
             <h2 id="garage-title">Garage</h2>

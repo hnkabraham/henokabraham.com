@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAirspaceDepth } from './use-airspace-depth';
 import ScrollDeparture from './scroll-departure';
-import { flights, openSource } from './flight-data';
+import { flights, liveSites, openSource } from './flight-data';
 import { readFlightLink, replaceFlightLink } from '@/lib/flight-links';
 import type { BayPhase } from '@/lib/bay-flight';
 import AviationLogbook from './aviation-logbook';
@@ -121,11 +121,14 @@ export default function TerminalExperience() {
           <a href="#departures">
             <span className="nav-number">01</span> Departures
           </a>
+          <a href="#in-service">
+            <span className="nav-number">02</span> In service
+          </a>
           <a href="#logbook">
-            <span className="nav-number">02</span> Flight log
+            <span className="nav-number">03</span> Flight log
           </a>
           <a href="#garage">
-            <span className="nav-number">03</span> Garage
+            <span className="nav-number">04</span> Garage
           </a>
           <a
             href="https://github.com/hnkabraham"
@@ -364,6 +367,65 @@ export default function TerminalExperience() {
                 </div>
               </DialogContent>
             </Dialog>
+          </div>
+        </section>
+        {/* The two projects on the board that are not models or repositories
+            but sites a visitor can open, so they get their own screenshots
+            rather than the briefing's thumbnail rail. */}
+        <section
+          className="terminal-section"
+          id="in-service"
+          aria-labelledby="in-service-title"
+        >
+          <div className="terminal-section-top" data-reveal>
+            <div className="terminal-section-label">
+              <span className="section-marker">02</span>
+              <div>
+                <p className="eyebrow">IN SERVICE</p>
+                <h2 id="in-service-title">Live on the web.</h2>
+              </div>
+            </div>
+            <p className="terminal-caption">
+              Two aviation data sites, open to anyone.
+            </p>
+          </div>
+          <div className="service-pair" data-reveal>
+            {liveSites.map((site) => (
+              <article className="service-card" key={site.id}>
+                {/* The heading carries the only link, so the card does not
+                    repeat the same destination twice for a screen reader. */}
+                <picture className="service-shot">
+                  <source srcSet={`${site.image}.avif`} type="image/avif" />
+                  <img
+                    src={`${site.image}.jpg`}
+                    alt={site.alt}
+                    width={1440}
+                    height={665}
+                    loading="lazy"
+                  />
+                </picture>
+                <div className="service-body">
+                  <h3>
+                    <a
+                      href={site.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {site.name}
+                      <ArrowUpRight size={18} />
+                    </a>
+                  </h3>
+                  <p className="service-host mono">{site.host}</p>
+                  <p className="service-detail">{site.detail}</p>
+                  <ProjectUpdate
+                    item={live.data?.projects?.projects.find(
+                      (item) => item.id === site.id,
+                    )}
+                    now={live.now}
+                  />
+                </div>
+              </article>
+            ))}
           </div>
         </section>
         <AviationLogbook />

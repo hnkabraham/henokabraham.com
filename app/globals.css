@@ -477,6 +477,64 @@ a:focus-visible,
   gap: 25px;
   align-items: start;
 }
+/* The two live sites, one card each. The screenshots are the same shape, so
+   the pair reads as one object however different the two sites look. */
+.service-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px;
+  align-items: start;
+}
+.service-card {
+  background: #f7f8f6;
+  border: 1px solid #ccd8dc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.service-shot {
+  display: block;
+  border-bottom: 1px solid #ccd8dc;
+  background: #1b3747;
+}
+.service-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.service-body {
+  padding: 21px 23px 23px;
+}
+.service-body h3 {
+  font-size: 1.1875rem;
+  letter-spacing: -0.025em;
+  font-weight: 550;
+  margin: 0 0 4px;
+}
+.service-body h3 a {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: inherit;
+  transition: color 0.2s;
+}
+.service-body h3 a:hover {
+  color: #d34d26;
+}
+.service-host {
+  font-size: 0.75rem;
+  color: #8ea1aa;
+  letter-spacing: 0.02em;
+  margin: 0 0 11px;
+}
+.service-detail {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: #68818e;
+  margin: 0;
+}
+.service-body .project-live-update {
+  margin-top: 15px;
+}
 .departure-board {
   background: #152731;
   color: #e5eaeb;
@@ -940,6 +998,10 @@ a:focus-visible,
   }
   .departure-layout {
     grid-template-columns: 1fr;
+  }
+  .service-pair {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
   .terminal-section {
     padding: 35px 5% 40px;
@@ -1689,11 +1751,22 @@ a:focus-visible,
   }
 }
 @media (max-width: 800px) {
+  /* The station strip carries more stops than a phone is wide, so it scrolls
+     on its own rather than widening the document: without this the page
+     itself could be dragged sideways (416px of nav in a 393px viewport even
+     before the In service stop was added). */
   .terminal-header nav {
     gap: 17px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .terminal-header nav::-webkit-scrollbar {
+    display: none;
   }
   .terminal-header nav a {
     font-size: 0.875rem;
+    flex: 0 0 auto;
   }
   .terminal-header nav a .nav-number {
     display: none;
