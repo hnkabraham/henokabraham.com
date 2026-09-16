@@ -467,3 +467,17 @@ Numbering had to move with it, and that is what caught a bug. The header numbers
 The check now holds the invariants this section depends on: every `liveSites` id is also a board project, its printed host matches its link, both image formats exist on disk, the scheduled handler actually probes that URL, and the header's four numbered stops are `01`–`04` with no gap or repeat, each pointing at a section id that exists. That last one is the assertion that would have caught the collision I nearly shipped.
 
 TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `7d937d7c-f2c5-4044-b444-4a0dd6c33a65`, with the nav fade following it. Verified live at 1440, 1100 and 393 px: both cards render with their screenshots and live checks, all four image URLs return their own content types, and the console is clean.
+
+## The hard bands above and below the sky
+
+"Is it possible to fix the hard borders on the top and bottom on mobile?", with an iPhone screenshot. Source `1f9894e`.
+
+The bands are not the page. Sampled from the screenshot, the top is #1c2223 and the bottom #2a3235, against a sky measuring #628dc4 just below the band and clouds at #a2aabd just above it — Safari's own Liquid Glass bars in dark appearance, neither tinted from the page's edges nor matching its theme-color (#6398cf) or body colour (#eeefec).
+
+The same screenshot shows the page itself re-themed: the headline #163448 → #c9c6bf, the chapter bar #f4f8fa → #131f22, the brand badge #db4f24 → #9a4529 (dimmed, hue kept) and the sky photograph untouched. Neither WebKit nor Chromium reproduces any of that with the device's appearance forced to dark — both hold the headline at #163448 and the chapter bar at #f4f8fa — so a page-darkening tool on the phone is the likeliest cause, and Safari's dark bars follow from it. A full-screen inversion is ruled out: it would have turned the orange badge cyan and inverted the photograph.
+
+The page was still at fault in one way: `:root` and `.dark` declare identical variables, so there is exactly one theme and it is light, and nothing said so. `html` now declares `color-scheme: light` followed by `color-scheme: only light` (the plain value first, for anything that cannot parse the keyword — the same progressive pattern as the `svh`/`lvh` pair in the sticky frame). A phone in dark mode no longer has licence to frame a light page in dark chrome, Chrome on Android stops auto-darkening it, and the native controls — the flight log's year select, the contact fields — stay light where the design is light.
+
+What is verified: the scheme resolves to `light only` in WebKit and Chromium with the device in dark appearance, every page colour is unchanged, the contact form and logbook select still render light on light, and the served stylesheet carries both declarations. What cannot be verified here: the bar tint itself, which needs the device. If the bands go light and the bottom edge still reads as a seam, the remaining step is a bottom-edge element for Safari to sample — the fallback is the body's #eeefec, right for the lower sections and a little warm against the cloud deck.
+
+TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `f1028424-10c0-40f0-8e01-6f5cda35ee0e`.
