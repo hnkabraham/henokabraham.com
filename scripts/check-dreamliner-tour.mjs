@@ -18,6 +18,11 @@ const moduleURL = async (file, replacements = {}) => {
 const tourURL = await moduleURL('../lib/dreamliner-tour.ts');
 const { sampleDreamlinerTour, tourPhase, TOUR_CHAPTERS, tourPixelRatio } =
   await import(tourURL);
+const { projectWing, nearestOnWing, wakeRadius } = await import(
+  await moduleURL('../lib/dreamliner-wake.ts', {
+    './dreamliner-engine': await moduleURL('../lib/dreamliner-engine.ts'),
+  })
+);
 const { flightLink, readFlightLink } = await import(
   await moduleURL('../lib/flight-links.ts', { './dreamliner-tour': tourURL })
 );
@@ -161,6 +166,46 @@ for (const [width, height] of [
     assert.ok(
       Math.abs(v.x) < 0.9 && Math.abs(v.y) < 0.85 && v.z > -1 && v.z < 1,
       `${width}x${height} ${String(part)} framing: ${v.toArray().join(',')}`,
+    );
+  }
+  // The wing's wake over the story text: somewhere in the pass the visible
+  // wing (clipped to the near plane and the frame) must come within the
+  // wake's reach of the headline on every screen, or the effect would
+  // silently vanish if the tour were retuned. The headline box follows the
+  // stylesheet: 7% in from the left, below the eyebrow, under half the
+  // width on landscape screens and most of it on portrait ones.
+  {
+    const portrait = width <= 800;
+    const box = portrait
+      ? [width * 0.07, Math.max(height * 0.13, 100) + 30, width * 0.88, 130]
+      : [width * 0.07, Math.max(height * 0.19, 112) + 40, width * 0.36, 190];
+    const corners = [
+      [box[0], box[1]],
+      [box[0] + box[2], box[1]],
+      [box[0], box[1] + box[3]],
+      [box[0] + box[2], box[1] + box[3]],
+    ];
+    const near = { distance: 0, vx: 0, vy: 0 };
+    let closest = Infinity;
+    for (let p = 0.05; p <= 0.16; p += 0.005) {
+      const c = cameraAt(p);
+      const shot = sampleDreamlinerTour(p, aspect);
+      for (const poly of projectWing(
+        c,
+        model,
+        shot.flex,
+        width,
+        height,
+        [0, 0, 0],
+      )) {
+        assert.ok(poly.length <= 4 * 24 && poly.every(Number.isFinite));
+        for (const [x, y] of corners)
+          closest = Math.min(closest, nearestOnWing(poly, x, y, near).distance);
+      }
+    }
+    assert.ok(
+      closest < wakeRadius(width, height),
+      `${width}x${height} wing passes ${closest.toFixed(0)} px from the headline, beyond the wake's ${wakeRadius(width, height).toFixed(0)} px reach`,
     );
   }
   // The aircraft overtakes from behind the viewer: on the first visible

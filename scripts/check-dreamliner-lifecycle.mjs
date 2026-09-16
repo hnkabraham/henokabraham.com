@@ -13,12 +13,16 @@ const source = await fs.readFile(
 const js = transpileModule(source, {
   compilerOptions: { module: ModuleKind.ESNext, jsx: JsxEmit.ReactJSX },
 }).outputText;
-const pure = async (p) =>
-  uri(
-    transpileModule(await fs.readFile(new URL(p, import.meta.url), 'utf8'), {
-      compilerOptions: { module: ModuleKind.ESNext },
-    }).outputText,
-  );
+const pure = async (p, replacements = {}) => {
+  let js = transpileModule(
+    await fs.readFile(new URL(p, import.meta.url), 'utf8'),
+    { compilerOptions: { module: ModuleKind.ESNext } },
+  ).outputText;
+  for (const [name, value] of Object.entries(replacements))
+    js = js.replaceAll(`from '${name}'`, `from '${value}'`);
+  return uri(js);
+};
+const engine = await pure('../lib/dreamliner-engine.ts');
 const refs = [];
 const hooks = {
   useRef: (initial) => {
@@ -58,7 +62,10 @@ const imports = {
   ),
   '@/lib/scene-assets': uri('export const sceneAsset=p=>p;'),
   '@/lib/dreamliner-tour': await pure('../lib/dreamliner-tour.ts'),
-  '@/lib/dreamliner-engine': await pure('../lib/dreamliner-engine.ts'),
+  '@/lib/dreamliner-engine': engine,
+  '@/lib/dreamliner-wake': await pure('../lib/dreamliner-wake.ts', {
+    './dreamliner-engine': engine,
+  }),
   '@/lib/bay-performance': await pure('../lib/bay-performance.ts'),
   '@/lib/airframe-flex': uri(
     'export const addWingFlex=()=>{};export const addEngineFinish=()=>{};',

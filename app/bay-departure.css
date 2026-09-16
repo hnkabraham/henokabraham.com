@@ -831,6 +831,29 @@
     0 0 14px #ffffffcc,
     0 2px 34px #ffffff99;
 }
+/* The wing's wake. The story is set a word (in the headline, a letter) to a
+   box, so the renderer can shove the ones nearest the wing along with it as
+   it sweeps past and let them swing back. At rest the boxes lie where the
+   plain text did; the compositor hint is only on while something moves. */
+.dreamliner-journey .wake-word {
+  display: inline-block;
+  perspective: 480px;
+}
+.dreamliner-journey [data-wake] {
+  display: inline-block;
+  transform-origin: 50% 62%;
+}
+.dreamliner-journey .wake-live [data-wake] {
+  will-change: transform;
+}
+/* A letter with the wing right behind it keeps a white edge against the
+   white underside; the halo follows how deep in the wake it sits. */
+.dreamliner-journey[data-phase='preflight'] [data-wake].is-wake {
+  text-shadow:
+    0 0 2px rgb(255 255 255 / calc(var(--wake) * 0.9)),
+    0 0 12px rgb(255 255 255 / calc(var(--wake) * 0.75)),
+    0 1px 25px #d9ecf570;
+}
 .dreamliner-journey .bay-bottom {
   color: #21465f;
 }

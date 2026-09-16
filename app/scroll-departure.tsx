@@ -85,6 +85,7 @@ function toggleImmersive() {
   } else root.webkitRequestFullscreen?.();
 }
 import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
+import { createWingWake, type WingWake } from '@/lib/dreamliner-wake';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
 import { replaceFlightLink } from '@/lib/flight-links';
@@ -109,6 +110,32 @@ const copy: Record<BayPhase, [string, string, string]> = {
   ],
   cruise: ['04 / KEEP EXPLORING', 'Made with\ncuriosity.', 'Explore the rest.'],
 };
+
+// The story text in pieces the wing's wake can move: every word its own
+// box, and in the headline every letter. Spaces and line breaks stay as
+// text, so the lines wrap as they did. Screen readers get the plain text
+// through the heading's label rather than a letter at a time.
+function wakeText(text: string, letters: boolean) {
+  return text.split('\n').map((line, l) => (
+    <span key={l}>
+      {l > 0 && '\n'}
+      {line.split(' ').map((word, w) => (
+        <span key={w}>
+          {w > 0 && ' '}
+          <span className="wake-word" data-wake={letters ? undefined : ''}>
+            {letters
+              ? Array.from(word).map((letter, i) => (
+                  <span key={i} data-wake="">
+                    {letter}
+                  </span>
+                ))
+              : word}
+          </span>
+        </span>
+      ))}
+    </span>
+  ));
+}
 
 // `travel` is the section's scrollable height, measured by the caller before
 // any style write so a scroll frame lays out once rather than twice.
@@ -136,9 +163,11 @@ export default function ScrollDeparture({
   paused?: boolean;
 }) {
   const root = useRef<HTMLElement>(null);
+  const story = useRef<HTMLDivElement>(null);
   const progress = useRef(0);
   const reveal = useRef(0);
   const audio = useRef<ReturnType<typeof createBayAudio> | null>(null);
+  const wake = useRef<WingWake | null>(null);
   const [phase, setPhase] = useState<BayPhase>('preflight');
   const [rendererStatus, setStatus] = useState<
     'loading' | 'ready' | 'unavailable'
@@ -188,6 +217,18 @@ export default function ScrollDeparture({
     setSceneReady(true);
   }, [entry, reducedMotion]);
   useEffect(() => () => audio.current?.dispose(), []);
+  useEffect(() => {
+    const springs = createWingWake();
+    wake.current = springs;
+    return () => {
+      springs.dispose();
+      wake.current = null;
+    };
+  }, []);
+  // The story remounts at each chapter (its key), so its letters do too.
+  useEffect(() => {
+    wake.current?.attach(story.current);
+  }, [phase]);
   useEffect(() => {
     const section = root.current;
     if (!section) return;
@@ -292,6 +333,7 @@ export default function ScrollDeparture({
               reducedMotion={reducedMotion}
               paused={paused}
               audio={audio}
+              wake={wake}
               onStatus={(value) => {
                 setStatus(value);
                 if (value === 'ready')
@@ -324,10 +366,12 @@ export default function ScrollDeparture({
         <a className="bay-skip" href="#departures">
           Skip to projects <ArrowUpRight size={15} />
         </a>
-        <div className="bay-story" key={phase}>
-          <p className="eyebrow">{eyebrow}</p>
-          <h1 id="welcome-title">{heading}</h1>
-          <p className="bay-description">{description}</p>
+        <div className="bay-story" key={phase} ref={story}>
+          <p className="eyebrow">{wakeText(eyebrow, false)}</p>
+          <h1 id="welcome-title" aria-label={heading.replace('\n', ' ')}>
+            <span aria-hidden="true">{wakeText(heading, true)}</span>
+          </h1>
+          <p className="bay-description">{wakeText(description, false)}</p>
           {phase === 'preflight' && (
             <p className="bay-start-hint">
               <ArrowDown size={15} /> Scroll to explore

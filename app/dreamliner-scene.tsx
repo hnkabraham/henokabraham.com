@@ -25,6 +25,7 @@ import {
 } from '@/lib/bay-performance';
 import { addEngineFinish, addWingFlex } from '@/lib/airframe-flex';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
+import { projectWing, type WingWake } from '@/lib/dreamliner-wake';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import type { createBayAudio } from '@/lib/bay-audio';
 
@@ -33,6 +34,8 @@ type Props = {
   reducedMotion: boolean;
   paused?: boolean;
   audio: RefObject<ReturnType<typeof createBayAudio> | null>;
+  /** The story text's springs, fed the wings' screen outlines each frame. */
+  wake?: RefObject<WingWake | null>;
   onStatus: (value: 'loading' | 'ready' | 'unavailable') => void;
 };
 
@@ -41,6 +44,7 @@ export default function DreamlinerScene({
   reducedMotion,
   paused = false,
   audio,
+  wake: springs,
   onStatus,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
@@ -380,6 +384,10 @@ export default function DreamlinerScene({
       // Bank about the body axis after the heading, not the world's X.
       aircraft.rotation.order = 'YXZ';
       aircraft.add(gltf.scene);
+      // The aircraft's motion relative to the lens, for the wake's push.
+      let relative: [number, number, number] | undefined;
+      let wing: ReturnType<typeof projectWing> = [];
+      let wakeMoving = false;
       // Synchronous warm-up avoids an uncancellable driver poll after unmount.
       r.compile(scene, camera);
       if (disposed) return;
@@ -452,6 +460,35 @@ export default function DreamlinerScene({
         // The opening remains CSS-only; clear once when scrolling back to it.
         if (shown || lastShown) r.render(scene, camera);
         lastShown = shown;
+        // After the render, so the matrices are the ones just drawn. The
+        // wing's outline on screen drives the story text's wake.
+        if (springs?.current) {
+          const now3: [number, number, number] = [
+            shot.aircraft[0] - shot.camera[0],
+            shot.aircraft[1] - shot.camera[1],
+            shot.aircraft[2] - shot.camera[2],
+          ];
+          const motion: [number, number, number] = relative
+            ? [
+                (now3[0] - relative[0]) / dt,
+                (now3[1] - relative[1]) / dt,
+                (now3[2] - relative[2]) / dt,
+              ]
+            : [0, 0, 0];
+          relative = now3;
+          wing = shown
+            ? projectWing(camera, gltf.scene, flex.value, width, height, motion)
+            : [];
+          // The wake reaches the viewer through the pass and the hold and
+          // is gone once the aircraft has flown some 60 m off.
+          const range = Math.hypot(...now3);
+          const strength = Math.max(0, Math.min(1, (60 - range) / 30));
+          wakeMoving = springs.current.update(
+            wing.length ? wing : null,
+            dt,
+            strength * strength * (3 - 2 * strength),
+          );
+        }
         // The ambience swells as the aircraft overtakes and settles to a
         // cruise hum once it has pulled ahead (the exhaust passes the lens
         // with the aircraft some 14 m short of its resting place).
@@ -490,12 +527,18 @@ export default function DreamlinerScene({
           element.dataset.drawCalls = String(r.info.render.calls);
           element.dataset.aircraftVisible = String(shown);
           element.dataset.quality = String(performanceControl.quality);
+          element.dataset.wing = JSON.stringify(
+            wing.map((poly) => poly.map(Math.round)),
+          );
           devReport = now;
         }
-        // No RAF while the opening is settled or the scene is off screen.
+        // No RAF while the opening is settled or the scene is off screen,
+        // once the text's springs have settled too (a flick back to the top
+        // mid-pass must not freeze letters off their rest).
         wakeFrames = Math.max(0, wakeFrames - 1);
         if (
           shown ||
+          wakeMoving ||
           wakeFrames > 0 ||
           Math.abs(current - progress.current) > 0.00001
         )
@@ -543,7 +586,7 @@ export default function DreamlinerScene({
       controller.abort();
       release();
     };
-  }, [progress, reducedMotion, audio]);
+  }, [progress, reducedMotion, audio, springs]);
   return (
     <div
       className="bay-canvas dreamliner-canvas"
