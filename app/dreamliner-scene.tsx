@@ -265,7 +265,8 @@ export default function DreamlinerScene({
         depth: { value: 14 },
         on: { value: 0 },
       };
-      let maskTexture: Texture | undefined;
+      let maskTexture: Texture | undefined,
+        maskSize = '';
       const wingDepth = new T.MeshDepthMaterial({
         depthPacking: T.RGBADepthPacking,
       });
@@ -471,15 +472,21 @@ export default function DreamlinerScene({
         const box =
           shown && cut?.current ? cut.current.refresh(width, height) : null;
         if (box && cut?.current?.canvas) {
-          if (!maskTexture) {
-            const texture = new T.CanvasTexture(cut.current.canvas);
+          const source = cut.current.canvas;
+          // Each chapter's caption is its own size, and the mask canvas is
+          // resized with it. A texture cannot be re-uploaded into storage
+          // allocated for the old size, so it is replaced when that changes.
+          if (maskSize !== `${source.width}x${source.height}`) {
+            maskTexture?.dispose();
+            if (maskTexture) textures.delete(maskTexture);
+            const texture = new T.CanvasTexture(source);
             texture.minFilter = texture.magFilter = T.LinearFilter;
             texture.generateMipmaps = false;
             textures.add(texture);
             maskTexture = texture;
+            maskSize = `${source.width}x${source.height}`;
             cutUniforms.mask.value = texture;
-          }
-          if (box.redrawn) maskTexture.needsUpdate = true;
+          } else if (box.redrawn && maskTexture) maskTexture.needsUpdate = true;
           const ratio = r.getPixelRatio();
           cutUniforms.rect.value = [
             box.left * ratio,
