@@ -345,14 +345,16 @@ export default function TerminalExperience() {
                   {flight.image && (
                     <figure className="briefing-image">
                       <Image
-                        src={flight.image}
+                        src={flight.image.src}
                         unoptimized
                         loading="lazy"
-                        alt="Downshift’s simulated driving dashboard with RPM and shift coaching"
-                        width={690}
-                        height={1500}
+                        alt={flight.image.alt}
+                        width={flight.image.width}
+                        height={flight.image.height}
                       />
-                      <figcaption className="mono">SIMULATOR MODE</figcaption>
+                      <figcaption className="mono">
+                        {flight.image.caption}
+                      </figcaption>
                     </figure>
                   )}
                 </div>

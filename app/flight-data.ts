@@ -12,7 +12,17 @@ export type Flight = {
   stack: string[];
   url?: string;
   linkLabel?: string;
-  image?: string;
+  // A still from the project itself, shown in the briefing's side rail. The
+  // rail is a narrow portrait frame, so captures are taken tall; its own
+  // dimensions, caption and description travel with it rather than living in
+  // the markup, which only had room for one project's.
+  image?: {
+    src: string;
+    width: number;
+    height: number;
+    alt: string;
+    caption: string;
+  };
   features: string[];
 };
 export const flights: Flight[] = [
@@ -60,6 +70,34 @@ export const flights: Flight[] = [
     ],
   },
   {
+    id: 'routeloads',
+    code: 'HA 007',
+    name: 'routeloads',
+    destination: 'AVIATION',
+    category: 'Route analytics',
+    gate: 'A03',
+    status: 'LIVE',
+    open: true,
+    summary: 'How full are flight routes in America?',
+    story:
+      'Seat occupancy, fares and on-time rates for every US route, from the DOT’s monthly filings. Free and public: no logins, no paywalls.',
+    stack: ['Static HTML', 'DOT BTS T-100', 'Cloudflare'],
+    url: 'https://routeloads.com',
+    linkLabel: 'Explore live project',
+    image: {
+      src: '/images/routeloads-hero.jpg',
+      width: 690,
+      height: 1145,
+      alt: 'routeloads’ route search, with passengers, average load factor, route pairs and years covered',
+      caption: 'ROUTE SEARCH',
+    },
+    features: [
+      '70,000+ route pairs, ranked by load factor, fare and seats',
+      '600+ airport pages, carrier profiles and monthly reports',
+      'A national map coloured by how full each route runs',
+    ],
+  },
+  {
     id: 'downshift',
     code: 'HA 002',
     name: 'Downshift',
@@ -72,7 +110,13 @@ export const flights: Flight[] = [
     story:
       'An iOS driving companion with live OBD-II telemetry, shift coaching, and a car-free simulator.',
     stack: ['SwiftUI', 'OBD-II', 'CoreBluetooth'],
-    image: '/images/downshift-dashboard.jpg',
+    image: {
+      src: '/images/downshift-dashboard.jpg',
+      width: 690,
+      height: 1500,
+      alt: 'Downshift’s simulated driving dashboard with RPM and shift coaching',
+      caption: 'SIMULATOR MODE',
+    },
     features: [
       'Live shift advisories and quality scoring',
       'Session recording, lap timing, and telemetry',

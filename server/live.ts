@@ -81,6 +81,7 @@ export async function refreshProjects(store: LiveStore) {
     [
       { id: 'bay-departure', url: 'https://henokabraham.com/' },
       { id: 'flight-tracker', url: 'https://unitedflighttracker.com/' },
+      { id: 'routeloads', url: 'https://routeloads.com/' },
     ].map(async ({ id, url }) => {
       let reachable: boolean | null = null;
       try {

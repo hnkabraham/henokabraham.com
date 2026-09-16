@@ -29,17 +29,15 @@ if (!live) {
     'swift-obd-engine',
     'claude-code-mobile-mode',
   ]) {
-    github
-      .intercept({ path: `/repos/hnkabraham/${repo}` })
-      .reply(
-        200,
-        {
-          private: false,
-          full_name: `hnkabraham/${repo}`,
-          pushed_at: '2026-09-02T05:13:34Z',
-        },
-        { headers: { 'content-type': 'application/json' } },
-      );
+    github.intercept({ path: `/repos/hnkabraham/${repo}` }).reply(
+      200,
+      {
+        private: false,
+        full_name: `hnkabraham/${repo}`,
+        pushed_at: '2026-09-02T05:13:34Z',
+      },
+      { headers: { 'content-type': 'application/json' } },
+    );
     // One published release; a 404 is the normal answer for the others.
     const release = github.intercept({
       path: `/repos/hnkabraham/${repo}/releases/latest`,
@@ -56,7 +54,11 @@ if (!live) {
       );
     else release.reply(404, { message: 'Not Found' });
   }
-  for (const site of ['https://henokabraham.com', 'https://unitedflighttracker.com'])
+  for (const site of [
+    'https://henokabraham.com',
+    'https://unitedflighttracker.com',
+    'https://routeloads.com',
+  ])
     fetchMock.get(site).intercept({ path: '/', method: 'HEAD' }).reply(200, '');
 }
 const mf = new Miniflare({
@@ -73,7 +75,7 @@ try {
   assert.equal(result.outcome, 'ok');
   const kv = await mf.getKVNamespace('LIVE_DATA');
   const projects = await kv.get('projects:v1', 'json');
-  assert.equal(projects?.projects.length, 5);
+  assert.equal(projects?.projects.length, 6);
   assert.equal(
     projects.projects.find((project) => project.id === 'bay-departure')
       ?.reachable,
@@ -90,13 +92,15 @@ try {
       projects.projects.find((p) => p.id === 'obd-engine').release,
       undefined,
     );
-    assert.equal(
-      projects.projects.find((p) => p.id === 'flight-tracker').reachable,
-      true,
-    );
+    for (const id of ['flight-tracker', 'routeloads'])
+      assert.equal(
+        projects.projects.find((p) => p.id === id).reachable,
+        true,
+        `${id} reports its site reachable`,
+      );
   }
   console.log(
-    `Built Worker scheduled handler passed (${live ? 'live feeds' : 'canned upstreams'}): five project records written to local KV.`,
+    `Built Worker scheduled handler passed (${live ? 'live feeds' : 'canned upstreams'}): six project records written to local KV.`,
   );
 } finally {
   await mf.dispose();
