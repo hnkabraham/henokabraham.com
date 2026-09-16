@@ -846,9 +846,18 @@
 }
 .dreamliner-journey[data-phase='preflight'] .bay-story .eyebrow,
 .dreamliner-journey[data-phase='preflight'] .bay-story h1,
-.dreamliner-journey[data-phase='preflight'] .bay-description {
+.dreamliner-journey[data-phase='preflight'] .bay-description,
+.dreamliner-journey[data-phase='roll'] .bay-story .eyebrow,
+.dreamliner-journey[data-phase='roll'] .bay-story h1,
+.dreamliner-journey[data-phase='roll'] .bay-description {
   position: relative;
   z-index: -2;
+}
+/* The Apps mock-ups are their own object in front of the aircraft, not
+   part of the caption the tail passes through. */
+.dreamliner-journey[data-phase='roll'] .tour-mockup {
+  position: relative;
+  z-index: 2;
 }
 .dreamliner-journey[data-phase='preflight'] .bay-start-hint {
   position: relative;

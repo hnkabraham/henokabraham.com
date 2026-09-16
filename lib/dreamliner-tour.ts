@@ -118,21 +118,55 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     target = aircraft.map(
       (v, i) => v + mix([-3, 1, 9.4][i], [0, 1.5, -4][i], aim),
     ) as TourPoint;
-  // Then the lens lets it go: the aim slides away along its own right axis,
-  // by a share of the frame's half width at that range, and the aircraft runs
-  // out to the right of frame. A narrow frame needs the larger share, since
-  // the aircraft sits closer to its centre and spans more of it.
-  const slide = mix(0.9, 1.6, portrait) * runOut(departure);
-  if (slide > 0) {
+  // Two aim moves, both in half frames, both applied along the lens's own
+  // axes so they mean the same thing on every screen.
+  //
+  // The crossing: as the aircraft turns away the lens stops correcting for
+  // the turn, so the aircraft rides up and across to the left of frame and
+  // its horizontal stabilizer sweeps through the chapter caption; the lens
+  // catches it again as the turn rolls out.
+  const crossing =
+    ease((departure - 0.05) / 0.18) * (1 - ease((departure - 0.23) / 0.19));
+  // The run-out: the lens lets it go, and the aircraft leaves to the right.
+  // A narrow frame needs the larger share, since the aircraft sits closer to
+  // its centre there and spans more of it.
+  const right =
+    mix(0.9, 1.6, portrait) * runOut(departure) -
+    crossing * mix(0.86, 0.56, portrait);
+  const up = crossing * mix(0.52, 0.9, portrait);
+  if (right || up) {
     const fx = target[0] - camera[0],
+      fy = target[1] - camera[1],
       fz = target[2] - camera[2];
-    const range = Math.hypot(fx, target[1] - camera[1], fz);
+    const range = Math.hypot(fx, fy, fz);
     const flat = Math.hypot(fx, fz) || 1;
-    // right = normalize(forward × up); the aim moves left, the aircraft right.
-    const step =
-      (slide * Math.tan((fov * Math.PI) / 360) * aspect * range) / flat;
-    target = [target[0] + fz * step, target[1], target[2] - fx * step];
+    // A half frame at the target's range; the aim moves the other way, so
+    // that the aircraft moves as named.
+    const half = Math.tan((fov * Math.PI) / 360) * range;
+    // right = normalize(forward × up) = (-fz, 0, fx) / flat
+    const step = (right * half * aspect) / flat;
+    target = [
+      target[0] + fz * step,
+      target[1] - up * half,
+      target[2] - fx * step,
+    ];
   }
+  // Where the Apps chapter's caption hangs: just in front of the tail, at the
+  // station of the horizontal stabilizer's root (x = 28 of a tail
+  // that ends at 31), carried round by the heading. Everything aft of it —
+  // the horizontal stabilizer above all — passes in front of the words, and
+  // the wings and the fuselage ahead of it pass behind them. The shader
+  // compares view depth, not range, so this is measured along the lens axis.
+  const yaw = heading(departure);
+  const fx = target[0] - camera[0],
+    fy = target[1] - camera[1],
+    fz = target[2] - camera[2];
+  const axis = Math.hypot(fx, fy, fz) || 1;
+  const tailDepth =
+    ((aircraft[0] + 28 * Math.cos(yaw) - camera[0]) * fx +
+      (aircraft[1] + 2.6 - camera[1]) * fy +
+      (aircraft[2] - 28 * Math.sin(yaw) - camera[2]) * fz) /
+    axis;
   // The bank leads the turn in and trails it out, as a coordinated turn does,
   // and reverses as the aircraft rolls out through its track.
   const bank =
@@ -148,7 +182,7 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     camera,
     target,
     aircraft,
-    heading: heading(departure),
+    heading: yaw,
     // Tip lift in metres: a cruise wing is always flexed, and it loads up
     // further as the aircraft climbs away.
     flex: 0.8 + 1.3 * ease((p - 0.22) / 0.4),
@@ -156,10 +190,19 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     offsetX: mix(-0.18, 0, portrait),
     offsetY: mix(-0.035, -0.12, portrait),
     bank,
-    // How far in front of the lens the opening caption hangs: the wing
-    // passes over the headline 12 to 17 m out on a landscape screen and a
-    // little further out on a phone, and the seam should fall inside it.
-    cutDepth: mix(14, 15.5, portrait),
+    // How far in front of the lens the caption hangs. In the opening it is a
+    // fixed distance out: the wing passes over the headline 12 to 17 m out on
+    // a landscape screen and a little further out on a phone, and the seam
+    // should fall inside it. In the Apps chapter the plane rides out to the
+    // horizontal stabilizer while the tail sweeps across the words, and back
+    // to the lens on either side of that, where every letter is in front of
+    // the aircraft again and the caption reads as it always has.
+    cutDepth:
+      p < 0.18
+        ? mix(14, 15.5, portrait)
+        : Math.max(0, tailDepth) *
+          ease((p - 0.3) / 0.045) *
+          (1 - ease((p - 0.43) / 0.04)),
     visible: p > 0.025,
     phase: tourPhase(p),
   };

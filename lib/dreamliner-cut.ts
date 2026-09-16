@@ -178,11 +178,12 @@ export type TextCut = {
 const PAD = 8;
 
 /**
- * Draws every letter of the caption, in its own font and at its measured
+ * Draws every word of the caption, in its own font and at its measured
  * position, into a canvas the renderer samples as a texture. The text node's
  * box gives the content area, whose top is the font's ascent above the
  * baseline, the same metric canvas reports, so the glyphs land where the
- * page draws them.
+ * page draws them. A word, not a letter: canvas shapes the whole string the
+ * way the page does, ligatures and kerning included.
  */
 export function createTextCut(): TextCut {
   let canvas: HTMLCanvasElement | null = null;
@@ -229,6 +230,13 @@ export function createTextCut(): TextCut {
         if (!text || !text.trim()) continue;
         const style = getComputedStyle(span);
         context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        // The display face is set tight (the headline at -4 px a letter), and
+        // the font shorthand carries none of that: without it the mask runs
+        // wider than the page and drifts off the glyphs it is meant to cover.
+        if ('letterSpacing' in context) {
+          context.letterSpacing = style.letterSpacing;
+          context.wordSpacing = style.wordSpacing;
+        }
         range.selectNodeContents(span);
         const glyph = range.getBoundingClientRect();
         const ascent = context.measureText(text).fontBoundingBoxAscent;

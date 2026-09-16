@@ -218,6 +218,44 @@ for (const [width, height] of [
       `${width}x${height} wing covers at most ${(covered * 100).toFixed(0)}% of the headline in the opening`,
     );
   }
+  // The tail through the Apps caption. Somewhere in the crossing the tail
+  // cone has to reach the left of the frame, where that chapter's caption
+  // sits, and the caption's plane has to hang a few metres in front of it, so
+  // that the tail end passes over the words and the rest of the airframe
+  // passes behind them rather than half the aircraft covering the caption.
+  {
+    let reached = null;
+    for (let p = 0.31; p <= 0.4601; p += 0.005) {
+      const c = cameraAt(p);
+      const v = plane.localToWorld(new T.Vector3(31, 2.6, 0)).project(c);
+      const x = ((v.x + 1) / 2) * width,
+        y = ((1 - v.y) / 2) * height;
+      if (!(x > 0 && x < width * 0.5 && y > height * 0.18 && y < height * 0.46))
+        continue;
+      const { cutDepth } = sampleDreamlinerTour(p, aspect);
+      const tail = -plane
+        .localToWorld(new T.Vector3(31, 2.6, 0))
+        .applyMatrix4(cameraAt(p).matrixWorldInverse).z;
+      if (cutDepth - tail > 1 && cutDepth - tail < 8)
+        reached = { p, x, y, cutDepth, tail };
+    }
+    assert.ok(
+      reached,
+      `${width}x${height} the tail never cuts the Apps caption`,
+    );
+    // And on either side of the crossing the plane sits at the lens, which
+    // puts every letter of the chapter caption in front of the aircraft.
+    for (const p of [0.19, 0.28, 0.48])
+      assert.equal(
+        sampleDreamlinerTour(p, aspect).cutDepth,
+        0,
+        `${width}x${height} chapter caption is cut at ${p}`,
+      );
+    assert.ok(
+      sampleDreamlinerTour(0.17, aspect).cutDepth > 10,
+      'Opening plane',
+    );
+  }
   // The aircraft overtakes from behind the viewer: on the first visible
   // sample nothing of it may already be inside the frame, on any screen (the
   // landscape phone's frame is the widest), or it would pop into view.

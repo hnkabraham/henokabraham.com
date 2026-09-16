@@ -1,5 +1,6 @@
 'use client';
 import {
+  Fragment,
   lazy,
   Suspense,
   useEffect,
@@ -111,24 +112,25 @@ const copy: Record<BayPhase, [string, string, string]> = {
   cruise: ['04 / KEEP EXPLORING', 'Made with\ncuriosity.', 'Explore the rest.'],
 };
 
-// The story text a letter to a box, so the renderer can rasterize each
-// glyph where the page draws it and let the wing pass through the words.
-// Spaces and line breaks stay as text, so the lines wrap as they did.
-// Screen readers get the plain text (the heading's label, a hidden copy
-// in the paragraphs) rather than a letter at a time.
+// The story text a word to a box, so the renderer can rasterize each word
+// where the page draws it and let the aircraft pass through it. A word is
+// the smallest unit that still shapes the way the page does: split further,
+// to a box a letter, and a ligature (the "tt" of "Better", the "ff" of
+// "different") collapses one span to nothing and its glyph never reaches
+// the mask. Spaces and line breaks stay as text, so the lines wrap as they
+// did, and screen readers get the plain text — the heading's label, a hidden
+// copy in the paragraphs.
 function cutText(text: string) {
   return text.split('\n').map((line, l) => (
     <span key={l}>
       {l > 0 && '\n'}
       {line.split(' ').map((word, w) => (
-        <span key={w} className="cut-word">
+        <Fragment key={w}>
           {w > 0 && ' '}
-          {Array.from(word).map((letter, i) => (
-            <span key={i} data-cut="">
-              {letter}
-            </span>
-          ))}
-        </span>
+          <span className="cut-word" data-cut="">
+            {word}
+          </span>
+        </Fragment>
       ))}
     </span>
   ));
@@ -222,11 +224,15 @@ export default function ScrollDeparture({
       cut.current = null;
     };
   }, []);
-  // The story remounts at each chapter (its key). Only the opening's
-  // caption hangs in the aircraft's path; the chapter captions sit above
-  // the renderer as before.
+  // The story remounts at each chapter (its key). Two captions hang in the
+  // aircraft's path: the opening, which the wing passes through, and Apps,
+  // which the horizontal stabilizer sweeps across. Outside the sweep the
+  // tour holds that plane at the lens, so the caption reads as it always
+  // has; the rest of the chapters sit above the renderer as before.
   useEffect(() => {
-    cut.current?.attach(phase === 'preflight' ? story.current : null);
+    cut.current?.attach(
+      phase === 'preflight' || phase === 'roll' ? story.current : null,
+    );
   }, [phase]);
   useEffect(() => {
     const section = root.current;
