@@ -16,13 +16,14 @@ import {
   TURBINE_STATION,
   glowDisc,
   turbineRing,
+  wingLift,
 } from '@/lib/dreamliner-engine';
 import {
   createFlightPerformance,
   createScrollPerformance,
   followFlightProgress,
 } from '@/lib/bay-performance';
-import { addCoreHeat, addWingFlex } from '@/lib/airframe-flex';
+import { addEngineFinish, addWingFlex } from '@/lib/airframe-flex';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import type { createBayAudio } from '@/lib/bay-audio';
@@ -280,7 +281,20 @@ export default function DreamlinerScene({
             16,
             r.capabilities.getMaxAnisotropy(),
           );
-        if (['skin', 'wing-metal', 'chrome'].includes(original.name)) {
+        // The engines ride the flexed wing too, else the pylon would lift
+        // off the nacelle at cruise flex. The fans cannot take the vertex
+        // patch (their meshes turn on pivots, so an object-space lift would
+        // turn with the blades); their pivots are raised in the loop instead.
+        if (
+          [
+            'skin',
+            'wing-metal',
+            'chrome',
+            'inlet',
+            'nacelle',
+            'engine-interior',
+          ].includes(original.name)
+        ) {
           addWingFlex(finish, flex);
           mesh.customDepthMaterial = wingDepth;
           if (livery && original.name === 'skin')
@@ -290,7 +304,7 @@ export default function DreamlinerScene({
           finish.emissive.set(0xff1705);
           finish.emissiveIntensity = 0.3;
         }
-        if (original.name === 'engine-interior') addCoreHeat(finish, heat);
+        if (original.name === 'engine-interior') addEngineFinish(finish, heat);
         mesh.material = finish;
         materials.add(finish);
         mesh.castShadow = true;
@@ -317,16 +331,19 @@ export default function DreamlinerScene({
       // The tour opens looking up the port engine's tailpipe, and the GLB
       // has nothing there: its turbine stages were pruned with the rest of
       // the simulator-only interior. Each core nozzle gets a ring of turbine
-      // blades on the fan's own shaft, hot metal against the glowing duct
-      // that `addCoreHeat` paints, and a halo of exhaust glow at the lip
-      // that only shows from astern. All unlit and untouched by the tone
-      // mapper, so the orange stays orange.
+      // blades on the fan's own shaft, dark metal with a dull ember, inside
+      // the tempered-titanium nozzle that `addEngineFinish` paints, and a
+      // faint warm haze at the lip that only shows from astern.
       const turbineGeometry = turbineRing(T);
       geometries.add(turbineGeometry);
-      const turbineMaterial = new T.MeshBasicMaterial({
+      const turbineMaterial = new T.MeshStandardMaterial({
         vertexColors: true,
+        color: 0x3a3532,
+        metalness: 0.85,
+        roughness: 0.45,
+        emissive: 0xff5a10,
+        emissiveIntensity: 0.3,
         side: T.DoubleSide,
-        toneMapped: false,
       });
       materials.add(turbineMaterial);
       const halo = glowDisc(T);
@@ -360,6 +377,8 @@ export default function DreamlinerScene({
         glows.push(glow);
       }
       const toGlow = new T.Vector3();
+      // Bank about the body axis after the heading, not the world's X.
+      aircraft.rotation.order = 'YXZ';
       aircraft.add(gltf.scene);
       // Synchronous warm-up avoids an uncancellable driver poll after unmount.
       r.compile(scene, camera);
@@ -400,22 +419,32 @@ export default function DreamlinerScene({
         aircraft.position.set(...shot.aircraft);
         aircraft.position.y += Math.sin(elapsed * 0.65) * 0.08;
         aircraft.rotation.x = shot.bank + Math.sin(elapsed * 0.4) * 0.003;
-        flex.value = 0.45 + Math.sin(elapsed * 0.8) * 0.075;
+        aircraft.rotation.y = shot.heading;
+        // The wing breathes slowly and, once loaded up, flutters a little.
+        flex.value =
+          shot.flex +
+          Math.sin(elapsed * 0.8) * 0.06 +
+          Math.sin(elapsed * 2.9) * 0.02 * shot.flex;
         // The low-pressure turbine drives the fan on one shaft, so they turn together.
         const spin = (elapsed * 11) % (Math.PI * 2);
         for (const fan of fans) fan.rotation.x = spin;
         for (const turbine of turbines) turbine.rotation.x = spin;
+        for (const part of [...fans, ...turbines, ...glows])
+          part.position.y =
+            ENGINE_AXIS.y +
+            wingLift(part.position.x, part.position.z, flex.value);
         heat.value =
           1.05 +
           Math.sin(elapsed * 31) * 0.07 +
           Math.sin(elapsed * 17.3) * 0.05;
+        turbineMaterial.emissiveIntensity = 0.3 * heat.value;
         for (const glow of glows) {
-          // The halo is only convincing looking up the tailpipe: fade it by
+          // The haze is only convincing looking up the tailpipe: fade it by
           // how far the lens sits off the exhaust axis (+X is astern).
           glow.getWorldPosition(toGlow).sub(camera.position);
           const astern = -toGlow.x / (toGlow.length() || 1);
           (glow.material as SpriteMaterial).opacity =
-            Math.max(0, Math.min(1, (astern - 0.55) / 0.3)) * 0.38 * heat.value;
+            Math.max(0, Math.min(1, (astern - 0.55) / 0.3)) * 0.1 * heat.value;
         }
         sun.target.position.copy(aircraft.position);
         sun.position.copy(aircraft.position).add(sunlightOffset);

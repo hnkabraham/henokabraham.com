@@ -19,13 +19,30 @@ export const TURBINE_STATION = -3.15;
 export const EXHAUST_STATION = -2.1;
 export const ENGINE_AXIS = { y: -1.12702, z: 9.41336 };
 
+const smooth = (a: number, b: number, v: number) => {
+  const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * The wing-flex lift at a model-space point, the same curve `addWingFlex`
+ * applies in the vertex shader, for the engine parts that ride on pivots
+ * (fans, turbines, exhaust halos) and so cannot take the shader patch
+ * without the lift turning with them.
+ */
+export function wingLift(x: number, z: number, flex: number) {
+  const envelope = smooth(-12, -6, x) * (1 - smooth(10, 17, x));
+  const span = Math.max(0, Math.abs(z) - 4) / 26;
+  return flex * span * span * envelope;
+}
+
 /**
  * A ring of low-pressure turbine blades, one flat quad each, staggered like
  * the real stage so their faces catch the eye as the ring turns. It fits the
  * annulus between the exhaust cone (0.53 m here) and the nozzle wall (0.83 m).
- * Vertex colours carry the heat: the blades are drawn unlit, tips brighter
- * than roots, with a faint per-blade variation so rotation reads as motion
- * rather than a static disc.
+ * Vertex colours shade the blades, tips brighter than roots with a faint
+ * per-blade variation, so the ring reads as turning rather than a static
+ * disc; the material supplies the metal and the ember.
  */
 export function turbineRing(T: {
   BufferGeometry: typeof BufferGeometry;
@@ -60,8 +77,8 @@ export function turbineRing(T: {
         radial[0] * r + along[1] * u * (chord / 2),
         radial[1] * r + along[2] * u * (chord / 2),
       );
-      const tone = variation * (r === inner ? 0.55 : 1);
-      colors.push(1.0 * tone, 0.34 * tone, 0.07 * tone);
+      const tone = variation * (r === inner ? 0.6 : 1);
+      colors.push(tone, tone, tone);
     }
     const b = i * 4;
     index.push(b, b + 1, b + 2, b, b + 2, b + 3);

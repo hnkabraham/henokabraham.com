@@ -120,64 +120,86 @@ export function addSkinDetail(material: Material) {
 }
 
 /**
- * The hot section of each engine, drawn from model-space coordinates on the
- * engine interior: the core nozzle and exhaust plug lose their chrome and
- * glow from a deep red inside the duct to orange at the lip and the plug's
- * base, cooling toward the plug's tip. `heat` scales the radiance per
- * frame, so the glow can breathe. Composes with the other patches.
+ * The engines' tail ends, finished by model-space position on the engine
+ * interior: the core nozzle and exhaust plug become tempered titanium,
+ * bronze toward the lip and the plug's base, that the environment map
+ * reflects; the fan duct's walls and casing lose the texture's green cast
+ * for a light composite; the outlet guide vanes go to bare metal; and only
+ * the last turbine stage's annulus, forward of the lip and seen from
+ * inside, carries a faint ember. `heat` scales that ember per frame so it
+ * can breathe. Composes with the other patches.
  */
-export function addCoreHeat(material: Material, heat: { value: number }) {
-  addShaderPatch(material, 'core-heat-v1', (shader) => {
-    shader.uniforms.coreHeat = heat;
+export function addEngineFinish(material: Material, heat: { value: number }) {
+  addShaderPatch(material, 'engine-finish-v1', (shader) => {
+    shader.uniforms.engineHeat = heat;
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
-        '#include <common>\nvarying vec3 vCorePoint;',
+        '#include <common>\nvarying vec3 vEnginePoint;\nvarying vec3 vEngineNormal;',
       )
       .replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>\nvCorePoint = position;',
+        '#include <begin_vertex>\nvEnginePoint = position;\nvEngineNormal = normal;',
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
         `#include <common>
-      uniform float coreHeat;
-      varying vec3 vCorePoint;
-      float coreNozzle = 0.0;
-      float coreHot = 0.0;`,
+      uniform float engineHeat;
+      varying vec3 vEnginePoint;
+      varying vec3 vEngineNormal;
+      float engineCore = 0.0;
+      float engineDuct = 0.0;
+      float engineVanes = 0.0;
+      float engineHot = 0.0;`,
       )
       .replace(
         '#include <map_fragment>',
         `#include <map_fragment>
       {
-        vec3 p = vCorePoint;
+        vec3 p = vEnginePoint;
         float r = length(vec2(p.y + 1.12702, abs(p.z) - 9.41336));
-        // The nozzle wall, the last stage's annulus and the plug, aft of
-        // the turbine; nothing of the fan duct around them.
-        coreNozzle = (1.0 - smoothstep(0.86, 0.98, r)) * smoothstep(-4.2, -3.4, p.x);
-        coreHot = coreNozzle * (1.0 - smoothstep(-2.0, -0.9, p.x));
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.07, 0.04, 0.03), coreNozzle * 0.85);
+        // The nozzle wall, the last stage's annulus and the plug, aft of the turbine.
+        engineCore = (1.0 - smoothstep(0.86, 0.98, r)) * smoothstep(-4.2, -3.4, p.x);
+        // The ring of outlet guide vanes behind the fan.
+        engineVanes = smoothstep(-6.25, -6.1, p.x) * (1.0 - smoothstep(-5.8, -5.65, p.x))
+          * smoothstep(0.78, 0.82, r) * (1.0 - smoothstep(1.42, 1.46, r));
+        // The fan casing and the duct walls aft of it, out to the sleeve.
+        engineDuct = smoothstep(0.98, 1.06, r) * (1.0 - smoothstep(1.9, 2.0, r))
+          * smoothstep(-7.8, -7.5, p.x) * (1.0 - smoothstep(-2.85, -2.7, p.x)) * (1.0 - engineVanes);
+        float lip = smoothstep(-3.6, -2.5, p.x) * (1.0 - smoothstep(-2.3, -1.2, p.x));
+        vec3 titanium = mix(vec3(0.42, 0.40, 0.37), vec3(0.50, 0.35, 0.22), lip * 0.7);
+        diffuseColor.rgb = mix(diffuseColor.rgb, titanium, engineCore);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.70, 0.71, 0.72), engineDuct * 0.8);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.50, 0.50, 0.52), engineVanes * 0.8);
+        engineHot = engineCore * smoothstep(0.58, 0.64, r)
+          * smoothstep(-4.0, -3.5, p.x) * (1.0 - smoothstep(-2.9, -2.35, p.x));
       }`,
       )
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
-      roughnessFactor = mix(roughnessFactor, 0.72, coreNozzle);`,
+      roughnessFactor = mix(roughnessFactor, 0.38, engineCore);
+      roughnessFactor = mix(roughnessFactor, 0.55, engineDuct);
+      roughnessFactor = mix(roughnessFactor, 0.35, engineVanes);`,
       )
       .replace(
         '#include <metalnessmap_fragment>',
         `#include <metalnessmap_fragment>
-      metalnessFactor = mix(metalnessFactor, 0.25, coreNozzle);`,
+      metalnessFactor = mix(metalnessFactor, 0.88, engineCore);
+      metalnessFactor = mix(metalnessFactor, 0.12, engineDuct);
+      metalnessFactor = mix(metalnessFactor, 0.8, engineVanes);`,
       )
       .replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
       {
-        float x = vCorePoint.x;
-        float lip = smoothstep(-3.5, -2.5, x) * (1.0 - smoothstep(-2.3, -1.4, x));
-        vec3 hot = mix(vec3(0.42, 0.04, 0.01), vec3(1.0, 0.3, 0.05), lip);
-        totalEmissiveRadiance += hot * coreHot * coreHeat;
+        // The nozzle is one thin surface: only its inner face, the one seen
+        // looking up the tailpipe, glows; the outer face in the fan duct does not.
+        vec3 p = vEnginePoint;
+        vec3 toAxis = -normalize(vec3(0.0, p.y + 1.12702, p.z - sign(p.z) * 9.41336));
+        float inward = step(0.0, dot(normalize(vEngineNormal) * faceDirection, toAxis));
+        totalEmissiveRadiance += vec3(0.85, 0.2, 0.03) * engineHot * inward * engineHeat * 0.7;
       }`,
       );
   });

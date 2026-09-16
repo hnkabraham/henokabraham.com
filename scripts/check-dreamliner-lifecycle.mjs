@@ -61,7 +61,7 @@ const imports = {
   '@/lib/dreamliner-engine': await pure('../lib/dreamliner-engine.ts'),
   '@/lib/bay-performance': await pure('../lib/bay-performance.ts'),
   '@/lib/airframe-flex': uri(
-    'export const addWingFlex=()=>{};export const addCoreHeat=()=>{};',
+    'export const addWingFlex=()=>{};export const addEngineFinish=()=>{};',
   ),
   '@/lib/bay-livery': uri(
     'export const addLivery=()=>{};export const createLiveryTexture=()=>null;',

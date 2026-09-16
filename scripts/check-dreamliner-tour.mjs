@@ -129,7 +129,8 @@ for (const [width, height] of [
   const cameraAt = (p) => {
     const shot = sampleDreamlinerTour(p, aspect);
     plane.position.set(...shot.aircraft);
-    plane.rotation.x = shot.bank;
+    plane.rotation.order = 'YXZ';
+    plane.rotation.set(shot.bank, shot.heading, 0);
     plane.updateMatrixWorld(true);
     const c = new T.PerspectiveCamera(shot.fov, aspect, 0.15, 1200);
     c.position.set(...shot.camera);
@@ -145,13 +146,15 @@ for (const [width, height] of [
     c.updateMatrixWorld(true);
     return c;
   };
-  // Each named part stays visible, including on narrow screens. The remainder
-  // of the aircraft is intentionally cropped during these detail passes.
+  // The exhaust stays in frame through the hold, including on narrow screens
+  // (the rest of the aircraft is intentionally cropped there), and the
+  // departing aircraft stays in frame at every later chapter stop.
   for (const [p, part, xyz] of [
     [0.2, 'exhaust', [-2.9, -1.13, 9.41]],
-    [0.37, 'inlet', [-8.65, -1.1, 9.41]],
-    [0.59, 'wing', [7, 3, 18]],
-    [0.78, 'tail', [28, 8, 0]],
+    [0.37, 'departing aircraft', [0, 1, 0]],
+    [0.59, 'departing aircraft', [0, 1, 0]],
+    [0.78, 'departing aircraft', [0, 1, 0]],
+    [0.97, 'departing aircraft', [0, 1, 0]],
   ]) {
     const c = cameraAt(p),
       v = plane.localToWorld(new T.Vector3(...xyz)).project(c);
@@ -194,7 +197,8 @@ for (const [width, height] of [
     for (let p = 0.025; p <= 0.36; p += 0.002) {
       const shot = sampleDreamlinerTour(p, aspect);
       plane.position.set(...shot.aircraft);
-      plane.rotation.x = shot.bank;
+      plane.rotation.order = 'YXZ';
+      plane.rotation.set(shot.bank, shot.heading, 0);
       plane.updateMatrixWorld(true);
       const eye = new T.Vector3(...shot.camera);
       model.traverse((mesh) => {
@@ -217,7 +221,7 @@ for (const [width, height] of [
       `${width}x${height} lens clears the airframe by ${nearest.toFixed(2)} m at ${nearestAt.toFixed(3)}`,
     );
   }
-  for (const p of [0.285, 0.97]) {
+  for (const p of [0.62, 0.97]) {
     const c = cameraAt(p);
     let extreme = 0;
     model.traverse((mesh) => {

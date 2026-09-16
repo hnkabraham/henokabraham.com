@@ -28,8 +28,8 @@ const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 const point = (a: TourPoint, b: TourPoint, t: number) =>
   a.map((v, i) => mix(v, b[i], t)) as TourPoint;
 type Shot = { at: number; camera: TourPoint; target: TourPoint; fov: number };
-// Exterior coordinates in metres: nose -X, port +Z, up +Y. Each lens stays
-// outside the airframe; the pauses are deliberate opportunities to inspect it.
+// Exterior coordinates in metres: nose -X, port +Z, up +Y. The lens stays
+// outside the airframe throughout.
 export const TOUR_SHOTS: Shot[] = [
   // The lens waits low and outboard of where the port engine will settle,
   // looking up the flight path. The aircraft overtakes from behind the
@@ -37,21 +37,24 @@ export const TOUR_SHOTS: Shot[] = [
   // straight up the tailpipe of that engine; the lens creeps in behind the
   // exhaust through the hold.
   { at: 0, camera: [21, -3.5, 16.5], target: [-3, -1.3, 9.4], fov: 34 },
-  { at: 0.215, camera: [17, -2.9, 14.2], target: [-3, -1.3, 9.4], fov: 34 },
-  // Up and out over the port wing for the whole aircraft from astern, then
-  // around the wingtip and down to the inlet.
-  { at: 0.285, camera: [66, 23, 90], target: [1, 2, 1], fov: 34 },
-  { at: 0.35, camera: [-19, -0.3, 18], target: [-6.6, -0.7, 9.4], fov: 34 },
-  { at: 0.4, camera: [-17, 0.2, 17.7], target: [-6.6, -0.7, 9.4], fov: 34 },
-  { at: 0.46, camera: [-12, 2, 23], target: [-5, -0.3, 9.4], fov: 34 },
-  { at: 0.54, camera: [-5, 16, 36], target: [1, 2.2, 13], fov: 38 },
-  { at: 0.63, camera: [13, 18, 48], target: [7, 3, 18], fov: 38 },
-  { at: 0.69, camera: [25, 12, 32], target: [18, 4, 8], fov: 36 },
-  { at: 0.75, camera: [41, 10, 22], target: [27, 7.8, 0], fov: 34 },
-  { at: 0.82, camera: [46, 10, 13], target: [28, 6.5, 0], fov: 34 },
-  { at: 0.91, camera: [77, 29, 78], target: [3, 3, 0], fov: 34 },
-  { at: 1, camera: [95, 40, 100], target: [3, 3, 0], fov: 34 },
+  { at: 0.24, camera: [17, -2.9, 14.2], target: [-3, -1.3, 9.4], fov: 34 },
+  // Then the aircraft flies on and the lens stays behind, rising out of its
+  // wake to look down on the flexed wings from above and behind, and
+  // tightening a little as it climbs away. The aim follows the aircraft
+  // itself (the departure below); these targets only anchor the portrait
+  // pull-back.
+  { at: 0.45, camera: [24, 9, 22], target: [-3, -1.3, 9.4], fov: 32 },
+  { at: 0.62, camera: [28, 12, 24], target: [-3, -1.3, 9.4], fov: 30 },
+  { at: 1, camera: [36, 18, 30], target: [-3, -1.3, 9.4], fov: 24 },
 ];
+
+// The departure: after the hold the aircraft flies on, RANGE metres in all
+// over the rest of the scroll, along a power curve so it leaves from a
+// standstill without a jerk, climbing gently and rolling into a shallow
+// left turn part-way out that shows the flexed wings from above and behind.
+const RANGE = 900;
+const TURN = 0.5;
+const heading = (departure: number) => TURN * ease((departure - 0.26) / 0.5);
 
 export function sampleDreamlinerTour(progress: number, aspect: number) {
   const p = Math.max(0, Math.min(1, progress));
@@ -60,22 +63,14 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   const a = TOUR_SHOTS[index],
     b = TOUR_SHOTS[index + 1];
   const t = ease((p - a.at) / (b.at - a.at));
-  const target = point(a.target, b.target, t);
+  let target = point(a.target, b.target, t);
   let camera = point(a.camera, b.camera, t);
   const portrait = Math.max(0, Math.min(1, (1.15 - aspect) / 0.65));
-  // The whole-aircraft shots: astern after the fly-by, and the closing pull-away.
-  const wideShot =
-    ease((p - 0.2) / 0.085) * (1 - ease((p - 0.285) / 0.075)) +
-    ease((p - 0.84) / 0.13);
-  // On a phone, pull back the establishing shots more than the close-ups.
-  const engineFocus = ease((p - 0.29) / 0.05) * (1 - ease((p - 0.44) / 0.06));
-  const distance = 1 + portrait * (0.3 + wideShot * 0.9);
+  // On a phone, sit a little further back from the engine.
+  const distance = 1 + portrait * 0.3;
   camera = camera.map(
     (v, i) => target[i] + (v - target[i]) * distance,
   ) as TourPoint;
-  // A narrow frame follows the inlet itself, keeping its lip above the controls.
-  target[0] -= 1.8 * portrait * engineFocus;
-  target[1] -= 0.4 * portrait * engineFocus;
   // The aircraft starts just behind the viewer, nose level with the lens and
   // a little above it, and flies straight past on its own axis: the nacelle
   // passes some five metres to the right, the wing a few metres overhead.
@@ -84,18 +79,44 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   // as if the viewer had matched its pace.
   const arrival = 1 - (1 - Math.max(0, Math.min(1, (p - 0.025) / 0.17))) ** 3;
   const aircraft: TourPoint = [mix(42, 0, arrival), mix(2.4, 0, arrival), 0];
-  // The Devices stop puts the forward fuselage, titles and all, behind the
-  // story column on a wide screen. Slide the frame right there so the
-  // headline sits on sky while the wing root stays inside the frame.
-  const devices = ease((p - 0.49) / 0.05) * (1 - ease((p - 0.66) / 0.05));
+  // The departure path, integrated along the heading so the turn is flown
+  // rather than slid: distance = RANGE * departure^1.5.
+  const departure = Math.max(0, Math.min(1, (p - 0.22) / 0.78));
+  const steps = 40,
+    ds = departure / steps;
+  for (let i = 0; i < steps; i++) {
+    const s = (i + 0.5) * ds;
+    const travel = RANGE * 1.5 * Math.sqrt(s) * ds;
+    const h = heading(s);
+    aircraft[0] -= travel * Math.cos(h);
+    aircraft[2] += travel * Math.sin(h);
+  }
+  aircraft[1] += 30 * departure * departure;
+  // After the hold the aim rides with the aircraft, sliding from the port
+  // exhaust to the fuselage (a touch to starboard of it, so the whole span
+  // sits left of the frame's edge) as the aircraft comes into frame.
+  const aim = ease((p - 0.24) / 0.14);
+  if (p > 0.24)
+    target = aircraft.map(
+      (v, i) => v + mix([-3, -1.3, 9.4][i], [0, 1.5, -4][i], aim),
+    ) as TourPoint;
+  // The bank leads the turn in and trails it out, as a coordinated turn does.
+  const bank =
+    mix(-0.08, 0.025, arrival) +
+    Math.sin(p * Math.PI * 2) * 0.025 +
+    0.3 * ease((departure - 0.18) / 0.16) * (1 - ease((departure - 0.7) / 0.2));
   return {
     camera,
     target,
     aircraft,
+    heading: heading(departure),
+    // Tip lift in metres: a cruise wing is always flexed, and it loads up
+    // further as the aircraft climbs away.
+    flex: 0.8 + 1.3 * ease((p - 0.22) / 0.4),
     fov: mix(a.fov, b.fov, t),
-    offsetX: mix(-0.18 - 0.18 * devices, 0, portrait),
-    offsetY: mix(-0.035, -0.12 + 0.1 * engineFocus, portrait),
-    bank: mix(-0.08, 0.025, arrival) + Math.sin(p * Math.PI * 2) * 0.025,
+    offsetX: mix(-0.18, 0, portrait),
+    offsetY: mix(-0.035, -0.12, portrait),
+    bank,
     visible: p > 0.025,
     phase: tourPhase(p),
   };

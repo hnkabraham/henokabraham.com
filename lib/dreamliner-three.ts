@@ -14,7 +14,6 @@ export {
   HemisphereLight,
   LinearFilter,
   Mesh,
-  MeshBasicMaterial,
   MeshDepthMaterial,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
