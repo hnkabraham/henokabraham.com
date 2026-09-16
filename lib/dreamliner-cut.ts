@@ -176,6 +176,8 @@ export type TextCut = {
 
 // Around the caption's box, so glyph halos and rounding stay inside.
 const PAD = 8;
+/** A computed spacing as a length canvas accepts: `normal` is zero. */
+const length = (value: string) => (value.endsWith('px') ? value : '0px');
 
 /**
  * Draws every word of the caption, in its own font and at its measured
@@ -233,9 +235,12 @@ export function createTextCut(): TextCut {
         // The display face is set tight (the headline at -4 px a letter), and
         // the font shorthand carries none of that: without it the mask runs
         // wider than the page and drifts off the glyphs it is meant to cover.
+        // These take a length only, and silently keep their last value for
+        // anything else, so the headline's spacing would follow the context
+        // into the paragraph below it: `normal` has to be spelled as zero.
         if ('letterSpacing' in context) {
-          context.letterSpacing = style.letterSpacing;
-          context.wordSpacing = style.wordSpacing;
+          context.letterSpacing = length(style.letterSpacing);
+          context.wordSpacing = length(style.wordSpacing);
         }
         range.selectNodeContents(span);
         const glyph = range.getBoundingClientRect();
