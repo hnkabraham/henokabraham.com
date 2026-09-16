@@ -54,23 +54,25 @@ export const TOUR_SHOTS: Shot[] = [
 // over the rest of the scroll, along a power curve so it leaves from a
 // standstill without a jerk, climbing gently and rolling into a shallow
 // left turn part-way out that shows the flexed wings from above and behind.
-// In the back half it rolls out of that turn and a little past it, so its
-// track crosses the lens's own and carries it out to the right rather than
-// shrinking into the middle of the sky (where, on a phone, the Golden Gate
-// stands and the two looked set to meet).
+// The turn is held to the end: it is the aircraft's own track, up and to the
+// left of the lens, that carries it out of frame rather than the middle of
+// the sky (where, on a phone, the Golden Gate stands and the two looked set
+// to meet).
 const RANGE = 900;
 const TURN = 0.5;
-const ROLLOUT = 0.78;
-const heading = (departure: number) =>
-  TURN * ease((departure - 0.26) / 0.5) -
-  ROLLOUT * ease((departure - 0.52) / 0.44);
+const heading = (departure: number) => TURN * ease((departure - 0.26) / 0.5);
 // How far the aim falls behind the aircraft once it is running away, in half
-// frames: nothing while the aircraft is still being followed, then a run-out
-// with a cubic in it, so the aircraft leans out of frame through the last
-// chapter and is gone by the end of the scroll.
-const runOut = (departure: number) => {
-  const u = Math.max(0, Math.min(1, (departure - 0.42) / 0.58));
-  return 0.45 * u + 0.55 * u * u * u;
+// frames. Two moves, so it never doubles back through the middle of the sky:
+// it climbs out of the frame's centre first, clear of the Golden Gate that
+// stands below it on a phone, and only then slips away to the left, so that
+// it leaves by the top left corner over the last of the scroll.
+const climb = (departure: number) => {
+  const u = Math.max(0, Math.min(1, (departure - 0.28) / 0.72));
+  return 0.5 * u + 0.5 * u * u * u;
+};
+const slip = (departure: number) => {
+  const u = Math.max(0, Math.min(1, (departure - 0.5) / 0.5));
+  return u * u * u;
 };
 
 export function sampleDreamlinerTour(progress: number, aspect: number) {
@@ -124,16 +126,19 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   // The crossing: as the aircraft turns away the lens stops correcting for
   // the turn, so the aircraft rides up and across to the left of frame and
   // its horizontal stabilizer sweeps through the chapter caption; the lens
-  // catches it again as the turn rolls out.
+  // then catches it again, to leave the chapters their own composition.
   const crossing =
     ease((departure - 0.05) / 0.18) * (1 - ease((departure - 0.23) / 0.19));
-  // The run-out: the lens lets it go, and the aircraft leaves to the right.
-  // A narrow frame needs the larger share, since the aircraft sits closer to
-  // its centre there and spans more of it.
-  const right =
-    mix(0.9, 1.6, portrait) * runOut(departure) -
-    crossing * mix(0.86, 0.56, portrait);
-  const up = crossing * mix(0.52, 0.9, portrait);
+  // Then the run-out, up first and away to the left after. A narrow frame
+  // needs the larger share, since the aircraft sits closer to its centre
+  // there and spans more of it.
+  const up =
+    crossing * mix(0.52, 0.9, portrait) +
+    climb(departure) * mix(0.9, 1.5, portrait);
+  const right = -(
+    crossing * mix(0.86, 0.56, portrait) +
+    slip(departure) * mix(1.5, 1.3, portrait)
+  );
   if (right || up) {
     const fx = target[0] - camera[0],
       fy = target[1] - camera[1],
@@ -167,17 +172,11 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
       (aircraft[1] + 2.6 - camera[1]) * fy +
       (aircraft[2] - 28 * Math.sin(yaw) - camera[2]) * fz) /
     axis;
-  // The bank leads the turn in and trails it out, as a coordinated turn does,
-  // and reverses as the aircraft rolls out through its track.
+  // The bank leads the turn in and trails it out, as a coordinated turn does.
   const bank =
     mix(-0.08, 0.025, arrival) +
     Math.sin(p * Math.PI * 2) * 0.025 +
-    0.3 *
-      ease((departure - 0.18) / 0.16) *
-      (1 - ease((departure - 0.7) / 0.2)) -
-    0.22 *
-      ease((departure - 0.56) / 0.3) *
-      (1 - ease((departure - 0.92) / 0.1));
+    0.3 * ease((departure - 0.18) / 0.16) * (1 - ease((departure - 0.7) / 0.2));
   return {
     camera,
     target,

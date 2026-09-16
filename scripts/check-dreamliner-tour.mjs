@@ -167,13 +167,13 @@ for (const [width, height] of [
       `${width}x${height} ${String(part)} framing: ${v.toArray().join(',')}`,
     );
   }
-  // The last chapter is the leaving shot: the aircraft is out in the right of
-  // the frame, crossing its edge but not yet through it.
+  // The last chapter is the leaving shot: the aircraft has climbed out of the
+  // middle of the sky into the top left of the frame, on its way out of it.
   {
     const c = cameraAt(0.9),
       v = plane.localToWorld(new T.Vector3(0, 1, 0)).project(c);
     assert.ok(
-      v.x > 0.45 && v.x < 1.1 && Math.abs(v.y) < 0.85 && v.z > -1 && v.z < 1,
+      v.x < 0.2 && v.x > -1 && v.y > 0.25 && v.y < 1 && v.z > -1 && v.z < 1,
       `${width}x${height} leaving shot: ${v.toArray().join(',')}`,
     );
   }
@@ -333,11 +333,12 @@ for (const [width, height] of [
       `${width}x${height} wide shot ${p} crops aircraft: ${extreme}`,
     );
   }
-  // And by the end of the scroll it has gone off the right of the frame: not
-  // one vertex is left inside it, on any screen.
+  // And by the end of the scroll it has gone out by the top left: not one
+  // vertex is left inside the frame, on any screen.
   {
     const c = cameraAt(1);
-    let leftmost = Infinity;
+    let inside = 0,
+      rightmost = -Infinity;
     model.traverse((mesh) => {
       if (!mesh.isMesh) return;
       const attr = mesh.geometry.attributes.position;
@@ -346,12 +347,19 @@ for (const [width, height] of [
           .fromBufferAttribute(attr, i)
           .applyMatrix4(mesh.matrixWorld)
           .project(c);
-        leftmost = Math.min(leftmost, v.x);
+        rightmost = Math.max(rightmost, v.x);
+        if (Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && v.z > -1 && v.z < 1)
+          inside++;
       }
     });
+    assert.equal(
+      inside,
+      0,
+      `${width}x${height} aircraft has not left the frame: ${inside} vertices`,
+    );
     assert.ok(
-      leftmost > 1,
-      `${width}x${height} aircraft has not left the frame: ${leftmost}`,
+      rightmost < -0.9,
+      `${width}x${height} aircraft left by the wrong edge: ${rightmost}`,
     );
   }
   const ratios = [0, 1, 2].map((q) => tourPixelRatio(width, height, 3, q));
