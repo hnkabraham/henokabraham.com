@@ -441,3 +441,15 @@ Codex also matched the mask to the renderer's own pixel ratio rather than the de
 The check evaluates the patch's fragment arithmetic as JavaScript — the shadow is off in front of the plane, off beyond 0.6 of the caption's distance, off at the lens, off inside a glyph, darkest at contact, and never touches coverage — and drives `createTextCut` against a recording canvas for the two-pass draw, the halo's CSS size and the cache's lifetime.
 
 TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `c98f2ff8-c1d0-43c3-be06-4944918cd4cc`. Verified live on desktop and phone at the opening's wing cut and the Apps chapter's tail cut: the letters carry a soft shadow onto the skin behind them in both, and the console is clean.
+
+## routeloads joins the departures board
+
+"should we also showcase routeloads.com on my personal site? I made it". Source `176543c`.
+
+It is the most on-theme project on the board: the site is already a 787 tour, a personal flight log and a route atlas, and routeloads is the DOT's T-100 filings for every US route — "How full are flight routes in America?". It also happens to be the second of Henok's projects that is live and public rather than in the hangar. It sits directly under United Flight Tracker as HA 007 at gate A03, marked LIVE, and joins `refreshProjects`' website probe so the briefing carries the same reachability line the tracker does; `check-scheduled.mjs` now expects six records rather than five and asserts both sites report reachable.
+
+Two things came out of the work rather than the request. The briefing's image rail was hardcoded to Downshift — alt text, dimensions and the `SIMULATOR MODE` caption were literals in the markup, which had only ever held one project's image — so those move onto the flight itself as `image: { src, width, height, alt, caption }`. And the rail is a 170 px portrait frame with a phone-style border, which decides how the screenshot is taken: a landscape capture of a data site would be a postage stamp there, so routeloads is captured at a 500×1087 CSS viewport and cropped above its first content card, which puts the wordmark, the headline and the four summary figures (7.8B passengers, 78% average load factor, 70,355 route pairs, 2018–2026) inside the frame at 690×1145.
+
+The copy is taken from routeloads' own pages rather than written from memory, including the figures above. The stack line records only what the site shows about itself — static pages with no framework runtime, Cloudflare, and the DOT BTS T-100 dataset — and wants Henok's correction if the build behind it is worth naming.
+
+TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `1f9fcc12-4289-4982-b3cb-745151b59e07`. Verified live on desktop and phone: the board reads seven destinations, the row opens to the briefing with its screenshot, and the console is clean. The reachability line appears on the next quarter-hour cron tick, which is when the sixth record is written.
