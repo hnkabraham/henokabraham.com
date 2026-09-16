@@ -166,8 +166,8 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
     let disposed = false,
       started = false,
       visible = false,
+      interacting = false,
       frame = 0,
-      renderRequested = false,
       settleFrames = 0;
     let renderer: WebGLRenderer | undefined;
     const cleanups: (() => void)[] = [];
@@ -253,12 +253,32 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       const rim = new T.DirectionalLight(0xcfe3ff, 1.1);
       rim.position.set(-1.5, 5, -7);
       scene.add(rim);
-      requestRender = () => {
-        if (disposed || renderRequested) return;
-        renderRequested = true;
-        settleFrames = 40;
-        if (!frame) frame = requestAnimationFrame(render);
+      // The only place that calls requestAnimationFrame -- always gated on
+      // `frame` already being empty. render() itself calls this at its own
+      // tail, but orbit.update() (called from inside render(), a few lines
+      // down) can *synchronously* dispatch OrbitControls' own 'change' event
+      // whenever there's residual damping motion, which reaches this same
+      // function through requestFrame below. Without the `frame` guard,
+      // that inner call and render()'s own tail call each schedule a frame,
+      // doubling the pending count every frame damping is still settling --
+      // confirmed empirically (a single test drag queued 48,610 pending
+      // frames within under a second) before this guard was unified here.
+      const scheduleFrame = () => {
+        if (disposed || frame) return;
+        frame = requestAnimationFrame(render);
       };
+      requestRender = () => {
+        settleFrames = 40;
+        scheduleFrame();
+      };
+      // A frame during active dragging: keeps the loop alive without
+      // resetting the settle window, unlike requestRender -- OrbitControls'
+      // own damping keeps firing 'change' for a couple dozen frames after
+      // release, on top of whatever's still decaying from the drag itself,
+      // and if that also reset settleFrames every time it would perpetually
+      // push the 40-frame cutoff back out, rendering far longer than a
+      // settle tail ever needs to.
+      const requestFrame = scheduleFrame;
       const orbit = new Controls(camera, r.domElement);
       orbit.enableDamping = true;
       orbit.dampingFactor = 0.08;
@@ -276,14 +296,21 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       // crash, not just a stale closure.
       const render = () => {
         frame = 0;
-        renderRequested = false;
         if (disposed || !renderer || !visible || document.hidden) return;
         orbit.update();
         r.render(scene, camera);
-        settleFrames = Math.max(0, settleFrames - 1);
-        if (settleFrames > 0) frame = requestAnimationFrame(render);
+        if (!interacting) settleFrames = Math.max(0, settleFrames - 1);
+        if (interacting || settleFrames > 0) scheduleFrame();
       };
-      orbit.addEventListener('change', requestRender);
+      orbit.addEventListener('start', () => {
+        interacting = true;
+        requestRender();
+      });
+      orbit.addEventListener('change', requestFrame);
+      orbit.addEventListener('end', () => {
+        interacting = false;
+        settleFrames = 40;
+      });
       cleanups.push(() => orbit.dispose());
       let width = 1,
         height = 1;
