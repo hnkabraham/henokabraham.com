@@ -230,7 +230,11 @@ export function addCloudShade(material: Material, cloud: { value: number }) {
  * the page's own text shows through the canvas; nearer fragments draw over
  * the letters as usual. The mask is sampled by framebuffer position within
  * `rect` (x, y from the bottom left, width, height, in framebuffer pixels),
- * so nothing outside the caption's box pays for the lookup. Opaque
+ * so nothing outside the caption's box pays for the lookup. Its red channel
+ * holds crisp coverage; green holds a soft halo that only darkens nearby
+ * skin behind the plane, giving the intersection a faint contact shadow.
+ * The halo dies with separation and is off when the plane is at the lens,
+ * so it does not follow the letters across the distant aircraft. Opaque
  * materials write without blending, so the colour is premultiplied here for
  * the compositor; do not add this to a transparent material.
  */
@@ -243,7 +247,7 @@ export function addDepthCut(
     on: { value: number };
   },
 ) {
-  addShaderPatch(material, 'depth-cut-v1', (shader) => {
+  addShaderPatch(material, 'depth-cut-v2', (shader) => {
     shader.uniforms.cutMask = cut.mask;
     shader.uniforms.cutRect = cut.rect;
     shader.uniforms.cutDepth = cut.depth;
@@ -263,9 +267,22 @@ export function addDepthCut(
         if (cutOn > 0.5) {
           vec2 cutUv = (gl_FragCoord.xy - cutRect.xy) / cutRect.zw;
           if (all(greaterThan(cutUv, vec2(0.0))) && all(lessThan(cutUv, vec2(1.0)))) {
-            float cover = texture2D(cutMask, cutUv).a;
+            vec2 glyph = texture2D(cutMask, cutUv).rg;
+            float cover = glyph.r;
             float behind = smoothstep(cutDepth - 0.4, cutDepth + 0.4, vViewPosition.z);
+            // The shadow falls only on skin that lies behind the caption, and
+            // fades with how far behind it lies relative to the caption's own
+            // distance: the sun's penumbra widens with that ratio and with
+            // nothing else, so a wing a few metres past the words and a
+            // fuselage tens of metres past them read alike. It is held off
+            // when the plane sits at the lens, where every letter is in front
+            // of the whole aircraft and the halo would simply follow the words
+            // across it.
+            float spread = (vViewPosition.z - cutDepth) / max(cutDepth, 1.0);
+            float shade = step(0.001, cutDepth) * behind
+              * (1.0 - smoothstep(0.05, 0.6, spread));
             float keep = 1.0 - cover * behind;
+            gl_FragColor.rgb *= 1.0 - 0.34 * glyph.g * shade * (1.0 - cover);
             gl_FragColor.rgb *= keep;
             gl_FragColor.a *= keep;
           }

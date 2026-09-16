@@ -18,10 +18,262 @@ const moduleURL = async (file, replacements = {}) => {
 const tourURL = await moduleURL('../lib/dreamliner-tour.ts');
 const { sampleDreamlinerTour, tourPhase, TOUR_CHAPTERS, tourPixelRatio } =
   await import(tourURL);
-const { projectWing, insideWing } = await import(
+const { projectWing, insideWing, createTextCut } = await import(
   await moduleURL('../lib/dreamliner-cut.ts', {
     './dreamliner-engine': await moduleURL('../lib/dreamliner-engine.ts'),
   })
+);
+const { addDepthCut, addWingFlex } = await import(
+  await moduleURL('../lib/airframe-flex.ts', {
+    three: import.meta.resolve('three'),
+  })
+);
+// Exercise the actual patch on both aircraft shader families. Evaluate its
+// scalar fragment arithmetic below without a GPU; this checks compositing
+// and depth gates, not the visual strength of the canvas penumbra.
+for (const Material of [T.MeshStandardMaterial, T.MeshPhysicalMaterial]) {
+  const material = new Material();
+  const cut = {
+    mask: { value: new T.Texture() },
+    rect: { value: [10, 20, 300, 100] },
+    depth: { value: 14 },
+    on: { value: 1 },
+  };
+  addWingFlex(material, { value: 0.45 });
+  addDepthCut(material, cut);
+  assert.equal(
+    material.customProgramCacheKey(),
+    'dreamliner-wing-flex-v1|depth-cut-v2',
+  );
+  const shader = {
+    uniforms: {},
+    vertexShader: T.ShaderLib.physical.vertexShader,
+    fragmentShader: T.ShaderLib.physical.fragmentShader,
+  };
+  material.onBeforeCompile(shader, {});
+  for (const [name, uniform] of Object.entries(cut))
+    assert.equal(
+      shader.uniforms[`cut${name[0].toUpperCase()}${name.slice(1)}`],
+      uniform,
+      'The patch shares the live scene uniforms',
+    );
+  const fragment = shader.fragmentShader;
+  assert.equal((fragment.match(/texture2D\(cutMask/g) ?? []).length, 1);
+  assert.match(
+    fragment,
+    /if \(cutOn > 0\.5\)[\s\S]*if \(all\(greaterThan\(cutUv,[\s\S]*all\(lessThan\(cutUv,[\s\S]*texture2D\(cutMask, cutUv\)\.rg/,
+    'The one packed lookup stays inside the enabled caption rectangle',
+  );
+  const scalar = fragment.match(
+    /float cover =[\s\S]*?gl_FragColor\.a \*= keep;/,
+  )?.[0];
+  assert.ok(scalar, 'The cut has scalar compositing arithmetic to exercise');
+  // The GLSL runs here as JavaScript, so every builtin it uses has to be
+  // passed in: smoothstep, step and max are the set. Reach for another one
+  // in the patch and this throws a ReferenceError naming it.
+  const scalarModule = `export default (glyph, cutDepth, vViewPosition, smoothstep, step, max) => {
+    let rgb = [0.8, 0.6, 0.4], alpha = 1;
+    ${scalar
+      .replaceAll('float ', 'const ')
+      .replace(/gl_FragColor\.rgb \*= (.*);/g, 'rgb = rgb.map(v => v * ($1));')
+      .replaceAll('gl_FragColor.a', 'alpha')}
+    return { rgb, alpha };
+  };`;
+  const { default: evaluate } = await import(
+    `data:text/javascript;base64,${Buffer.from(scalarModule).toString('base64')}`
+  );
+  const smoothstep = (a, b, v) => {
+    const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  const shade = (cover, halo, gap, depth = 14) =>
+    evaluate(
+      { r: cover, g: halo },
+      depth,
+      { z: depth + gap },
+      smoothstep,
+      (edge, v) => Number(v >= edge),
+      Math.max,
+    );
+  const unchanged = { rgb: [0.8, 0.6, 0.4], alpha: 1 };
+  assert.deepEqual(shade(0, 1, -1), unchanged, 'No shadow in front');
+  assert.deepEqual(shade(0, 1, 12), unchanged, 'No shadow on distant skin');
+  assert.deepEqual(shade(0, 1, 1, 0), unchanged, 'No shadow at the lens');
+  assert.deepEqual(shade(0, 0, 1), unchanged, 'No shadow outside the halo');
+  assert.deepEqual(shade(1, 1, 1), { rgb: [0, 0, 0], alpha: 0 });
+  assert.deepEqual(shade(1, 1, 0), { rgb: [0.4, 0.3, 0.2], alpha: 0.5 });
+  // The same separation in metres reads differently at the two cuts, and
+  // has to: twelve metres past a caption hanging fourteen out is another
+  // aircraft's length of sky, and past one a hundred out it is nothing. The
+  // shadow fades on the ratio, so the wing tip loses it and the fuselage
+  // behind the distant tail keeps it.
+  assert.ok(
+    shade(0, 1, 12, 100).rgb[0] < 0.8 * 0.8,
+    'A distant caption still shadows the skin a few metres behind it',
+  );
+  const contact = shade(0, 1, 0.5);
+  assert.equal(contact.alpha, 1, 'The shadow never changes coverage');
+  assert.ok(
+    contact.rgb[0] < 0.8 * 0.8 && contact.rgb[0] > 0.8 * 0.6,
+    `The shadow at contact darkens the skin by a fifth to two fifths: ${contact.rgb[0].toFixed(3)} of 0.8`,
+  );
+  assert.ok(
+    shade(0, 1, 4).rgb[0] > contact.rgb[0],
+    'The shadow is darkest where the skin is closest to the caption',
+  );
+  for (const gap of [-0.4, 0, 0.4, 0.8, 3, 6]) {
+    const half = shade(0.5, 1, gap);
+    assert.equal(half.alpha, shade(0.5, 0, gap).alpha);
+    assert.deepEqual(
+      shade(1, 1, gap),
+      shade(1, 0, gap),
+      'Covered glyphs receive no shadow',
+    );
+    assert.ok(half.rgb.every((v) => v >= 0 && v <= half.alpha));
+  }
+  cut.mask.value.dispose();
+  material.dispose();
+}
+
+// A recording canvas verifies the packed drawing contract and cache lifetime.
+// Font rasterization and the browser's blur kernel still need visual review.
+{
+  const saved = ['document', 'getComputedStyle'].map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(globalThis, name),
+  ]);
+  const draws = [];
+  const context = {
+    setTransform(...values) {
+      this.transform = values;
+    },
+    fillRect() {
+      assert.equal(this.fillStyle, '#000');
+      assert.equal(this.globalCompositeOperation, 'source-over');
+    },
+    measureText() {
+      return { fontBoundingBoxAscent: 15 };
+    },
+    fillText(text, x, y) {
+      draws.push({ text, x, y, ...this });
+    },
+    letterSpacing: '0px',
+    wordSpacing: '0px',
+  };
+  let canvasWidth = 0,
+    canvasHeight = 0;
+  const reset = () =>
+    Object.assign(context, {
+      globalCompositeOperation: 'source-over',
+      shadowColor: 'transparent',
+      shadowBlur: 0,
+    });
+  const canvas = {
+    get width() {
+      return canvasWidth;
+    },
+    set width(value) {
+      canvasWidth = value;
+      reset();
+    },
+    get height() {
+      return canvasHeight;
+    },
+    set height(value) {
+      canvasHeight = value;
+      reset();
+    },
+    getContext() {
+      return context;
+    },
+  };
+  let x = 40.25;
+  const y = 60.125;
+  const spans = [
+    { textContent: 'Wing', spacing: '-4px' },
+    { textContent: 'tail', spacing: 'normal' },
+  ];
+  const story = {
+    offsetParent: { getBoundingClientRect: () => ({ left: 10, top: 20 }) },
+    getBoundingClientRect: () => ({
+      left: 10 + x,
+      top: 20 + y,
+      width: 200.25,
+      height: 80.125,
+    }),
+    querySelectorAll: () => spans,
+  };
+  try {
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      value: {
+        createElement: () => canvas,
+        createRange: () => ({
+          selectNodeContents() {},
+          getBoundingClientRect: () => ({ left: 10 + x, top: 20 + y }),
+        }),
+      },
+    });
+    globalThis.getComputedStyle = (span) => ({
+      fontStyle: 'normal',
+      fontWeight: '400',
+      fontSize: '20px',
+      fontFamily: 'sans-serif',
+      letterSpacing: span.spacing,
+      wordSpacing: 'normal',
+    });
+    const mask = createTextCut();
+    assert.equal(mask.refresh(390, 844, 1), null);
+    mask.attach(story);
+    for (const ratio of [1, 1.25, 2.2]) {
+      draws.length = 0;
+      const box = mask.refresh(390, 844, ratio);
+      assert.equal(box.redrawn, true, 'A renderer ratio change redraws');
+      assert.ok(Math.abs(box.width * ratio - canvas.width) < 1e-8);
+      assert.ok(Math.abs(box.height * ratio - canvas.height) < 1e-8);
+      for (const origin of [box.left, box.top])
+        assert.ok(
+          Math.abs(origin * ratio - Math.round(origin * ratio)) < 1e-8,
+          'Mask origins land on framebuffer pixels',
+        );
+      assert.equal(draws.length, 4, 'Two word passes, no extra canvas');
+      const [coverage, halo, paragraph] = draws;
+      assert.equal(coverage.fillStyle, '#f00');
+      assert.equal(coverage.shadowColor, 'transparent');
+      assert.equal(halo.fillStyle, '#000');
+      assert.equal(halo.shadowColor, '#0f0');
+      assert.equal(halo.globalCompositeOperation, 'lighter');
+      assert.equal(halo.shadowBlur / ratio, 10, 'Halo keeps its CSS size');
+      assert.equal(coverage.letterSpacing, '-4px');
+      assert.equal(paragraph.letterSpacing, '0px');
+      assert.ok(Math.abs(box.left + coverage.x - x) < 1e-8);
+      assert.ok(Math.abs(box.top + coverage.y - 15 - y) < 1e-8);
+      assert.equal(mask.refresh(390, 844, ratio).redrawn, false);
+      assert.equal(draws.length, 4, 'A stable mask does not rerasterize');
+      x += 0.01;
+      assert.equal(
+        mask.refresh(390, 844, ratio).redrawn,
+        true,
+        'Subpixel caption motion invalidates coverage',
+      );
+    }
+    mask.attach(null);
+    assert.equal(mask.refresh(390, 844, 1), null);
+    mask.attach(story);
+    mask.dispose();
+    assert.equal(mask.refresh(390, 844, 1), null);
+    canvas.getContext = () => null;
+    const unavailable = createTextCut();
+    unavailable.attach(story);
+    assert.equal(unavailable.refresh(390, 844, 1), null);
+  } finally {
+    for (const [name, descriptor] of saved)
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else delete globalThis[name];
+  }
+}
+console.log(
+  'Passed: packed caption mask, framebuffer pixel alignment and cache invalidation; one-lookup depth cut, bounded contact shadow and premultiplied coverage.',
 );
 const { flightLink, readFlightLink } = await import(
   await moduleURL('../lib/flight-links.ts', { './dreamliner-tour': tourURL })
@@ -505,6 +757,15 @@ for (const texture of decoded.getRoot().listTextures())
 const scene = await fs.readFile(
   new URL('../app/dreamliner-scene.tsx', import.meta.url),
   'utf8',
+);
+assert.match(
+  scene,
+  /const ratio = r\.getPixelRatio\(\);[\s\S]*cut\.current\.refresh\(width, height, ratio\)/,
+  'The mask follows renderer quality changes, not the device pixel ratio',
+);
+assert.ok(
+  scene.includes('r.domElement.height - (box.top + box.height) * ratio'),
+  'Caption Y uses the actual integer drawing buffer height',
 );
 assert.ok(
   scene.includes(

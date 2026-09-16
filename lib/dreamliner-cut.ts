@@ -162,7 +162,7 @@ export type CutBox = {
 };
 
 export type TextCut = {
-  /** The glyph mask, white on transparent; null where canvas 2D is missing. */
+  /** Opaque data: red is glyph coverage, green its halo; null without canvas 2D. */
   canvas: HTMLCanvasElement | null;
   /** Follow the `[data-cut]` spans under a story element (null: none). */
   attach: (story: HTMLElement | null) => void;
@@ -170,12 +170,19 @@ export type TextCut = {
    * Re-measure the caption and redraw the mask if its layout changed.
    * Returns where the mask sits, or null when there is nothing to cut.
    */
-  refresh: (width: number, height: number) => CutBox | null;
+  refresh: (width: number, height: number, pixelRatio: number) => CutBox | null;
   dispose: () => void;
 };
 
 // Around the caption's box, so glyph halos and rounding stay inside.
-const PAD = 8;
+const PAD = 14;
+// The caption's shadow on the skin behind it, in CSS px. It is centred, not
+// thrown along the sun: the sun puts the shadow down and to the right of the
+// letters on screen, and the skin behind them is as often above or to the
+// left — a wing sweeping down over the headline, a fuselage running out of
+// the top of the word. An offset shadow would fall on empty sky in exactly
+// those frames, so the penumbra is even and reads as contact from any side.
+const HALO_BLUR = 10;
 /** A computed spacing as a length canvas accepts: `normal` is zero. */
 const length = (value: string) => (value.endsWith('px') ? value : '0px');
 
@@ -204,27 +211,45 @@ export function createTextCut(): TextCut {
     // The caption's entrance slides it up over 0.65 s; measure again after.
     settledAt = next ? performance.now() + 750 : 0;
   };
-  const refresh = (width: number, height: number): CutBox | null => {
+  const refresh = (
+    width: number,
+    height: number,
+    ratio: number,
+  ): CutBox | null => {
     if (!story || !canvas || !context) return null;
     const host = (story.offsetParent as HTMLElement | null) ?? story;
     const frame = host.getBoundingClientRect();
     const box = story.getBoundingClientRect();
-    const ratio = Math.min(2, devicePixelRatio || 1);
-    const left = Math.floor(box.left - frame.left) - PAD;
-    const top = Math.floor(box.top - frame.top) - PAD;
-    const w = Math.ceil(box.width) + PAD * 2;
-    const h = Math.ceil(box.height) + PAD * 2;
-    if (w <= PAD * 2 || h <= PAD * 2) return null;
+    if (box.width <= 0 || box.height <= 0) return null;
+    // Match the renderer, including its reduced quality tiers. Snap the
+    // mask's bounds to framebuffer pixels, retaining each glyph's fractional
+    // position inside them, so the lookup does not resample a second grid.
+    const x = box.left - frame.left,
+      y = box.top - frame.top;
+    const pad = Math.ceil(PAD * ratio);
+    const leftPx = Math.floor(x * ratio) - pad;
+    const topPx = Math.floor(y * ratio) - pad;
+    const pixelWidth = Math.ceil((x + box.width) * ratio) + pad - leftPx;
+    const pixelHeight = Math.ceil((y + box.height) * ratio) + pad - topPx;
+    const left = leftPx / ratio,
+      top = topPx / ratio,
+      w = pixelWidth / ratio,
+      h = pixelHeight / ratio;
     const settled = settledAt && performance.now() > settledAt;
-    const next = `${width}x${height}@${ratio}:${left},${top},${w},${h}:${settled ? 1 : 0}`;
+    const next = `${width}x${height}@${ratio}:${x},${y},${box.width},${box.height}:${settled ? 1 : 0}`;
     const redrawn = next !== key;
     if (redrawn) {
       key = next;
-      canvas.width = Math.round(w * ratio);
-      canvas.height = Math.round(h * ratio);
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      context.clearRect(0, 0, w, h);
-      context.fillStyle = '#fff';
+      // Alpha must stay opaque: canvas premultiplication would otherwise
+      // discard the halo's colour outside the crisp glyph. Add the red
+      // coverage and green shadow independently over black, without a CPU
+      // pixel readback or a second texture fetch in the aircraft shader.
+      context.fillStyle = '#000';
+      context.fillRect(0, 0, w, h);
+      context.globalCompositeOperation = 'lighter';
       context.textBaseline = 'alphabetic';
       const range = document.createRange();
       for (const span of story.querySelectorAll<HTMLElement>('[data-cut]')) {
@@ -245,11 +270,18 @@ export function createTextCut(): TextCut {
         range.selectNodeContents(span);
         const glyph = range.getBoundingClientRect();
         const ascent = context.measureText(text).fontBoundingBoxAscent;
-        context.fillText(
-          text,
-          glyph.left - frame.left - left,
-          glyph.top - frame.top - top + ascent,
-        );
+        const gx = glyph.left - frame.left - left,
+          gy = glyph.top - frame.top - top + ascent;
+        context.shadowColor = 'transparent';
+        context.fillStyle = '#f00';
+        context.fillText(text, gx, gy);
+        // Shadow blur is in canvas pixels, independent of the transform.
+        // Black adds no coverage under `lighter`; only its green shadow
+        // contributes, leaving the red glyph's antialiasing untouched.
+        context.fillStyle = '#000';
+        context.shadowColor = '#0f0';
+        context.shadowBlur = HALO_BLUR * ratio;
+        context.fillText(text, gx, gy);
       }
     }
     return { left, top, width: w, height: h, redrawn };

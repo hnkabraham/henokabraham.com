@@ -496,8 +496,11 @@ export default function DreamlinerScene({
         const shown = shot.visible;
         // The caption's mask follows its layout; the aircraft's shader hides
         // its far side behind the letters while the text is attached.
+        const ratio = r.getPixelRatio();
         const box =
-          shown && cut?.current ? cut.current.refresh(width, height) : null;
+          shown && cut?.current
+            ? cut.current.refresh(width, height, ratio)
+            : null;
         if (box && cut?.current?.canvas) {
           const source = cut.current.canvas;
           // Each chapter's caption is its own size, and the mask canvas is
@@ -514,10 +517,11 @@ export default function DreamlinerScene({
             maskSize = `${source.width}x${source.height}`;
             cutUniforms.mask.value = texture;
           } else if (box.redrawn && maskTexture) maskTexture.needsUpdate = true;
-          const ratio = r.getPixelRatio();
+          // The drawing buffer rounds its size down at fractional ratios;
+          // use its actual height for the mask's top-to-bottom conversion.
           cutUniforms.rect.value = [
             box.left * ratio,
-            (height - box.top - box.height) * ratio,
+            r.domElement.height - (box.top + box.height) * ratio,
             box.width * ratio,
             box.height * ratio,
           ];
