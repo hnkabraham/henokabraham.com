@@ -481,3 +481,17 @@ The page was still at fault in one way: `:root` and `.dark` declare identical va
 What is verified: the scheme resolves to `light only` in WebKit and Chromium with the device in dark appearance, every page colour is unchanged, the contact form and logbook select still render light on light, and the served stylesheet carries both declarations. What cannot be verified here: the bar tint itself, which needs the device. If the bands go light and the bottom edge still reads as a seam, the remaining step is a bottom-edge element for Safari to sample — the fallback is the body's #eeefec, right for the lower sections and a little warm against the cloud deck.
 
 TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `f1028424-10c0-40f0-8e01-6f5cda35ee0e`.
+
+## The sky fades into Safari's bars now
+
+"Still looks kinda harsh, anyway to make this look cleaner transition on top and bottom". Source `fc03035`, following `1f9894e`.
+
+`1f9894e` did its job: the second screenshot shows the page and the bars both light. What remained was the colour gap at each seam, and measuring it named the cause. The status band is #eeefec against a #5d8ac1 photograph — that is the **body's** colour, not the sticky frame's #6398cf, because a `position: sticky` element is not yet stuck at the top of the document and so never gets a say. The toolbar settles on #c4d9e5 against clouds measuring #c8d7e0 to #c6ccd4, which is why only the top read as harsh.
+
+Matching the band exactly is not winnable: it moves with the device, with the bars' own collapse, and with which section happens to be at the top. So the photograph is faded into it at both ends instead — #eeefec at 96% under the bar, gone 150 px into the frame; #c4d9e5 rising over the last 150 px at the bottom. The wash rides `.bay-opening-sky::after`, which sits at `z-index: -2` beneath the transparent canvas at `-1`, so the aircraft, the captions and the depth cut all stay crisp above it. It applies only where those bars exist: `(max-width: 800px) and (display-mode: browser)` — not on a desktop, and not from the Home Screen, where there are no bars to fade into. The frame's sampled colour joins the body's inside the same query, so the band is one tone the whole way down the page rather than switching to sky blue the moment the frame sticks.
+
+`theme-color` follows the same reasoning and changed from #6398cf to #eeefec. One value serves the whole document, so sky blue matched the opening and clashed with all four sections after it; the light tone matches the sections, and the opening now fades into it. The manifest keeps sky blue for the installed app, which has no browser bars to match.
+
+Judged on a composite of the rendered page at his screen's geometry (395 css wide; 55 px band, 721 px page, 84 px toolbar, all measured from the screenshot) with the two band colours pasted where Safari draws them: before, the band butts into mid-blue; after, it runs into a near-white sky that deepens over the header. The tour was checked at 10%, 38%, 62% and 90% on a phone — the tail cut still reads through "Downshift." and the departing aircraft stays crisp against the haze as it leaves the top left corner.
+
+TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `cd103ff0-b7a4-4866-84da-c36ab67ccec7`; the served stylesheet carries the `display-mode: browser` block and the document its new theme colour. The seam itself still needs the device: WebKit here has no browser chrome to tint.
