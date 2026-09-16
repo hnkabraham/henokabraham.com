@@ -7,7 +7,7 @@ export const TOUR_CHAPTERS: { at: number; label: string; phase: BayPhase }[] = [
   { at: 0.37, label: 'Apps', phase: 'roll' },
   { at: 0.59, label: 'Devices', phase: 'liftoff' },
   { at: 0.78, label: 'Flight log', phase: 'bay' },
-  // The last stop sits where the aircraft is crossing the right edge, not
+  // The last stop sits where the aircraft is crossing out of the top, not
   // after it has gone: the rest of the scroll clears the sky and hands over.
   { at: 0.9, label: 'Explore', phase: 'cruise' },
 ];
@@ -59,17 +59,16 @@ export const TOUR_SHOTS: Shot[] = [
 // standstill without a jerk, climbing gently and rolling into a shallow
 // left turn part-way out that shows the flexed wings from above and behind.
 // The turn is held to the end: it is the aircraft's own track, up and to the
-// left of the lens, that carries it out of frame rather than the middle of
-// the sky (where, on a phone, the Golden Gate stands and the two looked set
-// to meet).
+// left of the lens, that carries it out of the top of frame rather than the
+// middle of the sky (where, on a phone, the Golden Gate stands and the two
+// looked set to meet).
 const RANGE = 900;
 const TURN = 0.5;
 const heading = (departure: number) => TURN * ease((departure - 0.26) / 0.5);
 // How far the aim falls behind the aircraft once it is running away, in half
-// frames. Two moves, so it never doubles back through the middle of the sky:
-// it climbs out of the frame's centre first, clear of the Golden Gate that
-// stands below it on a phone, and only then slips away to the left, so that
-// it leaves by the top left corner over the last of the scroll.
+// frames. The climb is the whole of it; the slip only carries the aircraft
+// out of the corner the crossing already left it in, which a tall frame
+// needs and a wide one barely does.
 const climb = (departure: number) => {
   const u = Math.max(0, Math.min(1, (departure - 0.28) / 0.72));
   return 0.5 * u + 0.5 * u * u * u;
@@ -129,22 +128,21 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   //
   // The crossing: as the aircraft turns away the lens stops correcting for
   // the turn, so the aircraft rides up and across to the left of frame and
-  // its horizontal stabilizer sweeps through the chapter caption. Only the
-  // sideways half of that is given back, to leave the chapters that follow
-  // their own composition; the height is kept, because an aircraft that
-  // climbed for the crossing and then sank again read as a dip rather than
-  // a departure. Nothing after the crossing ever takes it lower.
+  // its horizontal stabilizer sweeps through the chapter caption. None of
+  // that is given back. Where the aircraft ends up at the cut is where it
+  // goes on from, and from there it only climbs: coming back down read as a
+  // dip, and coming back across read as the aircraft changing its mind.
   const swing = ease((departure - 0.05) / 0.18);
-  const held = 1 - ease((departure - 0.23) / 0.19);
-  // Then the run-out, on from the height it already has and away to the left.
-  // A narrow frame needs the larger share, since the aircraft sits closer to
-  // its centre there and spans more of it.
+  // So the run-out is the climb, with only enough drift left in it to carry
+  // the aircraft out of the corner it is already in. A narrow frame needs the
+  // larger share of that, since the aircraft spans more of it; a wide one has
+  // the height to leave through the top instead.
   const up =
     swing * mix(0.52, 0.9, portrait) +
-    climb(departure) * mix(0.43, 0.35, portrait);
+    climb(departure) * mix(0.72, 0.3, portrait);
   const right = -(
-    swing * held * mix(0.86, 0.56, portrait) +
-    slip(departure) * mix(1.5, 1.3, portrait)
+    swing * mix(0.86, 0.56, portrait) +
+    slip(departure) * mix(0.35, 0.8, portrait)
   );
   if (right || up) {
     const fx = target[0] - camera[0],

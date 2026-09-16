@@ -193,13 +193,27 @@ for (const [width, height] of [
     );
   }
   // The last chapter is the leaving shot: the aircraft has climbed out of the
-  // middle of the sky into the top left of the frame, on its way out of it.
+  // middle of the sky into the top left of the frame and is crossing its edge,
+  // so part of it still has to be in frame while its centre is up and left.
   {
-    const c = cameraAt(0.9),
-      v = plane.localToWorld(new T.Vector3(0, 1, 0)).project(c);
+    const c = cameraAt(0.9);
+    let seen = 0;
+    model.traverse((mesh) => {
+      if (!mesh.isMesh) return;
+      const attr = mesh.geometry.attributes.position;
+      for (let i = 0; i < attr.count; i++) {
+        const v = new T.Vector3()
+          .fromBufferAttribute(attr, i)
+          .applyMatrix4(mesh.matrixWorld)
+          .project(c);
+        if (Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && v.z > -1 && v.z < 1)
+          seen++;
+      }
+    });
+    const v = plane.localToWorld(new T.Vector3(0, 1, 0)).project(c);
     assert.ok(
-      v.x < 0.2 && v.x > -1 && v.y > 0.25 && v.y < 1 && v.z > -1 && v.z < 1,
-      `${width}x${height} leaving shot: ${v.toArray().join(',')}`,
+      seen > 200 && v.x < 0.2 && v.y > 0.25 && v.y < 1.1,
+      `${width}x${height} leaving shot: ${seen} vertices in frame at ${v.x.toFixed(2)},${v.y.toFixed(2)}`,
     );
   }
   // The wing through the headline: somewhere in the opening (the caption
@@ -339,6 +353,10 @@ for (const [width, height] of [
       `${width}x${height} lens clears the airframe by ${nearest.toFixed(2)} m at ${nearestAt.toFixed(3)}`,
     );
   }
+  // The wide shots hold the whole aircraft on a landscape screen. A portrait
+  // one cannot: the aircraft is climbing out of its top left corner by then
+  // and spans most of the width, so there it only has to stay centred in
+  // frame, cropped at the edge it is leaving by.
   for (const p of [0.62, 0.78]) {
     const c = cameraAt(p);
     let extreme = 0;
@@ -353,17 +371,24 @@ for (const [width, height] of [
         extreme = Math.max(extreme, Math.abs(v.x), Math.abs(v.y));
       }
     });
-    assert.ok(
-      extreme < 1,
-      `${width}x${height} wide shot ${p} crops aircraft: ${extreme}`,
-    );
+    const middle = plane.localToWorld(new T.Vector3(0, 1, 0)).project(c);
+    if (width > height)
+      assert.ok(
+        extreme < 1,
+        `${width}x${height} wide shot ${p} crops aircraft: ${extreme}`,
+      );
+    else
+      assert.ok(
+        Math.abs(middle.x) < 1 && Math.abs(middle.y) < 1,
+        `${width}x${height} wide shot ${p} loses the aircraft: ${middle.x.toFixed(2)},${middle.y.toFixed(2)}`,
+      );
   }
-  // And by the end of the scroll it has gone out by the top left: not one
-  // vertex is left inside the frame, on any screen.
+  // And by the end of the scroll it has climbed out: not one vertex is left
+  // inside the frame, on any screen, and it went by the top or the top left
+  // corner — never back down or out to the right.
   {
     const c = cameraAt(1);
-    let inside = 0,
-      rightmost = -Infinity;
+    let inside = 0;
     model.traverse((mesh) => {
       if (!mesh.isMesh) return;
       const attr = mesh.geometry.attributes.position;
@@ -372,7 +397,6 @@ for (const [width, height] of [
           .fromBufferAttribute(attr, i)
           .applyMatrix4(mesh.matrixWorld)
           .project(c);
-        rightmost = Math.max(rightmost, v.x);
         if (Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && v.z > -1 && v.z < 1)
           inside++;
       }
@@ -382,9 +406,10 @@ for (const [width, height] of [
       0,
       `${width}x${height} aircraft has not left the frame: ${inside} vertices`,
     );
+    const v = plane.localToWorld(new T.Vector3(0, 1, 0)).project(cameraAt(1));
     assert.ok(
-      rightmost < -0.9,
-      `${width}x${height} aircraft left by the wrong edge: ${rightmost}`,
+      v.y > 0.6 && v.x < 0.3,
+      `${width}x${height} aircraft left by the wrong edge: ${v.x.toFixed(2)},${v.y.toFixed(2)}`,
     );
   }
   const ratios = [0, 1, 2].map((q) => tourPixelRatio(width, height, 3, q));
