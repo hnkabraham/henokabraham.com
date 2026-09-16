@@ -148,6 +148,7 @@ for (const [width, height] of [
   // Each named part stays visible, including on narrow screens. The remainder
   // of the aircraft is intentionally cropped during these detail passes.
   for (const [p, part, xyz] of [
+    [0.2, 'exhaust', [-2.9, -1.13, 9.41]],
     [0.37, 'inlet', [-8.65, -1.1, 9.41]],
     [0.59, 'wing', [7, 3, 18]],
     [0.78, 'tail', [28, 8, 0]],
@@ -159,7 +160,64 @@ for (const [width, height] of [
       `${width}x${height} ${String(part)} framing: ${v.toArray().join(',')}`,
     );
   }
-  for (const p of [0.2, 0.97]) {
+  // The aircraft overtakes from behind the viewer: on the first visible
+  // sample nothing of it may already be inside the frame, on any screen (the
+  // landscape phone's frame is the widest), or it would pop into view.
+  {
+    const c = cameraAt(0.026);
+    let inside = 0;
+    model.traverse((mesh) => {
+      if (!mesh.isMesh) return;
+      const attr = mesh.geometry.attributes.position;
+      for (let i = 0; i < attr.count; i++) {
+        const v = new T.Vector3()
+          .fromBufferAttribute(attr, i)
+          .applyMatrix4(mesh.matrixWorld)
+          .project(c);
+        if (Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && v.z > -1 && v.z < 1)
+          inside++;
+      }
+    });
+    assert.equal(
+      inside,
+      0,
+      `${width}x${height} aircraft pops into frame: ${inside} vertices visible at 0.026`,
+    );
+  }
+  // The fly-by passes close. The lens keeps clear of the airframe throughout
+  // the pass and the swing around the wing, with room for the wing flex and
+  // the bob that the sampler cannot see.
+  {
+    let nearest = Infinity,
+      nearestAt = 0;
+    const v = new T.Vector3();
+    for (let p = 0.025; p <= 0.36; p += 0.002) {
+      const shot = sampleDreamlinerTour(p, aspect);
+      plane.position.set(...shot.aircraft);
+      plane.rotation.x = shot.bank;
+      plane.updateMatrixWorld(true);
+      const eye = new T.Vector3(...shot.camera);
+      model.traverse((mesh) => {
+        if (!mesh.isMesh) return;
+        const attr = mesh.geometry.attributes.position;
+        for (let i = 0; i < attr.count; i++) {
+          const d = v
+            .fromBufferAttribute(attr, i)
+            .applyMatrix4(mesh.matrixWorld)
+            .distanceTo(eye);
+          if (d < nearest) {
+            nearest = d;
+            nearestAt = p;
+          }
+        }
+      });
+    }
+    assert.ok(
+      nearest > 2,
+      `${width}x${height} lens clears the airframe by ${nearest.toFixed(2)} m at ${nearestAt.toFixed(3)}`,
+    );
+  }
+  for (const p of [0.285, 0.97]) {
     const c = cameraAt(p);
     let extreme = 0;
     model.traverse((mesh) => {
@@ -202,7 +260,7 @@ assert.ok(
   ).size > 5_000_000,
 );
 console.log(
-  `Passed: ${triangles.toLocaleString()} triangles, ${meshes} meshes; camera continuity and detail framing on five viewports; whole-aircraft wide shots; old chapter links; quality budgets; source credit archive.`,
+  `Passed: ${triangles.toLocaleString()} triangles, ${meshes} meshes; camera continuity, fly-by clearance, no pop-in and detail framing on five viewports; whole-aircraft wide shots; old chapter links; quality budgets; source credit archive.`,
 );
 
 const worker = await fs.readFile(
@@ -228,16 +286,19 @@ for (const [modern, fallback] of [
   ['cruise-sky.avif', 'cruise-sky.jpg'],
   ['cloud-sprite.avif', 'cloud-sprite.png'],
 ]) {
-  const rule = stylesheet.indexOf(`url('/images/${modern}') type('image/avif')`);
+  const rule = stylesheet.indexOf(
+    `url('/images/${modern}') type('image/avif')`,
+  );
   assert.ok(rule > 0, `${modern} is offered through image-set()`);
   assert.ok(
     stylesheet.lastIndexOf(`background: url('/images/${fallback}')`, rule) > 0,
     `${fallback} stays the plain background before the image-set`,
   );
   const [modernSize, fallbackSize] = await Promise.all(
-    [modern, fallback].map(async (name) =>
-      (await fs.stat(new URL(`../public/images/${name}`, import.meta.url)))
-        .size,
+    [modern, fallback].map(
+      async (name) =>
+        (await fs.stat(new URL(`../public/images/${name}`, import.meta.url)))
+          .size,
     ),
   );
   assert.ok(
@@ -270,18 +331,25 @@ const scene = await fs.readFile(
   'utf8',
 );
 assert.ok(
-  scene.includes("width < 800\n          ? '/models/dreamliner-787-9-phone.glb'"),
+  scene.includes(
+    "width < 800\n          ? '/models/dreamliner-787-9-phone.glb'",
+  ),
   'Narrow viewports fetch the phone aircraft',
 );
 // The Golden Gate landmark: a small sprite anchored to the sky photograph
 // inside the poster, on the home page and the 404 page alike.
 const landmark = await Promise.all(
-  ['golden-gate.avif', 'golden-gate.png'].map(async (name) =>
-    (await fs.stat(new URL(`../public/images/${name}`, import.meta.url))).size,
+  ['golden-gate.avif', 'golden-gate.png'].map(
+    async (name) =>
+      (await fs.stat(new URL(`../public/images/${name}`, import.meta.url)))
+        .size,
   ),
 );
 assert.ok(landmark[0] < 40_000, 'The landmark AVIF stays under 40 KB');
-assert.ok(landmark[1] < 160_000, 'The landmark PNG fallback stays under 160 KB');
+assert.ok(
+  landmark[1] < 160_000,
+  'The landmark PNG fallback stays under 160 KB',
+);
 assert.ok(
   stylesheet.includes("url('/images/golden-gate.avif') type('image/avif')"),
   'The landmark is offered as AVIF through image-set()',
@@ -301,7 +369,10 @@ const portrait = await Promise.all(
   ),
 );
 assert.ok(portrait[0] < 45_000, 'The portrait landmark AVIF stays under 45 KB');
-assert.ok(portrait[1] < 200_000, 'The portrait landmark PNG stays under 200 KB');
+assert.ok(
+  portrait[1] < 200_000,
+  'The portrait landmark PNG stays under 200 KB',
+);
 const portraitRule = stylesheet.match(
   /@media \(max-width: 800px\) \{\s*\.bay-landmark \{([^}]*)\}/,
 )?.[1];

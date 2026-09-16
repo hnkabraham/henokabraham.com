@@ -1,14 +1,28 @@
 'use client';
 import { useEffect, useRef, type RefObject } from 'react';
-import type { Material, Mesh, Texture, WebGLRenderer } from 'three';
+import type {
+  Material,
+  Mesh,
+  Sprite,
+  SpriteMaterial,
+  Texture,
+  WebGLRenderer,
+} from 'three';
 import { sceneAsset } from '@/lib/scene-assets';
 import { sampleDreamlinerTour, tourPixelRatio } from '@/lib/dreamliner-tour';
+import {
+  ENGINE_AXIS,
+  EXHAUST_STATION,
+  TURBINE_STATION,
+  glowDisc,
+  turbineRing,
+} from '@/lib/dreamliner-engine';
 import {
   createFlightPerformance,
   createScrollPerformance,
   followFlightProgress,
 } from '@/lib/bay-performance';
-import { addWingFlex } from '@/lib/airframe-flex';
+import { addCoreHeat, addWingFlex } from '@/lib/airframe-flex';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import type { createBayAudio } from '@/lib/bay-audio';
@@ -237,6 +251,7 @@ export default function DreamlinerScene({
       const livery = createLiveryTexture();
       if (livery) textures.add(livery);
       const flex = { value: 0.45 };
+      const heat = { value: 1 };
       const wingDepth = new T.MeshDepthMaterial({
         depthPacking: T.RGBADepthPacking,
       });
@@ -275,6 +290,7 @@ export default function DreamlinerScene({
           finish.emissive.set(0xff1705);
           finish.emissiveIntensity = 0.3;
         }
+        if (original.name === 'engine-interior') addCoreHeat(finish, heat);
         mesh.material = finish;
         materials.add(finish);
         mesh.castShadow = true;
@@ -298,6 +314,52 @@ export default function DreamlinerScene({
         gltf.scene.add(pivot);
         delete pivot.userData.mesh;
       }
+      // The tour opens looking up the port engine's tailpipe, and the GLB
+      // has nothing there: its turbine stages were pruned with the rest of
+      // the simulator-only interior. Each core nozzle gets a ring of turbine
+      // blades on the fan's own shaft, hot metal against the glowing duct
+      // that `addCoreHeat` paints, and a halo of exhaust glow at the lip
+      // that only shows from astern. All unlit and untouched by the tone
+      // mapper, so the orange stays orange.
+      const turbineGeometry = turbineRing(T);
+      geometries.add(turbineGeometry);
+      const turbineMaterial = new T.MeshBasicMaterial({
+        vertexColors: true,
+        side: T.DoubleSide,
+        toneMapped: false,
+      });
+      materials.add(turbineMaterial);
+      const halo = glowDisc(T);
+      textures.add(halo);
+      const turbines: import('three').Group[] = [];
+      const glows: Sprite[] = [];
+      for (const side of [1, -1]) {
+        const turbine = new T.Group();
+        turbine.position.set(
+          TURBINE_STATION,
+          ENGINE_AXIS.y,
+          side * ENGINE_AXIS.z,
+        );
+        turbine.add(new T.Mesh(turbineGeometry, turbineMaterial));
+        gltf.scene.add(turbine);
+        turbines.push(turbine);
+        const glowMaterial = new T.SpriteMaterial({
+          map: halo,
+          color: 0xff6a1c,
+          transparent: true,
+          opacity: 0,
+          blending: T.AdditiveBlending,
+          depthWrite: false,
+          toneMapped: false,
+        });
+        materials.add(glowMaterial);
+        const glow = new T.Sprite(glowMaterial);
+        glow.position.set(EXHAUST_STATION, ENGINE_AXIS.y, side * ENGINE_AXIS.z);
+        glow.scale.set(2.1, 2.1, 1);
+        gltf.scene.add(glow);
+        glows.push(glow);
+      }
+      const toGlow = new T.Vector3();
       aircraft.add(gltf.scene);
       // Synchronous warm-up avoids an uncancellable driver poll after unmount.
       r.compile(scene, camera);
@@ -339,14 +401,33 @@ export default function DreamlinerScene({
         aircraft.position.y += Math.sin(elapsed * 0.65) * 0.08;
         aircraft.rotation.x = shot.bank + Math.sin(elapsed * 0.4) * 0.003;
         flex.value = 0.45 + Math.sin(elapsed * 0.8) * 0.075;
-        for (const fan of fans) fan.rotation.x = (elapsed * 11) % (Math.PI * 2);
+        // The low-pressure turbine drives the fan on one shaft, so they turn together.
+        const spin = (elapsed * 11) % (Math.PI * 2);
+        for (const fan of fans) fan.rotation.x = spin;
+        for (const turbine of turbines) turbine.rotation.x = spin;
+        heat.value =
+          1.05 +
+          Math.sin(elapsed * 31) * 0.07 +
+          Math.sin(elapsed * 17.3) * 0.05;
+        for (const glow of glows) {
+          // The halo is only convincing looking up the tailpipe: fade it by
+          // how far the lens sits off the exhaust axis (+X is astern).
+          glow.getWorldPosition(toGlow).sub(camera.position);
+          const astern = -toGlow.x / (toGlow.length() || 1);
+          (glow.material as SpriteMaterial).opacity =
+            Math.max(0, Math.min(1, (astern - 0.55) / 0.3)) * 0.38 * heat.value;
+        }
         sun.target.position.copy(aircraft.position);
         sun.position.copy(aircraft.position).add(sunlightOffset);
         const shown = shot.visible;
         // The opening remains CSS-only; clear once when scrolling back to it.
         if (shown || lastShown) r.render(scene, camera);
         lastShown = shown;
-        audio.current?.update(current < 0.29 ? current : 0.4, shown);
+        // The ambience swells as the aircraft overtakes and settles to a
+        // cruise hum once it has pulled ahead (the exhaust passes the lens
+        // with the aircraft some 14 m short of its resting place).
+        const pass = Math.exp(-(((shot.aircraft[0] - 14) / 12) ** 2));
+        audio.current?.update(0.12 + 0.18 * (0.45 + 0.55 * pass), shown);
         if (shown) {
           const sample = performanceControl.sample(now);
           if (sample?.changed) {

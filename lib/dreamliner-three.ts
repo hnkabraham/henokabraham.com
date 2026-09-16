@@ -2,12 +2,19 @@
 // module, not the 'three' namespace, so the bundler ships these classes and
 // what the loaders need rather than the whole library.
 export {
+  AdditiveBlending,
   AgXToneMapping,
+  BufferAttribute,
+  BufferGeometry,
   DataTexture,
   DirectionalLight,
+  DoubleSide,
   EquirectangularReflectionMapping,
   Group,
   HemisphereLight,
+  LinearFilter,
+  Mesh,
+  MeshBasicMaterial,
   MeshDepthMaterial,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
@@ -17,6 +24,8 @@ export {
   RGBADepthPacking,
   RGBAFormat,
   Scene,
+  Sprite,
+  SpriteMaterial,
   SRGBColorSpace,
   Texture,
   Vector3,

@@ -119,6 +119,70 @@ export function addSkinDetail(material: Material) {
   });
 }
 
+/**
+ * The hot section of each engine, drawn from model-space coordinates on the
+ * engine interior: the core nozzle and exhaust plug lose their chrome and
+ * glow from a deep red inside the duct to orange at the lip and the plug's
+ * base, cooling toward the plug's tip. `heat` scales the radiance per
+ * frame, so the glow can breathe. Composes with the other patches.
+ */
+export function addCoreHeat(material: Material, heat: { value: number }) {
+  addShaderPatch(material, 'core-heat-v1', (shader) => {
+    shader.uniforms.coreHeat = heat;
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vCorePoint;',
+      )
+      .replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nvCorePoint = position;',
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+      uniform float coreHeat;
+      varying vec3 vCorePoint;
+      float coreNozzle = 0.0;
+      float coreHot = 0.0;`,
+      )
+      .replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>
+      {
+        vec3 p = vCorePoint;
+        float r = length(vec2(p.y + 1.12702, abs(p.z) - 9.41336));
+        // The nozzle wall, the last stage's annulus and the plug, aft of
+        // the turbine; nothing of the fan duct around them.
+        coreNozzle = (1.0 - smoothstep(0.86, 0.98, r)) * smoothstep(-4.2, -3.4, p.x);
+        coreHot = coreNozzle * (1.0 - smoothstep(-2.0, -0.9, p.x));
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.07, 0.04, 0.03), coreNozzle * 0.85);
+      }`,
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+      roughnessFactor = mix(roughnessFactor, 0.72, coreNozzle);`,
+      )
+      .replace(
+        '#include <metalnessmap_fragment>',
+        `#include <metalnessmap_fragment>
+      metalnessFactor = mix(metalnessFactor, 0.25, coreNozzle);`,
+      )
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+      {
+        float x = vCorePoint.x;
+        float lip = smoothstep(-3.5, -2.5, x) * (1.0 - smoothstep(-2.3, -1.4, x));
+        vec3 hot = mix(vec3(0.42, 0.04, 0.01), vec3(1.0, 0.3, 0.05), lip);
+        totalEmissiveRadiance += hot * coreHot * coreHeat;
+      }`,
+      );
+  });
+}
+
 /** Cloud cover over the aircraft's position, applied to the sun only. */
 export function addCloudShade(material: Material, cloud: { value: number }) {
   addShaderPatch(material, 'cloud-shade-v1', (shader) => {
