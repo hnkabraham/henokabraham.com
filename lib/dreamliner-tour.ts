@@ -42,9 +42,13 @@ export const TOUR_SHOTS: Shot[] = [
   { at: 0.24, camera: [18, -2.4, 14.2], target: [-3, 1, 9.4], fov: 34 },
   // Then the aircraft flies on and the lens stays behind, rising out of its
   // wake to look down on the flexed wings from above and behind, and
-  // tightening a little as it climbs away. The aim follows the aircraft
-  // itself (the departure below); these targets only anchor the portrait
-  // pull-back.
+  // tightening a little as it climbs away. That rise is worth spending while
+  // the aircraft is still near: at 25 m a metre of lens is 2 degrees of view,
+  // at 300 m it is a fifth of one, so the climb out of the wake is flown by
+  // a third of the scroll and what follows is a drift. The aim follows the
+  // aircraft itself (the departure below); these targets only anchor the
+  // portrait pull-back.
+  { at: 0.33, camera: [23, 8, 20.5], target: [-3, -0.4, 9.4], fov: 33 },
   { at: 0.45, camera: [24, 9, 22], target: [-3, -1.3, 9.4], fov: 32 },
   { at: 0.62, camera: [28, 12, 24], target: [-3, -1.3, 9.4], fov: 30 },
   { at: 1, camera: [36, 18, 30], target: [-3, -1.3, 9.4], fov: 24 },

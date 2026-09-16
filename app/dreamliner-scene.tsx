@@ -421,9 +421,36 @@ export default function DreamlinerScene({
         current = followFlightProgress(current, progress.current, dt);
         const shot = sampleDreamlinerTour(current, width / height);
         elapsed += dt;
-        camera.position.set(...shot.camera);
-        camera.lookAt(...shot.target);
-        camera.fov = shot.fov;
+        // A lens that is carried rather than bolted down. Four slow drifts on
+        // frequencies that never line up, so the frame never quite repeats:
+        // the aim wanders by an angle, which reads whether the wing is
+        // overhead or the aircraft is half a mile out; the lens itself by a
+        // few centimetres, which only reads while it is near; and the focal
+        // length breathes a fraction of a degree. All of it is well under the
+        // depth cut's own softness, so the seams through the words hold.
+        const sway = (rate: number, phase: number) =>
+          Math.sin(elapsed * rate + phase);
+        const yaw = sway(0.53, 0) * 0.62 + sway(0.91, 2.2) * 0.28;
+        const pitch = sway(0.47, 1.4) * 0.58 + sway(0.79, 4.1) * 0.24;
+        camera.position.set(
+          shot.camera[0] + sway(0.41, 3.3) * 0.09,
+          shot.camera[1] + pitch * 0.11,
+          shot.camera[2] + yaw * 0.13,
+        );
+        // An angle, so the wander is the same size on screen at any range.
+        const reach =
+          Math.hypot(
+            shot.target[0] - shot.camera[0],
+            shot.target[1] - shot.camera[1],
+            shot.target[2] - shot.camera[2],
+          ) * 0.008;
+        camera.lookAt(
+          shot.target[0] + yaw * reach * 0.4,
+          shot.target[1] + pitch * reach,
+          shot.target[2] + yaw * reach,
+        );
+        camera.rotateZ(sway(0.37, 5.2) * 0.0026);
+        camera.fov = shot.fov * (1 + sway(0.29, 0.7) * 0.005);
         camera.setViewOffset(
           width,
           height,
