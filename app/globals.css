@@ -64,6 +64,14 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 24px;
+  /* There is one theme, and it is light: `:root` and `.dark` declare the same
+     variables. Saying so keeps a phone in dark mode from framing a light page
+     in dark browser chrome — Safari tints its bars from the page's own edges
+     instead, and Chrome on Android stops auto-darkening the page. `only`
+     states it outright; the plain value is there for anything that cannot
+     parse the keyword. */
+  color-scheme: light;
+  color-scheme: only light;
   /* Sky behind any overscroll, no rubber band on the opening, and no text
      inflation when a phone turns to landscape. */
   background: #6398cf;
