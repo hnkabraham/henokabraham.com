@@ -129,18 +129,21 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   //
   // The crossing: as the aircraft turns away the lens stops correcting for
   // the turn, so the aircraft rides up and across to the left of frame and
-  // its horizontal stabilizer sweeps through the chapter caption; the lens
-  // then catches it again, to leave the chapters their own composition.
-  const crossing =
-    ease((departure - 0.05) / 0.18) * (1 - ease((departure - 0.23) / 0.19));
-  // Then the run-out, up first and away to the left after. A narrow frame
-  // needs the larger share, since the aircraft sits closer to its centre
-  // there and spans more of it.
+  // its horizontal stabilizer sweeps through the chapter caption. Only the
+  // sideways half of that is given back, to leave the chapters that follow
+  // their own composition; the height is kept, because an aircraft that
+  // climbed for the crossing and then sank again read as a dip rather than
+  // a departure. Nothing after the crossing ever takes it lower.
+  const swing = ease((departure - 0.05) / 0.18);
+  const held = 1 - ease((departure - 0.23) / 0.19);
+  // Then the run-out, on from the height it already has and away to the left.
+  // A narrow frame needs the larger share, since the aircraft sits closer to
+  // its centre there and spans more of it.
   const up =
-    crossing * mix(0.52, 0.9, portrait) +
-    climb(departure) * mix(0.9, 1.5, portrait);
+    swing * mix(0.52, 0.9, portrait) +
+    climb(departure) * mix(0.43, 0.35, portrait);
   const right = -(
-    crossing * mix(0.86, 0.56, portrait) +
+    swing * held * mix(0.86, 0.56, portrait) +
     slip(departure) * mix(1.5, 1.3, portrait)
   );
   if (right || up) {

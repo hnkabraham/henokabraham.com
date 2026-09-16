@@ -167,6 +167,31 @@ for (const [width, height] of [
       `${width}x${height} ${String(part)} framing: ${v.toArray().join(',')}`,
     );
   }
+  // Once the crossing has taken the aircraft up over the caption it never
+  // comes back down the frame: climbing for the tail cut and then sinking
+  // again read as a dip rather than a departure.
+  {
+    // NDC y counts up, so a frame that never dips never falls back from the
+    // highest it has reached. A hundredth of that is half a percent of the
+    // height, a pixel or two: the swing this replaced gave back a third of it.
+    let peak = -Infinity,
+      drop = 0,
+      droppedAt = 0;
+    for (let p = 0.4; p <= 1.0001; p += 0.005) {
+      // cameraAt also poses the aircraft, so it has to run first.
+      const c = cameraAt(p);
+      const v = plane.localToWorld(new T.Vector3(0, 1, 0)).project(c);
+      if (peak - v.y > drop) {
+        drop = peak - v.y;
+        droppedAt = p;
+      }
+      peak = Math.max(peak, v.y);
+    }
+    assert.ok(
+      drop < 0.01,
+      `${width}x${height} aircraft dips ${drop.toFixed(3)} of a half frame at ${droppedAt.toFixed(2)}`,
+    );
+  }
   // The last chapter is the leaving shot: the aircraft has climbed out of the
   // middle of the sky into the top left of the frame, on its way out of it.
   {
@@ -235,7 +260,7 @@ for (const [width, height] of [
       const { cutDepth } = sampleDreamlinerTour(p, aspect);
       const tail = -plane
         .localToWorld(new T.Vector3(31, 2.6, 0))
-        .applyMatrix4(cameraAt(p).matrixWorldInverse).z;
+        .applyMatrix4(c.matrixWorldInverse).z;
       if (cutDepth - tail > 1 && cutDepth - tail < 8)
         reached = { p, x, y, cutDepth, tail };
     }
