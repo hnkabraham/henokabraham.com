@@ -6,6 +6,7 @@ export {
   AgXToneMapping,
   BufferAttribute,
   BufferGeometry,
+  CanvasTexture,
   DataTexture,
   DirectionalLight,
   DoubleSide,

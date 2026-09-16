@@ -85,7 +85,7 @@ function toggleImmersive() {
   } else root.webkitRequestFullscreen?.();
 }
 import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
-import { createWingWake, type WingWake } from '@/lib/dreamliner-wake';
+import { createTextCut, type TextCut } from '@/lib/dreamliner-cut';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
 import { replaceFlightLink } from '@/lib/flight-links';
@@ -111,26 +111,23 @@ const copy: Record<BayPhase, [string, string, string]> = {
   cruise: ['04 / KEEP EXPLORING', 'Made with\ncuriosity.', 'Explore the rest.'],
 };
 
-// The story text in pieces the wing's wake can move: every word its own
-// box, and in the headline every letter. Spaces and line breaks stay as
-// text, so the lines wrap as they did. Screen readers get the plain text
-// through the heading's label rather than a letter at a time.
-function wakeText(text: string, letters: boolean) {
+// The story text a letter to a box, so the renderer can rasterize each
+// glyph where the page draws it and let the wing pass through the words.
+// Spaces and line breaks stay as text, so the lines wrap as they did.
+// Screen readers get the plain text (the heading's label, a hidden copy
+// in the paragraphs) rather than a letter at a time.
+function cutText(text: string) {
   return text.split('\n').map((line, l) => (
     <span key={l}>
       {l > 0 && '\n'}
       {line.split(' ').map((word, w) => (
-        <span key={w}>
+        <span key={w} className="cut-word">
           {w > 0 && ' '}
-          <span className="wake-word" data-wake={letters ? undefined : ''}>
-            {letters
-              ? Array.from(word).map((letter, i) => (
-                  <span key={i} data-wake="">
-                    {letter}
-                  </span>
-                ))
-              : word}
-          </span>
+          {Array.from(word).map((letter, i) => (
+            <span key={i} data-cut="">
+              {letter}
+            </span>
+          ))}
         </span>
       ))}
     </span>
@@ -167,7 +164,7 @@ export default function ScrollDeparture({
   const progress = useRef(0);
   const reveal = useRef(0);
   const audio = useRef<ReturnType<typeof createBayAudio> | null>(null);
-  const wake = useRef<WingWake | null>(null);
+  const cut = useRef<TextCut | null>(null);
   const [phase, setPhase] = useState<BayPhase>('preflight');
   const [rendererStatus, setStatus] = useState<
     'loading' | 'ready' | 'unavailable'
@@ -218,16 +215,18 @@ export default function ScrollDeparture({
   }, [entry, reducedMotion]);
   useEffect(() => () => audio.current?.dispose(), []);
   useEffect(() => {
-    const springs = createWingWake();
-    wake.current = springs;
+    const mask = createTextCut();
+    cut.current = mask;
     return () => {
-      springs.dispose();
-      wake.current = null;
+      mask.dispose();
+      cut.current = null;
     };
   }, []);
-  // The story remounts at each chapter (its key), so its letters do too.
+  // The story remounts at each chapter (its key). Only the opening's
+  // caption hangs in the aircraft's path; the chapter captions sit above
+  // the renderer as before.
   useEffect(() => {
-    wake.current?.attach(story.current);
+    cut.current?.attach(phase === 'preflight' ? story.current : null);
   }, [phase]);
   useEffect(() => {
     const section = root.current;
@@ -333,7 +332,7 @@ export default function ScrollDeparture({
               reducedMotion={reducedMotion}
               paused={paused}
               audio={audio}
-              wake={wake}
+              cut={cut}
               onStatus={(value) => {
                 setStatus(value);
                 if (value === 'ready')
@@ -367,11 +366,17 @@ export default function ScrollDeparture({
           Skip to projects <ArrowUpRight size={15} />
         </a>
         <div className="bay-story" key={phase} ref={story}>
-          <p className="eyebrow">{wakeText(eyebrow, false)}</p>
+          <p className="eyebrow">
+            <span className="sr-only">{eyebrow}</span>
+            <span aria-hidden="true">{cutText(eyebrow)}</span>
+          </p>
           <h1 id="welcome-title" aria-label={heading.replace('\n', ' ')}>
-            <span aria-hidden="true">{wakeText(heading, true)}</span>
+            <span aria-hidden="true">{cutText(heading)}</span>
           </h1>
-          <p className="bay-description">{wakeText(description, false)}</p>
+          <p className="bay-description">
+            <span className="sr-only">{description}</span>
+            <span aria-hidden="true">{cutText(description)}</span>
+          </p>
           {phase === 'preflight' && (
             <p className="bay-start-hint">
               <ArrowDown size={15} /> Scroll to explore

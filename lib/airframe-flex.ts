@@ -223,3 +223,53 @@ export function addCloudShade(material: Material, cloud: { value: number }) {
       );
   });
 }
+
+/**
+ * The caption's plane. Where a glyph of the caption covers a fragment that
+ * lies beyond `depth` metres from the lens, the fragment is blended out so
+ * the page's own text shows through the canvas; nearer fragments draw over
+ * the letters as usual. The mask is sampled by framebuffer position within
+ * `rect` (x, y from the bottom left, width, height, in framebuffer pixels),
+ * so nothing outside the caption's box pays for the lookup. Opaque
+ * materials write without blending, so the colour is premultiplied here for
+ * the compositor; do not add this to a transparent material.
+ */
+export function addDepthCut(
+  material: Material,
+  cut: {
+    mask: { value: unknown };
+    rect: { value: number[] };
+    depth: { value: number };
+    on: { value: number };
+  },
+) {
+  addShaderPatch(material, 'depth-cut-v1', (shader) => {
+    shader.uniforms.cutMask = cut.mask;
+    shader.uniforms.cutRect = cut.rect;
+    shader.uniforms.cutDepth = cut.depth;
+    shader.uniforms.cutOn = cut.on;
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+        uniform sampler2D cutMask;
+        uniform vec4 cutRect;
+        uniform float cutDepth;
+        uniform float cutOn;`,
+      )
+      .replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>
+        if (cutOn > 0.5) {
+          vec2 cutUv = (gl_FragCoord.xy - cutRect.xy) / cutRect.zw;
+          if (all(greaterThan(cutUv, vec2(0.0))) && all(lessThan(cutUv, vec2(1.0)))) {
+            float cover = texture2D(cutMask, cutUv).a;
+            float behind = smoothstep(cutDepth - 0.4, cutDepth + 0.4, vViewPosition.z);
+            float keep = 1.0 - cover * behind;
+            gl_FragColor.rgb *= keep;
+            gl_FragColor.a *= keep;
+          }
+        }`,
+      );
+  });
+}

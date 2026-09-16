@@ -36,8 +36,8 @@ export const TOUR_SHOTS: Shot[] = [
   // viewer, its flank and wing sweeping past, and pulls ahead into a view
   // straight up the tailpipe of that engine; the lens creeps in behind the
   // exhaust through the hold.
-  { at: 0, camera: [21, -3.5, 16.5], target: [-3, -1.3, 9.4], fov: 34 },
-  { at: 0.24, camera: [17, -2.9, 14.2], target: [-3, -1.3, 9.4], fov: 34 },
+  { at: 0, camera: [21, -3.5, 16.5], target: [-3, 1, 9.4], fov: 34 },
+  { at: 0.24, camera: [18, -2.4, 14.2], target: [-3, 1, 9.4], fov: 34 },
   // Then the aircraft flies on and the lens stays behind, rising out of its
   // wake to look down on the flexed wings from above and behind, and
   // tightening a little as it climbs away. The aim follows the aircraft
@@ -98,7 +98,7 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   const aim = ease((p - 0.24) / 0.14);
   if (p > 0.24)
     target = aircraft.map(
-      (v, i) => v + mix([-3, -1.3, 9.4][i], [0, 1.5, -4][i], aim),
+      (v, i) => v + mix([-3, 1, 9.4][i], [0, 1.5, -4][i], aim),
     ) as TourPoint;
   // The bank leads the turn in and trails it out, as a coordinated turn does.
   const bank =
@@ -117,6 +117,10 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     offsetX: mix(-0.18, 0, portrait),
     offsetY: mix(-0.035, -0.12, portrait),
     bank,
+    // How far in front of the lens the opening caption hangs: the wing
+    // passes over the headline 12 to 17 m out on a landscape screen and a
+    // little further out on a phone, and the seam should fall inside it.
+    cutDepth: mix(14, 15.5, portrait),
     visible: p > 0.025,
     phase: tourPhase(p),
   };

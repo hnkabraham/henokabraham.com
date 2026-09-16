@@ -35,7 +35,7 @@ const card = {
   url: '/images/og-card.jpg',
   width: 1200,
   height: 630,
-  alt: 'Looking up the tailpipe of a Boeing 787-9 engine as it passes above a cloud deck',
+  alt: 'A Boeing 787-9 passing above a cloud deck, its wing slicing between the two lines of the headline',
 };
 export const metadata: Metadata = {
   metadataBase: new URL('https://henokabraham.com'),

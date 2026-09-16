@@ -63,12 +63,12 @@ const imports = {
   '@/lib/scene-assets': uri('export const sceneAsset=p=>p;'),
   '@/lib/dreamliner-tour': await pure('../lib/dreamliner-tour.ts'),
   '@/lib/dreamliner-engine': engine,
-  '@/lib/dreamliner-wake': await pure('../lib/dreamliner-wake.ts', {
+  '@/lib/dreamliner-cut': await pure('../lib/dreamliner-cut.ts', {
     './dreamliner-engine': engine,
   }),
   '@/lib/bay-performance': await pure('../lib/bay-performance.ts'),
   '@/lib/airframe-flex': uri(
-    'export const addWingFlex=()=>{};export const addEngineFinish=()=>{};',
+    'export const addWingFlex=()=>{};export const addEngineFinish=()=>{};export const addDepthCut=()=>{};',
   ),
   '@/lib/bay-livery': uri(
     'export const addLivery=()=>{};export const createLiveryTexture=()=>null;',
@@ -111,6 +111,7 @@ install(
 );
 install('document', {
   hidden: false,
+  createElement: () => ({ getContext: () => null }),
   addEventListener: documentEvents.addEventListener.bind(documentEvents),
   removeEventListener: documentEvents.removeEventListener.bind(documentEvents),
 });
