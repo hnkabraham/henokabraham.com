@@ -43,103 +43,6 @@ function floorTexture(T: typeof import('@/lib/garage-three')) {
   return texture;
 }
 
-// A stretch of asphalt the car sits on, drawn on a canvas rather than
-// shipped as a photo -- same "generate it, don't fetch it" reasoning as
-// floorTexture above. The canvas's horizontal axis maps to the plane's
-// width (the car's X) and its vertical axis to the plane's length (the
-// car's Z, receding toward the horizon), so the lane lines below are drawn
-// as straight rectangles once rather than needing a seamless tiling
-// pattern; real 3D perspective foreshortens them correctly on its own.
-const ROAD_WIDTH = 40;
-const ROAD_LENGTH = 80;
-const ROAD_PX_PER_METER = 20;
-
-function roadTexture(T: typeof import('@/lib/garage-three')) {
-  const width = ROAD_WIDTH * ROAD_PX_PER_METER;
-  const height = ROAD_LENGTH * ROAD_PX_PER_METER;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  const base = ctx.createLinearGradient(0, 0, 0, height);
-  base.addColorStop(0, '#3b3e43');
-  base.addColorStop(1, '#292b2f');
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, width, height);
-  // Aggregate speckle: a scatter of small flecks reads as asphalt grain
-  // much faster than a per-pixel noise pass, and looks more like real
-  // aggregate than uniform static would.
-  for (let i = 0; i < 6000; i++) {
-    const gray = 40 + Math.random() * 60;
-    ctx.fillStyle = `rgba(${gray},${gray},${gray + 4},${0.15 + Math.random() * 0.2})`;
-    const size = 1 + Math.random() * 2;
-    ctx.fillRect(Math.random() * width, Math.random() * height, size, size);
-  }
-  // Faint tire-wear paths, a shade darker than the surrounding asphalt.
-  ctx.globalAlpha = 0.16;
-  ctx.fillStyle = '#000000';
-  const trackOffset = 0.85 * ROAD_PX_PER_METER;
-  const trackWidth = 0.5 * ROAD_PX_PER_METER;
-  for (const sign of [-1, 1]) {
-    ctx.fillRect(
-      width / 2 + sign * trackOffset - trackWidth / 2,
-      0,
-      trackWidth,
-      height,
-    );
-  }
-  ctx.globalAlpha = 1;
-  // Sun-faded lane edge lines, a car's width apart plus a little clearance.
-  ctx.fillStyle = '#c9c9c0';
-  const laneHalfWidth = 1.9 * ROAD_PX_PER_METER;
-  const lineWidth = 0.18 * ROAD_PX_PER_METER;
-  for (const sign of [-1, 1]) {
-    ctx.fillRect(
-      width / 2 + sign * laneHalfWidth - lineWidth / 2,
-      0,
-      lineWidth,
-      height,
-    );
-  }
-  const texture = new T.Texture(canvas);
-  texture.needsUpdate = true;
-  texture.colorSpace = T.SRGBColorSpace;
-  return texture;
-}
-
-// The visible backdrop, drawn on a canvas rather than sampled from the real
-// daylight HDR used for reflections below. That HDR is a real (if tiny,
-// 512x256) sky dome, but from this camera's low, ground-level vantage --
-// framing a parked car, not looking up at the sky -- the only slice of it
-// ever in view is the hazy band right at the horizon, which reads as flat
-// gray regardless of how the background blur/intensity are tuned; the
-// actual blue only exists higher up in the dome than this camera ever
-// points. A dedicated gradient, in the same blue the aircraft tour's own
-// sky photo uses, reliably reads as sky instead. It doesn't rotate with
-// the camera (a plain 2D texture, not an environment map), but the car
-// only orbits at a fairly constant, shallow elevation, so a static gradient
-// behind it is indistinguishable from a real one within that range.
-function skyTexture(T: typeof import('@/lib/garage-three')) {
-  const width = 2;
-  const height = 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, '#5b8fc9');
-  gradient.addColorStop(0.55, '#9cc7e9');
-  gradient.addColorStop(1, '#dde8f2');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
-  const texture = new T.Texture(canvas);
-  texture.needsUpdate = true;
-  texture.colorSpace = T.SRGBColorSpace;
-  return texture;
-}
-
 const fetchAsset = async (path: string, signal: AbortSignal) => {
   const response = await fetch(sceneAsset(path), {
     signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),
@@ -217,6 +120,7 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       if (disposed) return;
       const r = (renderer = new T.WebGLRenderer({
         antialias: true,
+        alpha: true,
         powerPreference: 'low-power',
       }));
       r.setClearColor(0x000000, 0);
@@ -232,12 +136,11 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       cleanups.push(() =>
         r.domElement.removeEventListener('webglcontextlost', lost),
       );
+      // No scene.background: the canvas clears to transparent (the
+      // renderer's `alpha: true` plus the clear color's zero alpha below),
+      // so the car sits directly on the page/frame behind it rather than
+      // inside a modeled sky or studio backdrop.
       const scene = new T.Scene();
-      const sky = skyTexture(T);
-      if (sky) {
-        scene.background = sky;
-        textures.add(sky);
-      }
       const camera = new T.PerspectiveCamera(36, 1, 0.1, 50);
       camera.position.set(4.6, 1.9, 5.4);
       scene.add(new T.HemisphereLight(0xdfe6ea, 0x33363c, 0.9));
@@ -248,8 +151,8 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       fill.position.set(6, 3, -6);
       scene.add(fill);
       // A cool rim/kicker light from behind separates the car's silhouette
-      // from the (now visible, see below) sky backdrop -- without it the
-      // shaded side of the body reads as flat as the void it replaced.
+      // from whatever sits behind the transparent canvas -- without it the
+      // shaded side of the body reads as flat as the void it's floating in.
       const rim = new T.DirectionalLight(0xcfe3ff, 1.1);
       rim.position.set(-1.5, 5, -7);
       scene.add(rim);
@@ -344,8 +247,8 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
           const pmrem = new T.PMREMGenerator(r);
           const environment = pmrem.fromEquirectangular(texture);
           // The same daylight dome the aircraft tour uses, sampled for
-          // reflections only -- see skyTexture above for why the visible
-          // backdrop is a separate, dedicated gradient rather than this.
+          // reflections only -- there's no visible backdrop for it to
+          // double as; scene.background is left unset (see above).
           scene.environment = environment.texture;
           scene.environmentIntensity = 0.6;
           texture.dispose();
@@ -404,32 +307,12 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
         mesh.material = finish;
         materials.add(finish);
       });
-      const road = roadTexture(T);
-      if (road) {
-        // The speckled grain aliases into a moire pattern at the shallow
-        // viewing angles a ground plane is seen at without this -- the
-        // GLB's own textures don't need it (the car's never seen edge-on).
-        road.anisotropy = r.capabilities.getMaxAnisotropy();
-        const asphalt = new T.Mesh(
-          new T.PlaneGeometry(ROAD_WIDTH, ROAD_LENGTH),
-          new T.MeshStandardMaterial({
-            map: road,
-            roughness: 0.95,
-            metalness: 0.02,
-          }),
-        );
-        asphalt.rotation.x = -Math.PI / 2;
-        scene.add(asphalt);
-        geometries.add(asphalt.geometry);
-        materials.add(asphalt.material);
-        textures.add(road);
-      }
       const floor = floorTexture(T);
       if (floor) {
-        // A soft contact shadow layered just above the asphalt, not a
-        // stand-in for the ground itself now that the road plane above is
-        // the actual surface -- without it the car reads as resting near
-        // the road rather than on it.
+        // A soft contact shadow floating on its own -- there's no road or
+        // sky plane to layer it above now, just this and the transparent
+        // canvas -- so the car reads as resting on something instead of
+        // hovering with no grounding at all.
         const ground = new T.Mesh(
           new T.CircleGeometry(5.5, 48),
           new T.MeshBasicMaterial({
