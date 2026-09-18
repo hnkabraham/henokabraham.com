@@ -55,10 +55,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `a7e02827-9d66-4716-bd8c-75a269d23694`
+- Cloudflare version: `c92c9e19-9d33-4de6-b8db-91efc74adf06`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to my inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: transparent airline logos with representative brand colors and clear spacing, source `035e597` (September 12, 2026); scene assets `c7512aa4f3f205f9`.
-- Current validation: TypeScript, summary/asset/privacy checks, the production build and deployment passed. The live homepage returns HTTP 200 with all 14 airline logos; the stylesheet and all 14 logo files match local SHA-256 hashes. American’s three-color SVG and the isolated Frontier mark were inspected as standalone assets. Airline totals, country order and individual-flight exclusions remain unchanged. This release did not include browser QA.
+- Current release: wing-driven opening text wipe and stable URLs during scrolling, source `7067278` (September 17, 2026).
+- Current validation: TypeScript, complete-wipe coverage on six viewport sizes, Dreamliner geometry/lifecycle, performance safeguards, chapter-link round trips, Cloudflare build and dry run passed. Local desktop (1589 × 952) and phone-size (390 × 844) browser checks verified the wipe and chapter reveal; the old liftoff link still opens Devices. The live homepage returns HTTP 200; both changed application chunks and both stylesheets match local SHA-256 hashes.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
 ## Zone settings that affect the opening
@@ -523,3 +523,11 @@ The wordmark was the other half of the report, and not a tint problem at all. At
 Known cost, and easy to undo on its own: the bottom strip is a flat six pixels against clouds that are far less uniform than the sky at the top, so in the moment Safari collapses its bars it is more likely to be noticed there than at the top. The journey is 3028 px and the document 8927 px, unchanged by either strip, and the page does not scroll sideways.
 
 TypeScript, lint, `build:cloudflare` and all fourteen checks pass. Worker version `61f6fd9f-eba0-4172-83e1-51660c9ed5d3`; the served stylesheet carries the frame, the bottom strip and the wordmark rule.
+
+## Wing-driven opening wipe and stable scrolling URLs
+
+Source `7067278` keeps “A different perspective.”, its subtitle and the scroll hint in the opening until the wing sweeps them away. A short upward camera aim gives the wing enough travel to clear the complete caption. The wipe follows a sampled envelope of the model’s projected wing at the renderer’s eased progress; it stays erased as the aircraft climbs, and reverses deterministically when scrolling back. The Apps caption begins at 34% after the wipe, while its chapter button remains at 37%. Later camera shots and chapter stops remain intact.
+
+The envelope is computed once per viewport size. Stationary frames reuse caption geometry and clip paths; there is no extra WebGL render pass or image asset. The opening no longer uploads a glyph mask, so erased letters leave no holes in the aircraft. Apps retains the existing tail-depth effect. Regression coverage is in `scripts/check-wing-sweep.mjs`, alongside the existing tour, lifecycle and performance checks.
+
+Ordinary scrolling no longer writes `?chapter=...` to the address bar. The page remains at its current URL, and previously shared chapter links still seed the correct stop on load. Explicit project links and section anchors still work on the same domain.
