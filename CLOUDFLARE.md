@@ -55,10 +55,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `fb991e21-f292-4f9f-91ec-d6498c4ff75d`
+- Cloudflare version: `01e38e62-9ec5-4e28-8b97-8550c73a969b`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to my inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: lasting Downshift tail sweep, source `a0baf18` (September 18, 2026).
-- Current validation: TypeScript, lint, wing/tail wipe checks across six viewports, full-airframe camera checks, renderer lifecycle checks, performance checks, and the Cloudflare production build/deployment passed. Local desktop/mobile previews verified the tail erasing the caption and phone preview. The live homepage returns HTTP 200; both changed JavaScript chunks and both stylesheets match local SHA-256 hashes.
+- Current release: longer Apps reading hold and slower mobile tail sweep, source `d39147d` (September 18, 2026).
+- Current validation: TypeScript, lint, wing/tail wipe and scroll-pacing checks, full-airframe camera checks, renderer lifecycle checks, performance checks, Cloudflare dry run and production deployment passed. In the mobile preview, 480 pixels of scrolling kept the complete app preview unclipped while its demo video continued playing. The live homepage returns HTTP 200; the renderer and terminal JavaScript chunks and both stylesheets match the local build hashes.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
 ## Zone settings that affect the opening
@@ -543,3 +543,11 @@ Source `a0baf18` extends the lasting opening wipe to the Apps chapter. A separat
 The camera briefly tracks the tail after 34% so it can cross the full caption, retains that height during the climb, and gives short landscape screens extra room afterward. The Apps button now lands at 34.5%, before the sweep; the opening wing pass and other chapter stops are unchanged. Apps no longer binds the glyph-depth mask, so erased content leaves no ghost holes in the fuselage. Clip measurements are cached even before mounting a chapter, and a renderer failure clears both wipes.
 
 Cloudflare version `fb991e21-f292-4f9f-91ec-d6498c4ff75d`. Regression checks cover complete erasure, reverse scrolling, chapter jumps, disposal, the uninterrupted departure, exterior camera clearance, and full-aircraft framing in the later wide shots.
+
+## More time with the Apps preview
+
+Source `d39147d` adds a full-preview reading hold before the elevator starts erasing the Apps chapter. On screens up to 800px wide, the hold spans 110svh of scrolling and the tail crossing gets another 70svh, making that sweep about 2.5 times longer at the same scrolling speed. Desktop gets a 50svh hold and 30svh added to the sweep. The preview video and moving sky continue during the hold.
+
+`lib/tour-scroll.ts` maps scroll pixels into the existing flight timeline, so the opening retains its scroll pacing and the aircraft and its wipes remain synchronized. The section is 600svh on mobile and 500svh on desktop; reduced-motion and unavailable-renderer layouts retain their short static fallback. Chapter buttons and shared links use the inverse mapping, with Apps landing inside the unclipped hold. The later flight resumes its previous pacing after the added distance. Measurements account for Safari’s changing innerHeight separately from svh and are cached until viewport/section dimensions change.
+
+Cloudflare version `01e38e62-9ec5-4e28-8b97-8550c73a969b`. The pacing tests cover the full hold, slowdown, continuous boundaries, monotonic motion, reverse/jump behavior, chapter links, and differing small/layout viewport heights.
