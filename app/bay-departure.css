@@ -1113,7 +1113,11 @@
 
 /* Each stop reveals part of the portfolio, alongside the aircraft. */
 .dreamliner-journey {
-  height: 420svh;
+  --apps-read-scroll: 50;
+  --apps-sweep-scroll: 30;
+  height: calc(
+    (420 + var(--apps-read-scroll) + var(--apps-sweep-scroll)) * 1svh
+  );
 }
 .tour-mockup {
   position: relative;
@@ -1234,6 +1238,10 @@
   height: 100lvh;
 }
 @media (max-width: 800px) {
+  .dreamliner-journey {
+    --apps-read-scroll: 110;
+    --apps-sweep-scroll: 70;
+  }
   .tour-mockup {
     margin-top: 14px;
     height: clamp(130px, 26svh, 260px);

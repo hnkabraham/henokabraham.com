@@ -29,7 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { clamp01, type BayPhase } from '@/lib/bay-flight';
+import type { BayPhase } from '@/lib/bay-flight';
 // The renderer, its shader helpers and their slice of three.js arrive in a
 // chunk of their own, fetched only once a motion visit mounts the scene.
 const DreamlinerScene = lazy(() => import('./dreamliner-scene'));
@@ -85,6 +85,12 @@ function toggleImmersive() {
   } else root.webkitRequestFullscreen?.();
 }
 import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
+import {
+  tourScrollLayout,
+  tourProgressAt,
+  tourScrollAt,
+  type TourScroll,
+} from '@/lib/tour-scroll';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
 import { createOpeningWipe, type OpeningWipe } from '@/lib/opening-wipe';
@@ -134,15 +140,27 @@ function cutText(text: string) {
   ));
 }
 
-// `travel` is the section's scrollable height, measured by the caller before
-// any style write so a scroll frame lays out once rather than twice.
+// The CSS adds scroll distance only to Apps. Cache its resolved pacing until
+// the section or browser viewport changes, not on every scroll event.
+function measureScroll(section: HTMLElement, previous: TourScroll | null) {
+  const height = section.offsetHeight;
+  if (previous?.height === height && previous.viewport === innerHeight)
+    return previous;
+  const style = getComputedStyle(section);
+  return tourScrollLayout(
+    height,
+    innerHeight,
+    parseFloat(style.getPropertyValue('--apps-read-scroll')) || 0,
+    parseFloat(style.getPropertyValue('--apps-sweep-scroll')) || 0,
+  );
+}
+
 function updateOpening(
   section: HTMLElement,
-  progress: number,
+  scroll: number,
   staticSky: boolean,
-  travel: number,
 ) {
-  const reveal = staticSky ? 0 : openingSkyReveal(progress * travel);
+  const reveal = staticSky ? 0 : openingSkyReveal(scroll);
   section.style.setProperty('--flight-reveal', String(reveal));
   section.dataset.opening = String(reveal < 1);
   return reveal;
@@ -162,6 +180,7 @@ export default function ScrollDeparture({
   const root = useRef<HTMLElement>(null);
   const story = useRef<HTMLDivElement>(null);
   const progress = useRef(0);
+  const scrollLayout = useRef<TourScroll | null>(null);
   const reveal = useRef(0);
   const tailWipe = useRef<OpeningWipe | null>(null);
   const openingWipe = useRef<OpeningWipe | null>(null);
@@ -186,29 +205,17 @@ export default function ScrollDeparture({
   useLayoutEffect(() => {
     const section = root.current;
     if (!section || !entry) return;
-    const travel = Math.max(1, section.offsetHeight - innerHeight);
+    const layout = measureScroll(section, scrollLayout.current);
+    scrollLayout.current = layout;
+    const rect = section.getBoundingClientRect();
     const chapter = TOUR_CHAPTERS.find((item) => item.phase === entry.chapter);
+    let offset = Math.max(0, Math.min(layout.travel, -rect.top));
     if (chapter && !reducedMotion) {
-      progress.current = chapter.at;
-      const top = scrollY + section.getBoundingClientRect().top;
-      scrollTo({
-        top: top + chapter.at * Math.max(0, section.offsetHeight - innerHeight),
-        behavior: 'instant',
-      });
-    } else {
-      progress.current = reducedMotion
-        ? 1
-        : clamp01(
-            -section.getBoundingClientRect().top /
-              Math.max(1, section.offsetHeight - innerHeight),
-          );
+      offset = tourScrollAt(chapter.at, layout);
+      scrollTo({ top: scrollY + rect.top + offset, behavior: 'instant' });
     }
-    reveal.current = updateOpening(
-      section,
-      progress.current,
-      reducedMotion,
-      travel,
-    );
+    progress.current = reducedMotion ? 1 : tourProgressAt(offset, layout);
+    reveal.current = updateOpening(section, offset, reducedMotion);
     renderedPhase.current = tourPhase(progress.current);
     setPhase(renderedPhase.current);
     // Mount the renderer only after the shared chapter has seeded its ref.
@@ -262,19 +269,18 @@ export default function ScrollDeparture({
     if (!section || !sceneReady) return;
     let frame = 0;
     const update = () => {
-      // All reads first: a write between them would force a second layout on
-      // every scroll frame, in a document with a 420svh section.
+      // Read geometry before writing the reveal/progress styles.
       const rect = section.getBoundingClientRect();
-      const travel = Math.max(1, section.offsetHeight - innerHeight);
+      const layout = measureScroll(section, scrollLayout.current);
+      scrollLayout.current = layout;
+      const offset = Math.max(0, Math.min(layout.travel, -rect.top));
       const staticSky = reducedMotion || status === 'unavailable';
-      progress.current = staticSky ? 1 : clamp01(-rect.top / travel);
-      section.style.setProperty('--flight-progress', String(progress.current));
-      reveal.current = updateOpening(
-        section,
-        progress.current,
-        staticSky,
-        travel,
+      progress.current = staticSky ? 1 : tourProgressAt(offset, layout);
+      section.style.setProperty(
+        '--flight-progress',
+        String(offset / layout.travel),
       );
+      reveal.current = updateOpening(section, offset, staticSky);
       // The animated caption follows the renderer's eased position. Static
       // fallbacks can use the scroll position directly. Scrolling never
       // writes a chapter URL; existing shared links still seed the tour.
@@ -297,8 +303,10 @@ export default function ScrollDeparture({
     const section = root.current;
     if (!section) return;
     const top = scrollY + section.getBoundingClientRect().top;
+    const layout = measureScroll(section, scrollLayout.current);
+    scrollLayout.current = layout;
     scrollTo({
-      top: top + position * Math.max(0, section.offsetHeight - innerHeight),
+      top: top + tourScrollAt(position, layout),
       behavior: reducedMotion ? 'instant' : 'smooth',
     });
   };

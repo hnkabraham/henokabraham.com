@@ -8,7 +8,7 @@ export const TOUR_CHAPTERS: {
   phase: BayPhase;
 }[] = [
   { at: 0, label: 'Open sky', phase: 'preflight' },
-  { at: 0.345, label: 'Apps', phase: 'roll' },
+  { at: 0.34, label: 'Apps', phase: 'roll' },
   { at: 0.59, label: 'Devices', phase: 'liftoff' },
   { at: 0.78, label: 'Flight log', phase: 'bay' },
   // The last stop sits where the aircraft is crossing out of the top, not

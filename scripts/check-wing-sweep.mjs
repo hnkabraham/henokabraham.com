@@ -23,7 +23,10 @@ const { createWingSweep, createTailSweep } = await import(
     './dreamliner-cut': cut,
   })
 );
-const { tourPhase } = await import(tour);
+const { tourPhase, TOUR_CHAPTERS } = await import(tour);
+const { tourScrollLayout, tourProgressAt, tourScrollAt } = await import(
+  await moduleURL('../lib/tour-scroll.ts')
+);
 for (const [width, height, captionBottom] of [
   [1589, 952, 0.57],
   [1920, 1080, 0.56],
@@ -109,6 +112,91 @@ for (const [width, height, top, right] of [
     sample(0.34).every((y) => y === 2),
     'Reverse restores all Apps content',
   );
+}
+
+// Extra scroll distance belongs only to Apps: hold the complete live preview,
+// then run the same aircraft/wipe through a longer physical scroll segment.
+for (const [width, height, viewport] of [
+  [1589, 952, 952],
+  [390, 844, 844],
+  [375, 667, 667],
+  [844, 390, 390],
+  [390, 744, 844], // Safari with expanded content area but the same small viewport units.
+]) {
+  const mobile = width <= 800,
+    read = mobile ? 110 : 50,
+    extra = mobile ? 70 : 30;
+  const layout = tourScrollLayout(
+    ((420 + read + extra) * height) / 100,
+    viewport,
+    read,
+    extra,
+  );
+  const base = 4.2 * height - viewport;
+  const close = (a, b, reason) => assert.ok(Math.abs(a - b) < 1e-9, reason);
+  close(
+    layout.base,
+    base,
+    'Additional Apps distance does not alter the opening speed',
+  );
+  const tail = createTailSweep(width, viewport);
+  for (const p of [0, 0.025, 0.1, 0.2, 0.3, 0.33])
+    close(
+      tourProgressAt(p * base, layout),
+      p,
+      'Original wing sweep uses the same scroll pixels',
+    );
+  for (const fraction of [0.01, 0.25, 0.5, 0.9, 0.99]) {
+    const p = tourProgressAt(0.34 * base + fraction * layout.hold, layout);
+    assert.equal(tourPhase(p), 'roll');
+    assert.ok(
+      tail(p).every((y) => y === 2),
+      'The whole preview remains unclipped throughout the reading hold',
+    );
+  }
+  const wipeDistance = 0.15 * base + layout.sweep;
+  assert.ok(
+    wipeDistance / (0.15 * base) >= (mobile ? 2.4 : 1.6),
+    'The tail crossing itself is slower',
+  );
+  let prior = -1;
+  for (let offset = 0; offset <= layout.travel; offset += 3) {
+    const p = tourProgressAt(offset, layout);
+    assert.ok(Number.isFinite(p) && p >= prior && p >= 0 && p <= 1);
+    prior = p;
+  }
+  for (const { at, phase } of TOUR_CHAPTERS) {
+    const offset = tourScrollAt(at, layout);
+    close(
+      tourProgressAt(offset, layout),
+      at,
+      'Chapter buttons and old links use the inverse pacing map',
+    );
+    assert.equal(tourPhase(tourProgressAt(offset, layout)), phase);
+  }
+  for (const p of [0.335, 0.34, 0.35, 0.4, 0.48, 0.49, 0.59, 0.78, 1]) {
+    const offset = tourScrollAt(p, layout);
+    tourProgressAt(layout.travel, layout);
+    close(
+      tourProgressAt(offset, layout),
+      p,
+      'Jumping back restores the same flight position',
+    );
+  }
+  for (const boundary of [
+    0.34 * base,
+    0.34 * base + layout.hold,
+    0.49 * base + layout.hold + layout.sweep,
+  ])
+    assert.ok(
+      Math.abs(
+        tourProgressAt(boundary + 0.001, layout) -
+          tourProgressAt(boundary - 0.001, layout),
+      ) < 0.00001,
+      'The hold and slower sweep have continuous boundaries',
+    );
+  assert.equal(tourProgressAt(-100, layout), 0);
+  assert.equal(tourProgressAt(layout.travel + 100, layout), 1);
 }
 
 assert.equal(
@@ -200,5 +288,5 @@ assert.deepEqual(
 tailWipe.dispose();
 assert.ok(nodes.every((n) => n.style.clipPath === ''));
 console.log(
-  'Passed: complete wing and tail wipes on six viewports; forward, reverse and jump consistency; chapter timing; all caption children; idle measurement caching; cleanup.',
+  'Passed: complete wing and tail wipes on six viewports; forward, reverse and jump consistency; chapter timing; Apps reading hold and slower sweep; chapter/link inverse mapping; Safari viewport units; all caption children; idle measurement caching; cleanup.',
 );
