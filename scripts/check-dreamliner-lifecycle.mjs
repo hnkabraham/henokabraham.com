@@ -201,7 +201,6 @@ try {
     Scene({
       progress,
       reducedMotion: mode === 'reduced',
-      audio: { current: null },
       onStatus: (s) => statuses.push(s),
     });
     const disposers = h.effects.map((f) => f()).filter(Boolean);

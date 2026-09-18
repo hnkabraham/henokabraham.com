@@ -18,8 +18,6 @@ import {
   Minimize2,
   RotateCcw,
   Smartphone,
-  Volume2,
-  VolumeX,
   Watch,
   X,
 } from 'lucide-react';
@@ -32,7 +30,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { clamp01, type BayPhase } from '@/lib/bay-flight';
-import { createBayAudio } from '@/lib/bay-audio';
 // The renderer, its shader helpers and their slice of three.js arrive in a
 // chunk of their own, fetched only once a motion visit mounts the scene.
 const DreamlinerScene = lazy(() => import('./dreamliner-scene'));
@@ -167,7 +164,6 @@ export default function ScrollDeparture({
   const story = useRef<HTMLDivElement>(null);
   const progress = useRef(0);
   const reveal = useRef(0);
-  const audio = useRef<ReturnType<typeof createBayAudio> | null>(null);
   const cut = useRef<TextCut | null>(null);
   const openingWipe = useRef<OpeningWipe | null>(null);
   const renderedPhase = useRef<BayPhase>('preflight');
@@ -177,7 +173,6 @@ export default function ScrollDeparture({
   >('loading');
   // Reduced motion never mounts the renderer; the static sky is ready at once.
   const status = reducedMotion ? 'ready' : rendererStatus;
-  const [sound, setSound] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
   const immersive = useSyncExternalStore(
     subscribeFullscreen,
@@ -220,7 +215,6 @@ export default function ScrollDeparture({
     // Mount the renderer only after the shared chapter has seeded its ref.
     setSceneReady(true);
   }, [entry, reducedMotion]);
-  useEffect(() => () => audio.current?.dispose(), []);
   useLayoutEffect(() => {
     const mask = createTextCut();
     const wipe = createOpeningWipe();
@@ -260,20 +254,6 @@ export default function ScrollDeparture({
       document.removeEventListener('visibilitychange', activity);
     };
   }, [paused]);
-  const toggleSound = () => {
-    if (audio.current) {
-      audio.current.dispose();
-      audio.current = null;
-      setSound(false);
-    } else {
-      try {
-        audio.current = createBayAudio();
-        setSound(true);
-      } catch {
-        setSound(false);
-      }
-    }
-  };
   useEffect(() => {
     const section = root.current;
     if (!section || !sceneReady) return;
@@ -341,7 +321,6 @@ export default function ScrollDeparture({
               progress={progress}
               reducedMotion={reducedMotion}
               paused={paused}
-              audio={audio}
               cut={cut}
               onFrame={(value, front, width, height) => {
                 const next = tourPhase(value);
@@ -360,15 +339,8 @@ export default function ScrollDeparture({
                 setStatus(value);
                 if (value === 'ready')
                   recordFlightMetric('scene_ready_ms', performance.now());
-                if (value === 'unavailable') {
+                if (value === 'unavailable')
                   recordFlightMetric('scene_unavailable', 1);
-                  // A lost context stops the loop that drives the ambience,
-                  // so close it rather than leave a silent context running
-                  // behind a disabled button that still reads ON.
-                  audio.current?.dispose();
-                  audio.current = null;
-                  setSound(false);
-                }
               }}
             />
           </Suspense>
@@ -580,17 +552,6 @@ export default function ScrollDeparture({
                 </DialogContent>
               </Dialog>
             )}
-            <button
-              className="mono"
-              // The render loop sets the ambience level, and the static sky
-              // has no loop: without one the button would only ever be silent.
-              disabled={status !== 'ready' || reducedMotion}
-              aria-pressed={sound}
-              onClick={toggleSound}
-            >
-              {sound ? <Volume2 size={15} /> : <VolumeX size={15} />} SOUND{' '}
-              {sound ? 'ON' : 'OFF'}
-            </button>
             <button
               className="mono"
               disabled={reducedMotion || status === 'unavailable'}

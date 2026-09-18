@@ -36,18 +36,39 @@ import {
 } from '@/components/ui/dialog';
 
 function StationClock() {
-  const [time, setTime] = useState('--:--:--');
+  const [clock, setClock] = useState({ time: '--:--:--', zone: 'PT' });
   useEffect(() => {
-    const update = () => setTime(new Date().toISOString().slice(11, 19));
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+      timeZoneName: 'short',
+    });
+    const update = () => {
+      const parts = formatter.formatToParts(new Date());
+      setClock({
+        time: parts
+          .filter((part) => part.type !== 'timeZoneName')
+          .map((part) => part.value)
+          .join('')
+          .trim(),
+        zone: parts.find((part) => part.type === 'timeZoneName')?.value ?? 'PT',
+      });
+    };
     update();
     const interval = window.setInterval(update, 1000);
     return () => window.clearInterval(interval);
   }, []);
   return (
-    <div className="station-clock mono" aria-label={`Current UTC time ${time}`}>
+    <div
+      className="station-clock mono"
+      aria-label={`Current Pacific time ${clock.time} ${clock.zone}`}
+    >
       <span className="signal-dot" />
-      <time>{time}</time>
-      <span>UTC</span>
+      <time>{clock.time}</time>
+      <span>{clock.zone}</span>
     </div>
   );
 }

@@ -28,13 +28,11 @@ import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import type { TextCut } from '@/lib/dreamliner-cut';
 import { createWingSweep } from '@/lib/wing-sweep';
 import { recordFlightMetric } from '@/lib/flight-metrics';
-import type { createBayAudio } from '@/lib/bay-audio';
 
 type Props = {
   progress: RefObject<number>;
   reducedMotion: boolean;
   paused?: boolean;
-  audio: RefObject<ReturnType<typeof createBayAudio> | null>;
   /** The caption's glyph mask, for the wing to pass through the words. */
   cut?: RefObject<TextCut | null>;
   onFrame?: (
@@ -50,7 +48,6 @@ export default function DreamlinerScene({
   progress,
   reducedMotion,
   paused = false,
-  audio,
   cut,
   onFrame,
   onStatus,
@@ -102,7 +99,6 @@ export default function DreamlinerScene({
         renderer.domElement.remove();
         renderer = undefined;
       }
-      audio.current?.update(0, false);
     };
     const fail = () => {
       if (disposed) return;
@@ -552,11 +548,6 @@ export default function DreamlinerScene({
         // The opening remains CSS-only; clear once when scrolling back to it.
         if (shown || lastShown) r.render(scene, camera);
         lastShown = shown;
-        // The ambience swells as the aircraft overtakes and settles to a
-        // cruise hum once it has pulled ahead (the exhaust passes the lens
-        // with the aircraft some 14 m short of its resting place).
-        const pass = Math.exp(-(((shot.aircraft[0] - 14) / 12) ** 2));
-        audio.current?.update(0.12 + 0.18 * (0.45 + 0.55 * pass), shown);
         if (shown) {
           const sample = performanceControl.sample(now);
           if (sample?.changed) {
@@ -611,7 +602,6 @@ export default function DreamlinerScene({
           previous = 0;
           performanceControl.reset();
           scrollPerformance.reset();
-          audio.current?.update(0, false);
           return;
         }
         // Allow the parent’s scroll RAF to update the progress ref first.
@@ -646,7 +636,7 @@ export default function DreamlinerScene({
       controller.abort();
       release();
     };
-  }, [progress, reducedMotion, audio, cut]);
+  }, [progress, reducedMotion, cut]);
   return (
     <div
       className="bay-canvas dreamliner-canvas"
