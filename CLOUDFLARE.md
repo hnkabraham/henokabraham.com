@@ -55,10 +55,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `0e61cb91-fb6b-4477-a88f-3c1f3db88464`
+- Cloudflare version: `fb056b35-7a30-440c-a821-62abf772bc3d`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to my inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: clean elevator sweep across the complete Downshift preview, source `fdff1d2` (September 18, 2026).
-- Current validation: TypeScript, lint, wing/tail wipe and scroll-pacing checks, full-airframe camera checks, renderer lifecycle and performance checks, Cloudflare dry run and production deployment passed. Browser checks at 390 × 844 and 1589 × 952 confirmed the elevator starts below the complete preview and clips the phones and lettering along its visible edge; reverse scrolling restores the same cut. Six viewport regression checks cover the reading hold and prevent a sudden side-entry notch. The live homepage returns HTTP 200; both changed JavaScript chunks and both stylesheets match local build hashes.
+- Current release: left-elevator-only Downshift sweep, source `42e155a` (September 18, 2026).
+- Current validation: TypeScript, lint, wing/tail wipe and scroll-pacing checks, full-airframe camera checks, renderer lifecycle and performance checks, Cloudflare dry run and production deployment passed. Mobile (390 × 844) and desktop (1589 × 952) browser checks show only the left elevator sweeping the phones and lettering; the tail cone stays to the right and the original wider flight resumes afterward. Geometry checks across five viewports keep the fuselage and tail cone outside the elevator shot; six viewport checks verify the complete wipe and reading hold. The live homepage returns HTTP 200; both changed JavaScript chunks and both stylesheets match local build hashes.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
 ## Zone settings that affect the opening
@@ -559,3 +559,7 @@ Source `863ccd7` reveals Downshift once the main wing has cleared the opening: a
 ## Clean elevator sweep deployed
 
 Source `fdff1d2` frames the elevator beneath the whole Downshift preview before its upward pass. The closer tail framing begins after the opening wipe, its clipping envelope starts before contact, and camera/aircraft drift is suppressed during the cut so the visible edge stays aligned. The reading hold, slower scroll pacing and earlier Downshift entrance are preserved. Mobile and desktop browser checks show the phones, subtitle and heading disappearing along the elevator; the geometry, lifecycle, performance, type/lint and Cloudflare build checks passed. Production assets match local hashes.
+
+## Left-elevator-only sweep deployed
+
+Source `42e155a` replaces the joined two-elevator/tail-cone wipe silhouette with only the port elevator. A tracking view beneath that elevator keeps the fuselage to the right while one diagonal edge crosses the phones and lettering. The camera blends framing and position into the original departure shot after the wipe; the opening, early Apps entrance and reading hold remain. Mobile and desktop visual checks plus full-model framing, continuity, clearance, wipe, type/lint, lifecycle, performance and Cloudflare checks passed. Production assets match local hashes.
