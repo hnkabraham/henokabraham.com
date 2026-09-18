@@ -55,10 +55,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `bfb1ab15-4dc5-4734-9dcd-afa8e04fd553`
+- Cloudflare version: `fb991e21-f292-4f9f-91ec-d6498c4ff75d`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to my inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: Pacific-time header clock and flight audio removed, source `ab59e26` (September 17, 2026).
-- Current validation: TypeScript, Dreamliner lifecycle checks and the Cloudflare production build/deployment passed. The clock was checked for PST in winter and PDT in summer. Local and live desktop previews show Pacific time and no sound button; the aircraft remains ready. The live homepage returns HTTP 200, both changed JavaScript chunks match local SHA-256 hashes, and no browser chunk includes Web Audio context creation.
+- Current release: lasting Downshift tail sweep, source `a0baf18` (September 18, 2026).
+- Current validation: TypeScript, lint, wing/tail wipe checks across six viewports, full-airframe camera checks, renderer lifecycle checks, performance checks, and the Cloudflare production build/deployment passed. Local desktop/mobile previews verified the tail erasing the caption and phone preview. The live homepage returns HTTP 200; both changed JavaScript chunks and both stylesheets match local SHA-256 hashes.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
 ## Zone settings that affect the opening
@@ -535,3 +535,11 @@ Ordinary scrolling no longer writes `?chapter=...` to the address bar. The page 
 ## Pacific clock and silent flight
 
 Source `ab59e26` uses `America/Los_Angeles` for the top-right clock, with its PST/PDT abbreviation following daylight saving automatically. The sound toggle, audio state, audio initialization and renderer audio updates are removed from the active Dreamliner experience. The older audio helper remains with the archived terrain experiment but is absent from the deployed browser bundle.
+
+## Downshift tail sweep
+
+Source `a0baf18` extends the lasting opening wipe to the Apps chapter. A separate envelope follows the projected horizontal stabilizer, joined through the tail cone, and clears every Downshift child from below: title, subtitle, label and phone preview. Scrubbing backward restores the same contour without depending on prior frames. Both envelopes are cached per viewport and follow the renderer’s eased progress.
+
+The camera briefly tracks the tail after 34% so it can cross the full caption, retains that height during the climb, and gives short landscape screens extra room afterward. The Apps button now lands at 34.5%, before the sweep; the opening wing pass and other chapter stops are unchanged. Apps no longer binds the glyph-depth mask, so erased content leaves no ghost holes in the fuselage. Clip measurements are cached even before mounting a chapter, and a renderer failure clears both wipes.
+
+Cloudflare version `fb991e21-f292-4f9f-91ec-d6498c4ff75d`. Regression checks cover complete erasure, reverse scrolling, chapter jumps, disposal, the uninterrupted departure, exterior camera clearance, and full-aircraft framing in the later wide shots.
