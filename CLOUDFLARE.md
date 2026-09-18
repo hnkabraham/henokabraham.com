@@ -55,10 +55,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `01e38e62-9ec5-4e28-8b97-8550c73a969b`
+- Cloudflare version: `4c60c850-a44b-4d69-a081-4a7f333a2b5b`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to my inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: longer Apps reading hold and slower mobile tail sweep, source `d39147d` (September 18, 2026).
-- Current validation: TypeScript, lint, wing/tail wipe and scroll-pacing checks, full-airframe camera checks, renderer lifecycle checks, performance checks, Cloudflare dry run and production deployment passed. In the mobile preview, 480 pixels of scrolling kept the complete app preview unclipped while its demo video continued playing. The live homepage returns HTTP 200; the renderer and terminal JavaScript chunks and both stylesheets match the local build hashes.
+- Current release: earlier Downshift entrance in the cleared sky, source `863ccd7` (September 18, 2026).
+- Current validation: TypeScript, lint, wing/tail wipe and scroll-pacing checks, full-airframe camera checks, renderer lifecycle checks, Cloudflare dry run and production deployment passed. Browser checks at 390 × 844 and 1589 × 952 confirmed the earlier Downshift entrance; mobile forward/reverse scrolling preserved the elevator wipe and restored the complete preview. The live homepage returns HTTP 200; both changed JavaScript chunks and both stylesheets match local build hashes.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
 ## Zone settings that affect the opening
@@ -551,3 +551,7 @@ Source `d39147d` adds a full-preview reading hold before the elevator starts era
 `lib/tour-scroll.ts` maps scroll pixels into the existing flight timeline, so the opening retains its scroll pacing and the aircraft and its wipes remain synchronized. The section is 600svh on mobile and 500svh on desktop; reduced-motion and unavailable-renderer layouts retain their short static fallback. Chapter buttons and shared links use the inverse mapping, with Apps landing inside the unclipped hold. The later flight resumes its previous pacing after the added distance. Measurements account for Safari’s changing innerHeight separately from svh and are cached until viewport/section dimensions change.
 
 Cloudflare version `01e38e62-9ec5-4e28-8b97-8550c73a969b`. The pacing tests cover the full hold, slowdown, continuous boundaries, monotonic motion, reverse/jump behavior, chapter links, and differing small/layout viewport heights.
+
+## Earlier Downshift entrance deployed
+
+Source `863ccd7` reveals Downshift once the main wing has cleared the opening: at 24% of the canonical flight in portrait, blending to 30% in wider views. The existing 34% reading hold and slower elevator wipe remain unchanged. Six viewport checks verify the previous caption is fully erased before the new one appears and that the earlier preview is unclipped. Mobile and desktop browser checks, TypeScript, lint, camera/lifecycle checks and the Cloudflare dry run passed; live asset hashes match the verified build.
