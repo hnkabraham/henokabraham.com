@@ -55,10 +55,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `c92c9e19-9d33-4de6-b8db-91efc74adf06`
+- Cloudflare version: `bfb1ab15-4dc5-4734-9dcd-afa8e04fd553`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to my inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: wing-driven opening text wipe and stable URLs during scrolling, source `7067278` (September 17, 2026).
-- Current validation: TypeScript, complete-wipe coverage on six viewport sizes, Dreamliner geometry/lifecycle, performance safeguards, chapter-link round trips, Cloudflare build and dry run passed. Local desktop (1589 × 952) and phone-size (390 × 844) browser checks verified the wipe and chapter reveal; the old liftoff link still opens Devices. The live homepage returns HTTP 200; both changed application chunks and both stylesheets match local SHA-256 hashes.
+- Current release: Pacific-time header clock and flight audio removed, source `ab59e26` (September 17, 2026).
+- Current validation: TypeScript, Dreamliner lifecycle checks and the Cloudflare production build/deployment passed. The clock was checked for PST in winter and PDT in summer. Local and live desktop previews show Pacific time and no sound button; the aircraft remains ready. The live homepage returns HTTP 200, both changed JavaScript chunks match local SHA-256 hashes, and no browser chunk includes Web Audio context creation.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
 ## Zone settings that affect the opening
@@ -531,3 +531,7 @@ Source `7067278` keeps “A different perspective.”, its subtitle and the scro
 The envelope is computed once per viewport size. Stationary frames reuse caption geometry and clip paths; there is no extra WebGL render pass or image asset. The opening no longer uploads a glyph mask, so erased letters leave no holes in the aircraft. Apps retains the existing tail-depth effect. Regression coverage is in `scripts/check-wing-sweep.mjs`, alongside the existing tour, lifecycle and performance checks.
 
 Ordinary scrolling no longer writes `?chapter=...` to the address bar. The page remains at its current URL, and previously shared chapter links still seed the correct stop on load. Explicit project links and section anchors still work on the same domain.
+
+## Pacific clock and silent flight
+
+Source `ab59e26` uses `America/Los_Angeles` for the top-right clock, with its PST/PDT abbreviation following daylight saving automatically. The sound toggle, audio state, audio initialization and renderer audio updates are removed from the active Dreamliner experience. The older audio helper remains with the archived terrain experiment but is absent from the deployed browser bundle.
