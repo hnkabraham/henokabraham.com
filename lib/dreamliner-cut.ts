@@ -92,25 +92,14 @@ export function projectWing(
   );
 }
 
-/** Both elevators, joined through the tail cone so no text survives in its gap. */
+/** Only the port (screen-left) elevator supplies the Apps wipe silhouette. */
 export function projectTail(
   camera: PerspectiveCamera,
   model: Object3D,
   width: number,
   height: number,
 ): WingPolygon[] {
-  return projectOutlines(
-    camera,
-    model,
-    [
-      [
-        ...TAIL_OUTLINE,
-        ...[...TAIL_OUTLINE].reverse().map(([x, y, z]) => [x, y, -z]),
-      ],
-    ],
-    width,
-    height,
-  );
+  return projectOutlines(camera, model, [TAIL_OUTLINE], width, height);
 }
 
 function projectOutlines(

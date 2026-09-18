@@ -18,7 +18,7 @@ const moduleURL = async (file, replacements = {}) => {
 const tourURL = await moduleURL('../lib/dreamliner-tour.ts');
 const { sampleDreamlinerTour, tourPhase, TOUR_CHAPTERS, tourPixelRatio } =
   await import(tourURL);
-const { projectWing, insideWing, createTextCut } = await import(
+const { projectWing, projectTail, insideWing, createTextCut } = await import(
   await moduleURL('../lib/dreamliner-cut.ts', {
     './dreamliner-engine': await moduleURL('../lib/dreamliner-engine.ts'),
   })
@@ -405,11 +405,11 @@ for (const [width, height] of [
   };
   // The exhaust stays in frame through the hold, including on narrow screens
   // (the rest of the aircraft is intentionally cropped there), and the
-  // tail fills Apps, and the departing aircraft retains a 5% frame margin
+  // left elevator fills Apps, and the departing aircraft retains a 5% frame margin
   // at the following stops before leaving at the last.
   for (const [p, part, xyz] of [
     [0.2, 'exhaust', [-2.9, -1.13, 9.41]],
-    [0.37, 'tail close-up', [28, 2.6, 0]],
+    [0.4, 'left elevator close-up', [31.5, 3, 7]],
     [0.59, 'departing aircraft', [0, 1, 0]],
     [0.78, 'departing aircraft', [0, 1, 0]],
   ]) {
@@ -510,30 +510,32 @@ for (const [width, height] of [
       `${width}x${height} wing covers at most ${(covered * 100).toFixed(0)}% of the headline in the opening`,
     );
   }
-  // The tail through the Apps caption. Somewhere in the crossing the tail
-  // cone has to reach the left of the frame, where that chapter's caption
-  // sits, and the caption's plane has to hang a few metres in front of it, so
-  // that the tail end passes over the words and the rest of the airframe
-  // passes behind them rather than half the aircraft covering the caption.
+  // The left elevator alone spans the content while the centre of the
+  // aircraft stays to its right. A joined tail/cone silhouette cannot pass
+  // this framing check by bringing the tail cone over the caption again.
   {
-    let reached = null;
-    for (let p = 0.31; p <= 0.4601; p += 0.005) {
+    let reached = false;
+    for (let p = 0.34; p <= 0.4801; p += 0.005) {
       const c = cameraAt(p);
-      const v = plane.localToWorld(new T.Vector3(31, 2.6, 0)).project(c);
-      const x = ((v.x + 1) / 2) * width,
-        y = ((1 - v.y) / 2) * height;
-      if (!(x > 0 && x < width * 0.5 && y > height * 0.18 && y < height * 0.46))
-        continue;
-      const { cutDepth } = sampleDreamlinerTour(p, aspect);
-      const tail = -plane
-        .localToWorld(new T.Vector3(31, 2.6, 0))
-        .applyMatrix4(c.matrixWorldInverse).z;
-      if (cutDepth - tail > 1 && cutDepth - tail < 8)
-        reached = { p, x, y, cutDepth, tail };
+      for (const point of [
+        [35, 2.6, 0],
+        [28, 4, 0],
+        [0, 1, 0],
+        [-28, 1, 0],
+      ]) {
+        const v = plane.localToWorld(new T.Vector3(...point)).project(c);
+        assert.ok(
+          v.x > 1,
+          `${width}x${height}: fuselage or tail cone entered the left-elevator shot at ${p}`,
+        );
+      }
+      const polygons = projectTail(c, plane, width, height);
+      if (polygons.some((poly) => insideWing(poly, width * 0.2, height * 0.4)))
+        reached = true;
     }
     assert.ok(
       reached,
-      `${width}x${height} the tail never cuts the Apps caption`,
+      `${width}x${height}: the left elevator itself must cross the Apps content`,
     );
     // And on either side of the crossing the plane sits at the lens, which
     // puts every letter of the chapter caption in front of the aircraft.

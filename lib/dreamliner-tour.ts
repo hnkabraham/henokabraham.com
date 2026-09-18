@@ -91,6 +91,45 @@ const slip = (departure: number) => {
   return u * u * u;
 };
 
+// Normalized viewport coordinates before a lens shift. This mirrors a
+// PerspectiveCamera looking at a target with world-up, without a Three import.
+function projectPoint(
+  position: TourPoint,
+  camera: TourPoint,
+  target: TourPoint,
+  tangent: number,
+  aspect: number,
+): [number, number] {
+  const f = target.map((v, i) => v - camera[i]);
+  const length = Math.hypot(...f);
+  const [fx, fy, fz] = f.map((v) => v / length);
+  const flat = Math.hypot(fx, fz);
+  const right = [-fz / flat, 0, fx / flat];
+  const up = [(-fx * fy) / flat, flat, (-fz * fy) / flat];
+  const d = position.map((v, i) => v - camera[i]);
+  const depth = d[0] * fx + d[1] * fy + d[2] * fz;
+  return [
+    0.5 +
+      d.reduce((sum, v, i) => sum + v * right[i], 0) /
+        (2 * depth * tangent * aspect),
+    0.5 - d.reduce((sum, v, i) => sum + v * up[i], 0) / (2 * depth * tangent),
+  ];
+}
+const modelPoint = (
+  local: TourPoint,
+  position: TourPoint,
+  yaw: number,
+  bank: number,
+): TourPoint => {
+  const y = local[1] * Math.cos(bank) - local[2] * Math.sin(bank);
+  const z = local[1] * Math.sin(bank) + local[2] * Math.cos(bank);
+  return [
+    position[0] + local[0] * Math.cos(yaw) + z * Math.sin(yaw),
+    position[1] + y,
+    position[2] - local[0] * Math.sin(yaw) + z * Math.cos(yaw),
+  ];
+};
+
 export function sampleDreamlinerTour(progress: number, aspect: number) {
   const p = Math.max(0, Math.min(1, progress));
   let index = 0;
@@ -131,7 +170,7 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   // exhaust to the fuselage (a touch to starboard of it, so the whole span
   // sits left of the frame's edge) as the aircraft comes into frame.
   const aim = ease((p - 0.24) / 0.14);
-  const fov = mix(a.fov, b.fov, t);
+  let fov = mix(a.fov, b.fov, t);
   if (p > 0.24)
     target = aircraft.map(
       (v, i) => v + mix([-3, 1, 9.4][i], [0, 1.5, -4][i], aim),
@@ -222,6 +261,64 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   target = target.map(
     (v, i) => pivot[i] + (v - pivot[i]) * wideRelease,
   ) as TourPoint;
+  // The bank leads the turn in and trails it out, as a coordinated turn does.
+  let bank =
+    mix(-0.08, 0.025, arrival) +
+    Math.sin(p * Math.PI * 2) * 0.025 +
+    0.3 * ease((departure - 0.18) / 0.16) * (1 - ease((departure - 0.7) / 0.2));
+  let offsetX = mix(-0.18, 0, portrait);
+  let offsetY = mix(-0.035, -0.12, portrait) - tailLeadIn;
+  // Track underneath the PORT elevator, with the tail cone beyond the right
+  // edge. The panel itself spans the caption; the fuselage never supplies
+  // a synthetic bridge in the wipe. Hold this view, then pull back to flight.
+  const portPass = ease((p - 0.3) / 0.04) * (1 - ease((p - 0.48) / 0.11));
+  if (portPass) {
+    const tangent = Math.tan((fov * Math.PI) / 360);
+    const body = modelPoint([0, 1, 0], aircraft, yaw, bank);
+    const before = projectPoint(body, camera, target, tangent, aspect);
+    const portCamera: TourPoint = [44, 0, 6];
+    const portTarget: TourPoint = [28, 2.5, 6];
+    // A consistent horizontal field of view keeps the same span on phones
+    // and widescreens. The topmost tip point is measured from the GLB.
+    const portTangent = 0.19 / aspect;
+    const portBody = projectPoint(
+      [0, 1, 0],
+      portCamera,
+      portTarget,
+      portTangent,
+      aspect,
+    );
+    const portTip = projectPoint(
+      [33.767, 3.11, 9.801],
+      portCamera,
+      portTarget,
+      portTangent,
+      aspect,
+    );
+    const edgeY = 0.83 - 0.94 * ease((p - 0.34) / 0.14);
+    const bodyX = mix(before[0] - offsetX, portBody[0] + 0.28, portPass);
+    const bodyY = mix(
+      before[1] - offsetY,
+      portBody[1] - portTip[1] + edgeY,
+      portPass,
+    );
+    camera = point(camera, modelPoint(portCamera, aircraft, yaw, 0), portPass);
+    target = point(target, modelPoint(portTarget, aircraft, yaw, 0), portPass);
+    bank = mix(bank, 0, portPass);
+    const framedTangent = 1 / mix(1 / tangent, 1 / portTangent, portPass);
+    fov = (2 * Math.atan(framedTangent) * 180) / Math.PI;
+    const after = projectPoint(
+      modelPoint([0, 1, 0], aircraft, yaw, bank),
+      camera,
+      target,
+      framedTangent,
+      aspect,
+    );
+    // Blend screen framing as well as camera position, avoiding a lurch
+    // when the close-up returns to the much longer departure camera.
+    offsetX = after[0] - bodyX;
+    offsetY = after[1] - bodyY;
+  }
   const fx = target[0] - camera[0],
     fy = target[1] - camera[1],
     fz = target[2] - camera[2];
@@ -233,11 +330,6 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
       (aircraft[1] + 2.6 - camera[1]) * fy +
       (aircraft[2] - 28 * Math.sin(yaw) - camera[2]) * fz) /
     axis;
-  // The bank leads the turn in and trails it out, as a coordinated turn does.
-  const bank =
-    mix(-0.08, 0.025, arrival) +
-    Math.sin(p * Math.PI * 2) * 0.025 +
-    0.3 * ease((departure - 0.18) / 0.16) * (1 - ease((departure - 0.7) / 0.2));
   return {
     camera,
     target,
@@ -247,11 +339,11 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     // further as the aircraft climbs away.
     flex: 0.8 + 1.3 * ease((p - 0.22) / 0.4),
     fov,
-    offsetX: mix(-0.18, 0, portrait),
-    offsetY: mix(-0.035, -0.12, portrait) - tailLeadIn,
+    offsetX,
+    offsetY,
     // Lock the lens to the cached silhouette during the precise tail wipe;
     // otherwise idle camera bob lets the rendered edge drift off the cut.
-    drift: 1 - ease((p - 0.28) / 0.02) * (1 - ease((p - 0.49) / 0.05)),
+    drift: 1 - ease((p - 0.28) / 0.02) * (1 - ease((p - 0.59) / 0.05)),
     bank,
     // Retain the optional shader depth for scenes that interleave glyphs
     // with the airframe; the portfolio uses lasting silhouette wipes.
