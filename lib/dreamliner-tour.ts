@@ -15,8 +15,12 @@ export const TOUR_CHAPTERS: {
   // after it has gone: the rest of the scroll clears the sky and hands over.
   { at: 0.9, label: 'Explore', phase: 'cruise' },
 ];
-export function tourPhase(p: number): BayPhase {
-  return p < 0.34
+export function tourPhase(p: number, aspect = 16 / 9): BayPhase {
+  // The wing clears the opening sooner in portrait. Reveal Apps in that
+  // empty sky, before the tail-view reading hold and its elevator wipe.
+  // Keep the wider framing long enough to finish erasing the opening.
+  const portrait = Math.max(0, Math.min(1, (1.15 - aspect) / 0.65));
+  return p < 0.3 - 0.06 * portrait
     ? 'preflight'
     : p < 0.49
       ? 'roll'
@@ -250,7 +254,7 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
       ease((p - 0.3) / 0.045) *
       (1 - ease((p - 0.43) / 0.04)),
     visible: p > 0.025,
-    phase: tourPhase(p),
+    phase: tourPhase(p, aspect),
   };
 }
 

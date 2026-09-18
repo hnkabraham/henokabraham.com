@@ -23,7 +23,7 @@ const { createWingSweep, createTailSweep } = await import(
     './dreamliner-cut': cut,
   })
 );
-const { tourPhase, TOUR_CHAPTERS } = await import(tour);
+const { tourPhase, TOUR_CHAPTERS, sampleDreamlinerTour } = await import(tour);
 const { tourScrollLayout, tourProgressAt, tourScrollAt } = await import(
   await moduleURL('../lib/tour-scroll.ts')
 );
@@ -59,6 +59,22 @@ for (const [width, height, captionBottom] of [
     Math.min(...caption) > captionBottom,
     `${width}x${height}: wing must erase the subtitle and scroll hint too (${Math.min(...caption).toFixed(3)} > ${captionBottom})`,
   );
+  // The new caption starts only after the wing has cleared the old one,
+  // including short landscape screens; portrait does not wait for the tail.
+  let entrance = 0;
+  while (tourPhase(entrance, width / height) === 'preflight') entrance += 0.001;
+  const atEntrance = [...sample(entrance)].filter(
+    (_, i) => i / 48 >= 0.07 && i / 48 <= right,
+  );
+  assert.ok(
+    Math.min(...atEntrance) > captionBottom,
+    `${width}x${height}: opening must be erased before Downshift appears`,
+  );
+  assert.ok(
+    createTailSweep(width, height)(entrance).every((y) => y === 2),
+    'The earlier Downshift entrance shows the whole preview',
+  );
+  assert.equal(sampleDreamlinerTour(entrance, width / height).phase, 'roll');
   const middle = sample(0.16).slice();
   sample(1); // Jump to the end, then scrub back. No frame-history dependency.
   assert.deepEqual(sample(0.16), middle);
@@ -206,14 +222,23 @@ assert.equal(
 );
 assert.equal(
   tourPhase(0.33),
-  'preflight',
-  'The completed wipe gets a moment of open sky',
+  'roll',
+  'Downshift fills the cleared sky before the tail-view hold',
 );
 assert.equal(
   tourPhase(0.37),
   'roll',
   'The Apps chapter button still reaches Apps',
 );
+
+assert.equal(
+  tourPhase(0.24, 390 / 844),
+  'roll',
+  'On a phone Downshift appears while the wing is low in the frame',
+);
+assert.equal(tourPhase(0.23, 390 / 844), 'preflight');
+assert.equal(tourPhase(0.24, 1589 / 952), 'preflight');
+assert.equal(tourPhase(0.3, 1589 / 952), 'roll');
 
 // The DOM adapter clips every caption child, reuses measurements at rest,
 // and removes its inline styles on detach (including a renderer failure).

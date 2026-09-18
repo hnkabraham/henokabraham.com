@@ -216,7 +216,10 @@ export default function ScrollDeparture({
     }
     progress.current = reducedMotion ? 1 : tourProgressAt(offset, layout);
     reveal.current = updateOpening(section, offset, reducedMotion);
-    renderedPhase.current = tourPhase(progress.current);
+    renderedPhase.current = tourPhase(
+      progress.current,
+      innerWidth / innerHeight,
+    );
     setPhase(renderedPhase.current);
     // Mount the renderer only after the shared chapter has seeded its ref.
     setSceneReady(true);
@@ -284,7 +287,8 @@ export default function ScrollDeparture({
       // The animated caption follows the renderer's eased position. Static
       // fallbacks can use the scroll position directly. Scrolling never
       // writes a chapter URL; existing shared links still seed the tour.
-      if (staticSky) setPhase(tourPhase(progress.current));
+      if (staticSky)
+        setPhase(tourPhase(progress.current, innerWidth / innerHeight));
       frame = 0;
     };
     const onScroll = () => {
@@ -333,7 +337,7 @@ export default function ScrollDeparture({
               reducedMotion={reducedMotion}
               paused={paused}
               onFrame={(value, front, width, height, tail) => {
-                const next = tourPhase(value);
+                const next = tourPhase(value, width / height);
                 if (renderedPhase.current !== next) {
                   renderedPhase.current = next;
                   setPhase(next);
