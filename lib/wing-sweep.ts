@@ -76,9 +76,9 @@ export function createWingSweep(width: number, height: number) {
 
 /** Upward tail sweep for Apps; cached separately so the opening is untouched. */
 export function createTailSweep(width: number, height: number) {
-  const start = 0.3,
+  const start = 0.34,
     end = 0.49,
-    steps = 190;
+    steps = 150;
   const camera = new PerspectiveCamera(34, width / height, 0.15, 1200);
   const aircraft = new Object3D();
   aircraft.rotation.order = 'YXZ';
@@ -113,9 +113,7 @@ export function createTailSweep(width: number, height: number) {
     const row = Float32Array.from(previous, (y, column) =>
       Math.min(
         y,
-        // Apps sits above the canvas: cut just ahead of the leading edge
-        // so lettering never draws over the elevator's top surface.
-        1 - lowerEdge(polygons, (column / COLUMNS) * width, -1) / height,
+        1 - lowerEdge(polygons, (column / COLUMNS) * width, 4) / height,
       ),
     );
     rows.push(row);
