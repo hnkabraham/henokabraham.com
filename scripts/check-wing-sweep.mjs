@@ -16,7 +16,7 @@ const tour = await moduleURL('../lib/dreamliner-tour.ts');
 const cut = await moduleURL('../lib/dreamliner-cut.ts', {
   './dreamliner-engine': await moduleURL('../lib/dreamliner-engine.ts'),
 });
-const { createWingSweep } = await import(
+const { createWingSweep, createTailSweep } = await import(
   await moduleURL('../lib/wing-sweep.ts', {
     three: import.meta.resolve('three'),
     './dreamliner-tour': tour,
@@ -65,6 +65,52 @@ for (const [width, height, captionBottom] of [
     'Reverse scrolling restores the whole opening',
   );
 }
+// The tail clears the Apps text and the phone preview before Devices.
+// Bounds match the responsive caption: its eyebrow is narrower than the title.
+for (const [width, height, top, right] of [
+  [1589, 952, 0.23, 0.4],
+  [1920, 1080, 0.23, 0.4],
+  [390, 844, 0.13, 0.7],
+  [375, 667, 0.13, 0.7],
+  [844, 390, 64 / 390, 0.36],
+  [781, 914, 0.13, 0.4],
+]) {
+  const sample = createTailSweep(width, height);
+  assert.ok(
+    sample(0.34).every((y) => y === 2),
+    'Apps starts without a tail cut',
+  );
+  let prior = sample(0.34).slice();
+  for (let p = 0.34; p <= 0.4901; p += 0.001) {
+    const front = sample(p);
+    assert.ok(
+      front.every((y, i) => Number.isFinite(y) && y <= prior[i]),
+      'Tail-erased content never comes back while scrolling forward',
+    );
+    prior = front.slice();
+  }
+  const cleared = sample(0.48).slice();
+  const caption = [...cleared].filter(
+    (_, i) => i / 48 >= 0.0625 && i / 48 <= right,
+  );
+  assert.ok(
+    Math.max(...caption) < top,
+    `${width}x${height}: tail must clear the whole caption (${Math.max(...caption).toFixed(3)} < ${top})`,
+  );
+  const middle = sample(0.4).slice();
+  sample(1);
+  assert.deepEqual(
+    sample(0.4),
+    middle,
+    'Tail reverse has no frame-history dependency',
+  );
+  assert.deepEqual(sample(0.48), cleared);
+  assert.ok(
+    sample(0.34).every((y) => y === 2),
+    'Reverse restores all Apps content',
+  );
+}
+
 assert.equal(
   tourPhase(0.2),
   'preflight',
@@ -132,6 +178,27 @@ assert.ok(
   nodes.every((n) => n.style.clipPath === ''),
   'Fallback/disposal leaves no clipped text',
 );
+// The same DOM adapter closes above the tail, not below the wing. Every
+// child takes part, and a remount gets the current cut before its first paint.
+const tailWipe = createOpeningWipe('up');
+tailWipe.update(front, 1000, 800);
+tailWipe.attach(story);
+assert.ok(
+  nodes.every((n, i) =>
+    n.style.clipPath.endsWith(
+      `900.0px ${-(160 + i * 80)}px,-100.0px ${-(160 + i * 80)}px)`,
+    ),
+  ),
+);
+const tailClips = nodes.map((n) => n.style.clipPath);
+tailWipe.attach(null);
+tailWipe.attach(story);
+assert.deepEqual(
+  nodes.map((n) => n.style.clipPath),
+  tailClips,
+);
+tailWipe.dispose();
+assert.ok(nodes.every((n) => n.style.clipPath === ''));
 console.log(
-  'Passed: complete wing wipe on six viewports; forward, reverse and jump consistency; chapter timing; all caption children; idle measurement caching; cleanup.',
+  'Passed: complete wing and tail wipes on six viewports; forward, reverse and jump consistency; chapter timing; all caption children; idle measurement caching; cleanup.',
 );

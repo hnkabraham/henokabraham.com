@@ -26,7 +26,7 @@ import {
 import { addDepthCut, addEngineFinish, addWingFlex } from '@/lib/airframe-flex';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import type { TextCut } from '@/lib/dreamliner-cut';
-import { createWingSweep } from '@/lib/wing-sweep';
+import { createWingSweep, createTailSweep } from '@/lib/wing-sweep';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 
 type Props = {
@@ -40,6 +40,7 @@ type Props = {
     front: Float32Array,
     width: number,
     height: number,
+    tail: Float32Array,
   ) => void;
   onStatus: (value: 'loading' | 'ready' | 'unavailable') => void;
 };
@@ -169,6 +170,7 @@ export default function DreamlinerScene({
         elapsed = 0;
       let devReport = 0;
       let sweep: ReturnType<typeof createWingSweep> | undefined;
+      let tailSweep: ReturnType<typeof createTailSweep> | undefined;
       let sweepSize = '';
       const resize = () => {
         if (disposed || !renderer) return;
@@ -186,6 +188,7 @@ export default function DreamlinerScene({
         const size = `${width}x${height}`;
         if (size !== sweepSize) {
           sweep = createWingSweep(width, height);
+          tailSweep = createTailSweep(width, height);
           sweepSize = size;
         }
         camera.aspect = width / height;
@@ -509,8 +512,14 @@ export default function DreamlinerScene({
         sun.target.position.copy(aircraft.position);
         sun.position.copy(aircraft.position).add(sunlightOffset);
         const shown = shot.visible;
-        if (sweep)
-          presentation.current?.(current, sweep(current), width, height);
+        if (sweep && tailSweep)
+          presentation.current?.(
+            current,
+            sweep(current),
+            width,
+            height,
+            tailSweep(current),
+          );
         // The caption's mask follows its layout; the aircraft's shader hides
         // its far side behind the letters while the text is attached.
         const ratio = r.getPixelRatio();

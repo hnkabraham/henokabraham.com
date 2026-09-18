@@ -405,17 +405,18 @@ for (const [width, height] of [
   };
   // The exhaust stays in frame through the hold, including on narrow screens
   // (the rest of the aircraft is intentionally cropped there), and the
-  // departing aircraft stays in frame at every chapter stop but the last.
+  // tail fills Apps, and the departing aircraft retains a 5% frame margin
+  // at the following stops before leaving at the last.
   for (const [p, part, xyz] of [
     [0.2, 'exhaust', [-2.9, -1.13, 9.41]],
-    [0.37, 'departing aircraft', [0, 1, 0]],
+    [0.37, 'tail close-up', [28, 2.6, 0]],
     [0.59, 'departing aircraft', [0, 1, 0]],
     [0.78, 'departing aircraft', [0, 1, 0]],
   ]) {
     const c = cameraAt(p),
       v = plane.localToWorld(new T.Vector3(...xyz)).project(c);
     assert.ok(
-      Math.abs(v.x) < 0.9 && Math.abs(v.y) < 0.85 && v.z > -1 && v.z < 1,
+      Math.abs(v.x) < 0.9 && Math.abs(v.y) < 0.9 && v.z > -1 && v.z < 1,
       `${width}x${height} ${String(part)} framing: ${v.toArray().join(',')}`,
     );
   }

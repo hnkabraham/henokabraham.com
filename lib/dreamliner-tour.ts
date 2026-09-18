@@ -8,7 +8,7 @@ export const TOUR_CHAPTERS: {
   phase: BayPhase;
 }[] = [
   { at: 0, label: 'Open sky', phase: 'preflight' },
-  { at: 0.37, label: 'Apps', phase: 'roll' },
+  { at: 0.345, label: 'Apps', phase: 'roll' },
   { at: 0.59, label: 'Devices', phase: 'liftoff' },
   { at: 0.78, label: 'Flight log', phase: 'bay' },
   // The last stop sits where the aircraft is crossing out of the top, not
@@ -154,11 +154,20 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   // the aircraft out of the corner it is already in. A narrow frame needs the
   // larger share of that, since the aircraft spans more of it; a wide one has
   // the height to leave through the top instead.
-  const up =
+  const departureUp =
     swing * mix(0.52, 0.9, portrait) +
     climb(departure) * mix(0.72, 0.3, portrait);
+  // Keep the tail close for its second sweep, then carry that height into
+  // the departure until the original climb catches up (never dip back down).
+  const wide = Math.max(0, Math.min(1, (aspect - 1.85) / 0.65));
+  const tailRise = mix(0.97, 1.1, portrait) + 0.24 * wide;
+  const up = Math.max(departureUp, tailRise * ease((p - 0.37) / 0.06));
   const right = -(
     swing * mix(0.86, 0.56, portrait) +
+    0.09 *
+      (1 - portrait) *
+      ease((p - 0.34) / 0.035) *
+      (1 - ease((p - 0.85) / 0.15)) +
     slip(departure) * mix(0.35, 0.8, portrait)
   );
   if (right || up) {
@@ -178,17 +187,40 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
       target[2] - fx * step,
     ];
   }
-  // Where the Apps chapter's caption hangs: just in front of the tail, at the
-  // station of the horizontal stabilizer's root (x = 28 of a tail
-  // that ends at 31), carried round by the heading. Everything aft of it —
-  // the horizontal stabilizer above all — passes in front of the words, and
-  // the wings and the fuselage ahead of it pass behind them. The shader
-  // compares view depth, not range, so this is measured along the lens axis.
   const yaw = heading(departure);
+  // Briefly track the aft fuselage so the elevators still span the caption
+  // while climbing past it. This starts after the opening wing wipe and
+  // releases smoothly into the established wide shot.
+  const closePass =
+    1 + 0.85 * ease((p - 0.34) / 0.05) * (1 - ease((p - 0.44) / 0.1));
+  const tailAnchor: TourPoint = [
+    aircraft[0] + 28 * Math.cos(yaw),
+    aircraft[1] + 2.6,
+    aircraft[2] - 28 * Math.sin(yaw),
+  ];
+  camera = camera.map(
+    (v, i) => tailAnchor[i] + (v - tailAnchor[i]) / closePass,
+  ) as TourPoint;
+  target = target.map(
+    (v, i) => tailAnchor[i] + (v - tailAnchor[i]) / closePass,
+  ) as TourPoint;
+  // A short, wide screen needs extra room above the climbing tail after
+  // the close pass. Pull back around the aircraft without lowering it.
+  const wideRelease =
+    1 + 0.75 * wide * ease((p - 0.49) / 0.11) * (1 - ease((p - 0.8) / 0.1));
+  const pivot: TourPoint = [aircraft[0], aircraft[1] + 1, aircraft[2]];
+  camera = camera.map(
+    (v, i) => pivot[i] + (v - pivot[i]) * wideRelease,
+  ) as TourPoint;
+  target = target.map(
+    (v, i) => pivot[i] + (v - pivot[i]) * wideRelease,
+  ) as TourPoint;
   const fx = target[0] - camera[0],
     fy = target[1] - camera[1],
     fz = target[2] - camera[2];
   const axis = Math.hypot(fx, fy, fz) || 1;
+  // Optional depth anchor for shader-based captions. The current wing/tail
+  // DOM wipes do not bind a glyph mask.
   const tailDepth =
     ((aircraft[0] + 28 * Math.cos(yaw) - camera[0]) * fx +
       (aircraft[1] + 2.6 - camera[1]) * fy +
@@ -211,8 +243,8 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     offsetX: mix(-0.18, 0, portrait),
     offsetY: mix(-0.035, -0.12, portrait),
     bank,
-    // Only Apps uses a glyph-depth mask. Its text hangs by the horizontal
-    // stabilizer while the tail crosses; the opening uses the lasting wipe.
+    // Retain the optional shader depth for scenes that interleave glyphs
+    // with the airframe; the portfolio uses lasting silhouette wipes.
     cutDepth:
       Math.max(0, tailDepth) *
       ease((p - 0.3) / 0.045) *

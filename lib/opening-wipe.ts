@@ -9,8 +9,10 @@ export type OpeningWipe = {
   dispose: () => void;
 };
 
-/** Apply the wing envelope to real text, preserving its fonts and selection. */
-export function createOpeningWipe(): OpeningWipe {
+/** Apply a wing or tail envelope to DOM content without changing its layout. */
+export function createOpeningWipe(
+  direction: 'down' | 'up' = 'down',
+): OpeningWipe {
   let story: HTMLElement | null = null;
   let parts: {
     node: HTMLElement;
@@ -34,11 +36,11 @@ export function createOpeningWipe(): OpeningWipe {
     opening?: string,
   ) => {
     last = front;
-    if (!story) return;
     if (w !== width || h !== height || opening !== openingState) dirty = true;
     openingState = opening;
     width = w;
     height = h;
+    if (!story) return;
     if (!dirty && applied && front.every((y, i) => y === applied![i])) return;
     applied = front.slice();
     if (dirty) {
@@ -62,7 +64,8 @@ export function createOpeningWipe(): OpeningWipe {
         (y, i) =>
           `${((i / (front.length - 1)) * w - part.left).toFixed(1)}px ${(y * h - part.top).toFixed(1)}px`,
       );
-      const clip = `polygon(${edge.join(',')},${(w - part.left).toFixed(1)}px ${h}px,${(-part.left).toFixed(1)}px ${h}px)`;
+      const closeY = direction === 'down' ? h : -part.top;
+      const clip = `polygon(${edge.join(',')},${(w - part.left).toFixed(1)}px ${closeY}px,${(-part.left).toFixed(1)}px ${closeY}px)`;
       if (clip !== part.clip) {
         part.node.style.clipPath = clip;
         part.clip = clip;

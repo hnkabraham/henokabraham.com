@@ -887,9 +887,8 @@
     0 0 14px #ffffffcc,
     0 2px 34px #ffffff99;
 }
-/* Opening copy sits below the aircraft and is clipped to the area its
-   wing has not swept yet. Apps retains the glyph-depth mask for its tail
-   crossing. Keep whole words so canvas shaping preserves ligatures. */
+/* Opening copy sits below the wing; Apps is clipped behind the tail.
+   Keep whole words to preserve the typeface’s shaping and ligatures. */
 .dreamliner-journey .cut-word {
   white-space: nowrap;
 }
@@ -898,18 +897,15 @@
 }
 .dreamliner-journey[data-phase='preflight'] .bay-story .eyebrow,
 .dreamliner-journey[data-phase='preflight'] .bay-story h1,
-.dreamliner-journey[data-phase='preflight'] .bay-description,
-.dreamliner-journey[data-phase='roll'] .bay-story .eyebrow,
-.dreamliner-journey[data-phase='roll'] .bay-story h1,
-.dreamliner-journey[data-phase='roll'] .bay-description {
+.dreamliner-journey[data-phase='preflight'] .bay-description {
   position: relative;
   z-index: -2;
 }
-/* The Apps mock-ups are their own object in front of the aircraft, not
-   part of the caption the tail passes through. */
-.dreamliner-journey[data-phase='roll'] .tour-mockup {
+/* Apps stays above the distant fuselage, while the projected tail edge
+   erases every child, including the mock-up. No letter-shaped shader holes. */
+.dreamliner-journey[data-phase='roll'] .bay-story > * {
   position: relative;
-  z-index: 2;
+  z-index: 0;
 }
 .dreamliner-journey[data-phase='preflight'] .bay-start-hint {
   position: relative;
@@ -917,7 +913,8 @@
 }
 /* A stable caption lets the wing, rather than a separate slide, erase it.
    Clip individual children so the story never traps them above the canvas. */
-.dreamliner-journey[data-phase='preflight'] .bay-story {
+.dreamliner-journey[data-phase='preflight'] .bay-story,
+.dreamliner-journey[data-phase='roll'] .bay-story {
   animation: none;
 }
 .dreamliner-journey .bay-bottom {

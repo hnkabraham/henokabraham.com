@@ -2,11 +2,9 @@ import type { Object3D, PerspectiveCamera } from 'three';
 import { wingLift } from './dreamliner-engine';
 
 /**
- * Two uses of the aircraft silhouette: projectWing supplies the opening's
- * lasting text wipe, while createTextCut rasterizes the Apps caption into
- * the mask used by addDepthCut. That shader lets the tail cross the letters
- * while the distant fuselage stays behind them. Both captions remain DOM
- * text, with normal fonts, layout and accessible labels.
+ * Projected wing and tail silhouettes drive lasting DOM caption wipes.
+ * The optional glyph-depth mask is retained for scenes that need text
+ * interleaved with the airframe instead of erased behind it.
  */
 
 /**
@@ -30,6 +28,17 @@ export const WING_OUTLINE: [number, number, number][] = [
   [6.09, 1.68, 14],
   [4.84, 1.04, 10],
   [4.47, -0.14, 4],
+];
+
+/** Horizontal stabilizer, measured from the shipped 787 model. */
+export const TAIL_OUTLINE: [number, number, number][] = [
+  [23.621, 1.829, 2.062],
+  [31.901, 3.008, 9.507],
+  [32.363, 3.091, 9.777],
+  [33.23, 3.12, 9.804],
+  [33.767, 3.11, 9.801],
+  [33.659, 3.06, 9.412],
+  [30.806, 2.168, 1.818],
 ];
 
 /** Vertices as [x, y, depth]: screen px and the view depth there. */
@@ -72,6 +81,45 @@ export function projectWing(
   width: number,
   height: number,
 ): WingPolygon[] {
+  return projectOutlines(
+    camera,
+    model,
+    [1, -1].map((side) =>
+      WING_OUTLINE.map(([x, y, z]) => [x, y + wingLift(x, z, flex), z * side]),
+    ),
+    width,
+    height,
+  );
+}
+
+/** Both elevators, joined through the tail cone so no text survives in its gap. */
+export function projectTail(
+  camera: PerspectiveCamera,
+  model: Object3D,
+  width: number,
+  height: number,
+): WingPolygon[] {
+  return projectOutlines(
+    camera,
+    model,
+    [
+      [
+        ...TAIL_OUTLINE,
+        ...[...TAIL_OUTLINE].reverse().map(([x, y, z]) => [x, y, -z]),
+      ],
+    ],
+    width,
+    height,
+  );
+}
+
+function projectOutlines(
+  camera: PerspectiveCamera,
+  model: Object3D,
+  outlines: number[][][],
+  width: number,
+  height: number,
+): WingPolygon[] {
   const mw = model.matrixWorld.elements;
   const vw = camera.matrixWorldInverse.elements;
   const pm = camera.projectionMatrix.elements;
@@ -80,10 +128,8 @@ export function projectWing(
     y0 = -height * MARGIN,
     y1 = height * (1 + MARGIN);
   const result: WingPolygon[] = [];
-  for (const side of [1, -1]) {
-    let view: number[][] = WING_OUTLINE.map(([x, y, z]) => {
-      const my = y + wingLift(x, z, flex);
-      const mz = z * side;
+  for (const outline of outlines) {
+    let view: number[][] = outline.map(([x, my, mz]) => {
       const wx = mw[0] * x + mw[4] * my + mw[8] * mz + mw[12];
       const wy = mw[1] * x + mw[5] * my + mw[9] * mz + mw[13];
       const wz = mw[2] * x + mw[6] * my + mw[10] * mz + mw[14];

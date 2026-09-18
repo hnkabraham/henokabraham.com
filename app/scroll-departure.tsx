@@ -85,7 +85,6 @@ function toggleImmersive() {
   } else root.webkitRequestFullscreen?.();
 }
 import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
-import { createTextCut, type TextCut } from '@/lib/dreamliner-cut';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
 import { createOpeningWipe, type OpeningWipe } from '@/lib/opening-wipe';
@@ -164,7 +163,7 @@ export default function ScrollDeparture({
   const story = useRef<HTMLDivElement>(null);
   const progress = useRef(0);
   const reveal = useRef(0);
-  const cut = useRef<TextCut | null>(null);
+  const tailWipe = useRef<OpeningWipe | null>(null);
   const openingWipe = useRef<OpeningWipe | null>(null);
   const renderedPhase = useRef<BayPhase>('preflight');
   const [phase, setPhase] = useState<BayPhase>('preflight');
@@ -216,23 +215,27 @@ export default function ScrollDeparture({
     setSceneReady(true);
   }, [entry, reducedMotion]);
   useLayoutEffect(() => {
-    const mask = createTextCut();
+    const tail = createOpeningWipe('up');
     const wipe = createOpeningWipe();
-    cut.current = mask;
+    tailWipe.current = tail;
     openingWipe.current = wipe;
     return () => {
-      mask.dispose();
+      tail.dispose();
       wipe.dispose();
-      cut.current = null;
+      tailWipe.current = null;
       openingWipe.current = null;
     };
   }, []);
-  // The opening is erased behind the wing; only Apps needs the glyph-depth
-  // mask. An erased opening glyph must never leave a hole in the aircraft.
+  // Both captions stay erased behind their passing surface. No glyph-depth
+  // mask: erased letters must never leave ghost holes in the aircraft.
   useLayoutEffect(() => {
-    cut.current?.attach(phase === 'roll' ? story.current : null);
-    openingWipe.current?.attach(phase === 'preflight' ? story.current : null);
-  }, [phase, sceneReady]);
+    tailWipe.current?.attach(
+      phase === 'roll' && status !== 'unavailable' ? story.current : null,
+    );
+    openingWipe.current?.attach(
+      phase === 'preflight' && status !== 'unavailable' ? story.current : null,
+    );
+  }, [phase, sceneReady, status]);
   useEffect(() => {
     const section = root.current;
     if (!section) return;
@@ -321,13 +324,18 @@ export default function ScrollDeparture({
               progress={progress}
               reducedMotion={reducedMotion}
               paused={paused}
-              cut={cut}
-              onFrame={(value, front, width, height) => {
+              onFrame={(value, front, width, height, tail) => {
                 const next = tourPhase(value);
                 if (renderedPhase.current !== next) {
                   renderedPhase.current = next;
                   setPhase(next);
                 }
+                tailWipe.current?.update(
+                  tail,
+                  width,
+                  height,
+                  root.current?.dataset.opening,
+                );
                 openingWipe.current?.update(
                   front,
                   width,
