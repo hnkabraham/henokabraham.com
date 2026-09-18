@@ -469,7 +469,7 @@ for (const [width, height] of [
     );
   }
   // The wing through the headline: somewhere in the opening (the caption
-  // remounts at 18%) the visible wing, clipped to the near plane and the
+  // remains until the complete wipe at 34%) the visible wing, clipped to the near plane and the
   // frame, must cover part of the headline on every screen, or the cut
   // would silently vanish if the tour were retuned. The headline box
   // follows the stylesheet: 7% in from the left, below the eyebrow, under
@@ -542,9 +542,10 @@ for (const [width, height] of [
         0,
         `${width}x${height} chapter caption is cut at ${p}`,
       );
-    assert.ok(
-      sampleDreamlinerTour(0.17, aspect).cutDepth > 10,
-      'Opening plane',
+    assert.equal(
+      sampleDreamlinerTour(0.17, aspect).cutDepth,
+      0,
+      'Opening wipe never punches glyph holes in the aircraft',
     );
   }
   // The aircraft overtakes from behind the viewer: on the first visible

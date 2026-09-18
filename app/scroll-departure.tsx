@@ -45,7 +45,9 @@ type FullscreenDocument = Document & {
   webkitFullscreenElement?: Element | null;
   webkitExitFullscreen?: () => void;
 };
-type FullscreenRoot = HTMLElement & { webkitRequestFullscreen?: () => void };
+type FullscreenRoot = HTMLElement & {
+  webkitRequestFullscreen?: () => void;
+};
 const subscribeFullscreen = (notify: () => void) => {
   document.addEventListener('fullscreenchange', notify);
   document.addEventListener('webkitfullscreenchange', notify);
@@ -89,7 +91,7 @@ import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
 import { createTextCut, type TextCut } from '@/lib/dreamliner-cut';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { openingSkyReveal } from '@/lib/bay-performance';
-import { replaceFlightLink } from '@/lib/flight-links';
+import { createOpeningWipe, type OpeningWipe } from '@/lib/opening-wipe';
 import { flightAtlas } from './flight-atlas';
 
 const copy: Record<BayPhase, [string, string, string]> = {
@@ -167,6 +169,8 @@ export default function ScrollDeparture({
   const reveal = useRef(0);
   const audio = useRef<ReturnType<typeof createBayAudio> | null>(null);
   const cut = useRef<TextCut | null>(null);
+  const openingWipe = useRef<OpeningWipe | null>(null);
+  const renderedPhase = useRef<BayPhase>('preflight');
   const [phase, setPhase] = useState<BayPhase>('preflight');
   const [rendererStatus, setStatus] = useState<
     'loading' | 'ready' | 'unavailable'
@@ -211,29 +215,30 @@ export default function ScrollDeparture({
       reducedMotion,
       travel,
     );
-    setPhase(tourPhase(progress.current));
+    renderedPhase.current = tourPhase(progress.current);
+    setPhase(renderedPhase.current);
     // Mount the renderer only after the shared chapter has seeded its ref.
     setSceneReady(true);
   }, [entry, reducedMotion]);
   useEffect(() => () => audio.current?.dispose(), []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const mask = createTextCut();
+    const wipe = createOpeningWipe();
     cut.current = mask;
+    openingWipe.current = wipe;
     return () => {
       mask.dispose();
+      wipe.dispose();
       cut.current = null;
+      openingWipe.current = null;
     };
   }, []);
-  // The story remounts at each chapter (its key). Two captions hang in the
-  // aircraft's path: the opening, which the wing passes through, and Apps,
-  // which the horizontal stabilizer sweeps across. Outside the sweep the
-  // tour holds that plane at the lens, so the caption reads as it always
-  // has; the rest of the chapters sit above the renderer as before.
-  useEffect(() => {
-    cut.current?.attach(
-      phase === 'preflight' || phase === 'roll' ? story.current : null,
-    );
-  }, [phase]);
+  // The opening is erased behind the wing; only Apps needs the glyph-depth
+  // mask. An erased opening glyph must never leave a hole in the aircraft.
+  useLayoutEffect(() => {
+    cut.current?.attach(phase === 'roll' ? story.current : null);
+    openingWipe.current?.attach(phase === 'preflight' ? story.current : null);
+  }, [phase, sceneReady]);
   useEffect(() => {
     const section = root.current;
     if (!section) return;
@@ -287,15 +292,10 @@ export default function ScrollDeparture({
         staticSky,
         travel,
       );
-      const currentPhase = tourPhase(progress.current);
-      setPhase(currentPhase);
-      if (
-        !reducedMotion &&
-        status !== 'unavailable' &&
-        rect.top <= 1 &&
-        rect.bottom > innerHeight
-      )
-        replaceFlightLink({ chapter: currentPhase });
+      // The animated caption follows the renderer's eased position. Static
+      // fallbacks can use the scroll position directly. Scrolling never
+      // writes a chapter URL; existing shared links still seed the tour.
+      if (staticSky) setPhase(tourPhase(progress.current));
       frame = 0;
     };
     const onScroll = () => {
@@ -343,6 +343,19 @@ export default function ScrollDeparture({
               paused={paused}
               audio={audio}
               cut={cut}
+              onFrame={(value, front, width, height) => {
+                const next = tourPhase(value);
+                if (renderedPhase.current !== next) {
+                  renderedPhase.current = next;
+                  setPhase(next);
+                }
+                openingWipe.current?.update(
+                  front,
+                  width,
+                  height,
+                  root.current?.dataset.opening,
+                );
+              }}
               onStatus={(value) => {
                 setStatus(value);
                 if (value === 'ready')

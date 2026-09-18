@@ -887,11 +887,9 @@
     0 0 14px #ffffffcc,
     0 2px 34px #ffffff99;
 }
-/* The caption's plane. In the opening the caption text sits under the
-   renderer, with the sky and the scrim that precede it, and the aircraft's
-   shader hides its own far side wherever a glyph covers it, so the wing
-   passes through the words rather than behind them. Words never break
-   inside; the scroll hint stays above the nacelle on a phone. */
+/* Opening copy sits below the aircraft and is clipped to the area its
+   wing has not swept yet. Apps retains the glyph-depth mask for its tail
+   crossing. Keep whole words so canvas shaping preserves ligatures. */
 .dreamliner-journey .cut-word {
   white-space: nowrap;
 }
@@ -915,7 +913,12 @@
 }
 .dreamliner-journey[data-phase='preflight'] .bay-start-hint {
   position: relative;
-  z-index: 2;
+  z-index: -2;
+}
+/* A stable caption lets the wing, rather than a separate slide, erase it.
+   Clip individual children so the story never traps them above the canvas. */
+.dreamliner-journey[data-phase='preflight'] .bay-story {
+  animation: none;
 }
 .dreamliner-journey .bay-bottom {
   color: #21465f;

@@ -2,17 +2,11 @@ import type { Object3D, PerspectiveCamera } from 'three';
 import { wingLift } from './dreamliner-engine';
 
 /**
- * The wing through the headline. In the opening the caption text hangs in
- * the sky at a fixed distance in front of the lens, and as the 787
- * overtakes, its wing passes through that plane (`cutDepth` in the tour
- * sampler): what lies nearer than the
- * plane covers the letters, what lies beyond goes behind them, with the
- * seam moving across the words as the wing sweeps by. The text stays real
- * DOM text under the renderer's canvas; this module rasterizes its glyphs
- * into a mask (`createTextCut`) that the aircraft's shader uses to hide its
- * own far side where a glyph covers it (`addDepthCut` in airframe-flex).
- * The wing's planform and its projection (`projectWing`) let the tour
- * check assert the wing really does cross the headline on every screen.
+ * Two uses of the aircraft silhouette: projectWing supplies the opening's
+ * lasting text wipe, while createTextCut rasterizes the Apps caption into
+ * the mask used by addDepthCut. That shader lets the tail cross the letters
+ * while the distant fuselage stays behind them. Both captions remain DOM
+ * text, with normal fonts, layout and accessible labels.
  */
 
 /**

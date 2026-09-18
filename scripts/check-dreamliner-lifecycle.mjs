@@ -75,6 +75,11 @@ const imports = {
   ),
   '@/lib/flight-metrics': uri('export const recordFlightMetric=()=>{};'),
 };
+imports['@/lib/wing-sweep'] = await pure('../lib/wing-sweep.ts', {
+  three: import.meta.resolve('three'),
+  './dreamliner-cut': imports['@/lib/dreamliner-cut'],
+  './dreamliner-tour': imports['@/lib/dreamliner-tour'],
+});
 let code = js;
 for (const [key, value] of Object.entries(imports))
   code = code
@@ -261,8 +266,8 @@ try {
     assert.ok(draws > 0, 'The first scroll wakes a settled opening');
     // The modal changes the pause ref and wakes the existing renderer, without
     // tearing down or downloading the model again.
-    const paused = refs[2],
-      wake = refs[3];
+    const paused = refs[3],
+      wake = refs[4];
     paused.current = true;
     wake.current();
     assert.equal(frames.size, 0, 'A project briefing pauses scheduled draws');

@@ -26,6 +26,7 @@ import {
 import { addDepthCut, addEngineFinish, addWingFlex } from '@/lib/airframe-flex';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import type { TextCut } from '@/lib/dreamliner-cut';
+import { createWingSweep } from '@/lib/wing-sweep';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import type { createBayAudio } from '@/lib/bay-audio';
 
@@ -36,6 +37,12 @@ type Props = {
   audio: RefObject<ReturnType<typeof createBayAudio> | null>;
   /** The caption's glyph mask, for the wing to pass through the words. */
   cut?: RefObject<TextCut | null>;
+  onFrame?: (
+    progress: number,
+    front: Float32Array,
+    width: number,
+    height: number,
+  ) => void;
   onStatus: (value: 'loading' | 'ready' | 'unavailable') => void;
 };
 
@@ -45,10 +52,15 @@ export default function DreamlinerScene({
   paused = false,
   audio,
   cut,
+  onFrame,
   onStatus,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const status = useRef(onStatus);
+  const presentation = useRef(onFrame);
+  useEffect(() => {
+    presentation.current = onFrame;
+  }, [onFrame]);
   const pausedRef = useRef(paused);
   const wakeRef = useRef<(() => void) | undefined>(undefined);
   useEffect(() => {
@@ -160,6 +172,8 @@ export default function DreamlinerScene({
         previous = 0,
         elapsed = 0;
       let devReport = 0;
+      let sweep: ReturnType<typeof createWingSweep> | undefined;
+      let sweepSize = '';
       const resize = () => {
         if (disposed || !renderer) return;
         width = Math.max(1, element.clientWidth);
@@ -173,6 +187,11 @@ export default function DreamlinerScene({
           ),
         );
         r.setSize(width, height, false);
+        const size = `${width}x${height}`;
+        if (size !== sweepSize) {
+          sweep = createWingSweep(width, height);
+          sweepSize = size;
+        }
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         element.dataset.pixelRatio = r.getPixelRatio().toFixed(2);
@@ -494,6 +513,8 @@ export default function DreamlinerScene({
         sun.target.position.copy(aircraft.position);
         sun.position.copy(aircraft.position).add(sunlightOffset);
         const shown = shot.visible;
+        if (sweep)
+          presentation.current?.(current, sweep(current), width, height);
         // The caption's mask follows its layout; the aircraft's shader hides
         // its far side behind the letters while the text is attached.
         const ratio = r.getPixelRatio();

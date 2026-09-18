@@ -2,7 +2,11 @@ import type { BayPhase } from './bay-flight';
 
 export type TourPoint = [number, number, number];
 // Keep the original phase IDs so existing shared links still open a chapter.
-export const TOUR_CHAPTERS: { at: number; label: string; phase: BayPhase }[] = [
+export const TOUR_CHAPTERS: {
+  at: number;
+  label: string;
+  phase: BayPhase;
+}[] = [
   { at: 0, label: 'Open sky', phase: 'preflight' },
   { at: 0.37, label: 'Apps', phase: 'roll' },
   { at: 0.59, label: 'Devices', phase: 'liftoff' },
@@ -12,7 +16,7 @@ export const TOUR_CHAPTERS: { at: number; label: string; phase: BayPhase }[] = [
   { at: 0.9, label: 'Explore', phase: 'cruise' },
 ];
 export function tourPhase(p: number): BayPhase {
-  return p < 0.18
+  return p < 0.34
     ? 'preflight'
     : p < 0.49
       ? 'roll'
@@ -29,7 +33,12 @@ const ease = (t: number) => {
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 const point = (a: TourPoint, b: TourPoint, t: number) =>
   a.map((v, i) => mix(v, b[i], t)) as TourPoint;
-type Shot = { at: number; camera: TourPoint; target: TourPoint; fov: number };
+type Shot = {
+  at: number;
+  camera: TourPoint;
+  target: TourPoint;
+  fov: number;
+};
 // Exterior coordinates in metres: nose -X, port +Z, up +Y. The lens stays
 // outside the airframe throughout.
 export const TOUR_SHOTS: Shot[] = [
@@ -123,6 +132,14 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     target = aircraft.map(
       (v, i) => v + mix([-3, 1, 9.4][i], [0, 1.5, -4][i], aim),
     ) as TourPoint;
+  // Look a little above the passing wing before following the departure.
+  // This carries its lower edge across the whole opening caption, including
+  // the subtitle and scroll hint. The original departure aim resumes at .34.
+  const wipeLook = ease((p - 0.2) / 0.085) * (1 - ease((p - 0.285) / 0.055));
+  if (wipeLook) {
+    const range = Math.hypot(...target.map((v, i) => v - camera[i]));
+    target[1] += Math.tan((fov * Math.PI) / 360) * range * 0.4 * wipeLook;
+  }
   // Two aim moves, both in half frames, both applied along the lens's own
   // axes so they mean the same thing on every screen.
   //
@@ -194,19 +211,12 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     offsetX: mix(-0.18, 0, portrait),
     offsetY: mix(-0.035, -0.12, portrait),
     bank,
-    // How far in front of the lens the caption hangs. In the opening it is a
-    // fixed distance out: the wing passes over the headline 12 to 17 m out on
-    // a landscape screen and a little further out on a phone, and the seam
-    // should fall inside it. In the Apps chapter the plane rides out to the
-    // horizontal stabilizer while the tail sweeps across the words, and back
-    // to the lens on either side of that, where every letter is in front of
-    // the aircraft again and the caption reads as it always has.
+    // Only Apps uses a glyph-depth mask. Its text hangs by the horizontal
+    // stabilizer while the tail crosses; the opening uses the lasting wipe.
     cutDepth:
-      p < 0.18
-        ? mix(14, 15.5, portrait)
-        : Math.max(0, tailDepth) *
-          ease((p - 0.3) / 0.045) *
-          (1 - ease((p - 0.43) / 0.04)),
+      Math.max(0, tailDepth) *
+      ease((p - 0.3) / 0.045) *
+      (1 - ease((p - 0.43) / 0.04)),
     visible: p > 0.025,
     phase: tourPhase(p),
   };
