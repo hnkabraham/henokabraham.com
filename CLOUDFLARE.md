@@ -55,10 +55,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `4c60c850-a44b-4d69-a081-4a7f333a2b5b`
+- Cloudflare version: `0e61cb91-fb6b-4477-a88f-3c1f3db88464`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to my inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: earlier Downshift entrance in the cleared sky, source `863ccd7` (September 18, 2026).
-- Current validation: TypeScript, lint, wing/tail wipe and scroll-pacing checks, full-airframe camera checks, renderer lifecycle checks, Cloudflare dry run and production deployment passed. Browser checks at 390 × 844 and 1589 × 952 confirmed the earlier Downshift entrance; mobile forward/reverse scrolling preserved the elevator wipe and restored the complete preview. The live homepage returns HTTP 200; both changed JavaScript chunks and both stylesheets match local build hashes.
+- Current release: clean elevator sweep across the complete Downshift preview, source `fdff1d2` (September 18, 2026).
+- Current validation: TypeScript, lint, wing/tail wipe and scroll-pacing checks, full-airframe camera checks, renderer lifecycle and performance checks, Cloudflare dry run and production deployment passed. Browser checks at 390 × 844 and 1589 × 952 confirmed the elevator starts below the complete preview and clips the phones and lettering along its visible edge; reverse scrolling restores the same cut. Six viewport regression checks cover the reading hold and prevent a sudden side-entry notch. The live homepage returns HTTP 200; both changed JavaScript chunks and both stylesheets match local build hashes.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
 ## Zone settings that affect the opening
@@ -555,3 +555,7 @@ Cloudflare version `01e38e62-9ec5-4e28-8b97-8550c73a969b`. The pacing tests cove
 ## Earlier Downshift entrance deployed
 
 Source `863ccd7` reveals Downshift once the main wing has cleared the opening: at 24% of the canonical flight in portrait, blending to 30% in wider views. The existing 34% reading hold and slower elevator wipe remain unchanged. Six viewport checks verify the previous caption is fully erased before the new one appears and that the earlier preview is unclipped. Mobile and desktop browser checks, TypeScript, lint, camera/lifecycle checks and the Cloudflare dry run passed; live asset hashes match the verified build.
+
+## Clean elevator sweep deployed
+
+Source `fdff1d2` frames the elevator beneath the whole Downshift preview before its upward pass. The closer tail framing begins after the opening wipe, its clipping envelope starts before contact, and camera/aircraft drift is suppressed during the cut so the visible edge stays aligned. The reading hold, slower scroll pacing and earlier Downshift entrance are preserved. Mobile and desktop browser checks show the phones, subtitle and heading disappearing along the elevator; the geometry, lifecycle, performance, type/lint and Cloudflare build checks passed. Production assets match local hashes.
