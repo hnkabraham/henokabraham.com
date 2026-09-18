@@ -86,26 +86,35 @@ for (const [width, height, captionBottom] of [
 }
 // The tail clears the Apps text and the phone preview before Devices.
 // Bounds match the responsive caption: its eyebrow is narrower than the title.
-for (const [width, height, top, right] of [
-  [1589, 952, 0.23, 0.4],
-  [1920, 1080, 0.23, 0.4],
-  [390, 844, 0.13, 0.7],
-  [375, 667, 0.13, 0.7],
-  [844, 390, 64 / 390, 0.36],
-  [781, 914, 0.13, 0.4],
+for (const [width, height, top, right, bottom] of [
+  [1589, 952, 0.23, 0.4, 0.74],
+  [1920, 1080, 0.23, 0.4, 0.74],
+  [390, 844, 0.13, 0.7, 0.7],
+  [375, 667, 0.13, 0.7, 0.7],
+  [844, 390, 64 / 390, 0.36, 0.77],
+  [781, 914, 0.13, 0.4, 0.7],
 ]) {
   const sample = createTailSweep(width, height);
   assert.ok(
-    sample(0.34).every((y) => y === 2),
-    'Apps starts without a tail cut',
+    [...sample(0.34)].every((y, i) => i / 48 > right || y > bottom),
+    'The elevator begins below the entire preview during the reading hold',
   );
-  let prior = sample(0.34).slice();
-  for (let p = 0.34; p <= 0.4901; p += 0.001) {
+  let prior = sample(0.3).slice();
+  for (let p = 0.301; p <= 0.4901; p += 0.001) {
     const front = sample(p);
     assert.ok(
       front.every((y, i) => Number.isFinite(y) && y <= prior[i]),
       'Tail-erased content never comes back while scrolling forward',
     );
+    for (let i = 0; i < front.length; i++) {
+      if (i / 48 < 0.03 || i / 48 > right) continue;
+      if (front[i] < top || front[i] > bottom) continue;
+      assert.ok(
+        Math.min(prior[i], bottom) - front[i] < 0.025,
+        `${width}x${height}: elevator must cross content from below, without a side-entry notch at ${p.toFixed(3)}`,
+      );
+      assert.equal(sampleDreamlinerTour(p, width / height).drift, 0);
+    }
     prior = front.slice();
   }
   const cleared = sample(0.48).slice();
@@ -125,7 +134,7 @@ for (const [width, height, top, right] of [
   );
   assert.deepEqual(sample(0.48), cleared);
   assert.ok(
-    sample(0.34).every((y) => y === 2),
+    [...sample(0.34)].every((y, i) => i / 48 > right || y > bottom),
     'Reverse restores all Apps content',
   );
 }
@@ -166,7 +175,11 @@ for (const [width, height, viewport] of [
     const p = tourProgressAt(0.34 * base + fraction * layout.hold, layout);
     assert.equal(tourPhase(p), 'roll');
     assert.ok(
-      tail(p).every((y) => y === 2),
+      [...tail(p)].every(
+        (y, i) =>
+          i / 48 > (mobile ? 0.7 : 0.4) ||
+          y > (mobile ? 0.7 : viewport < 600 ? 0.77 : 0.74),
+      ),
       'The whole preview remains unclipped throughout the reading hold',
     );
   }

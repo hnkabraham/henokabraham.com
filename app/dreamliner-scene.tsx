@@ -444,10 +444,10 @@ export default function DreamlinerScene({
         // the aim wanders by an angle, which reads whether the wing is
         // overhead or the aircraft is half a mile out; the lens itself by a
         // few centimetres, which only reads while it is near; and the focal
-        // length breathes a fraction of a degree. All of it is well under the
-        // depth cut's own softness, so the seams through the words hold.
+        // length breathes a fraction of a degree. The tail sweep temporarily
+        // locks this drift so its silhouette and the DOM cut stay aligned.
         const sway = (rate: number, phase: number) =>
-          Math.sin(elapsed * rate + phase);
+          Math.sin(elapsed * rate + phase) * shot.drift;
         const yaw = sway(0.53, 0) * 0.62 + sway(0.91, 2.2) * 0.28;
         const pitch = sway(0.47, 1.4) * 0.58 + sway(0.79, 4.1) * 0.24;
         camera.position.set(
@@ -480,8 +480,9 @@ export default function DreamlinerScene({
         camera.updateProjectionMatrix();
         aircraft.visible = shot.visible;
         aircraft.position.set(...shot.aircraft);
-        aircraft.position.y += Math.sin(elapsed * 0.65) * 0.08;
-        aircraft.rotation.x = shot.bank + Math.sin(elapsed * 0.4) * 0.003;
+        aircraft.position.y += Math.sin(elapsed * 0.65) * 0.08 * shot.drift;
+        aircraft.rotation.x =
+          shot.bank + Math.sin(elapsed * 0.4) * 0.003 * shot.drift;
         aircraft.rotation.y = shot.heading;
         // The wing breathes slowly and, once loaded up, flutters a little.
         flex.value =

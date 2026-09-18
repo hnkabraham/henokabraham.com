@@ -192,11 +192,14 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     ];
   }
   const yaw = heading(departure);
-  // Briefly track the aft fuselage so the elevators still span the caption
-  // while climbing past it. This starts after the opening wing wipe and
-  // releases smoothly into the established wide shot.
+  // Get the entire elevator under the preview before it climbs. Enter the
+  // close pass while the tail is still below the phones, so its tip cannot
+  // enter sideways halfway up an image and leave a vertical notch.
   const closePass =
-    1 + 0.85 * ease((p - 0.34) / 0.05) * (1 - ease((p - 0.44) / 0.1));
+    1 +
+    mix(1.4, 2, wide) * ease((p - 0.3) / 0.04) * (1 - ease((p - 0.44) / 0.1));
+  const tailLeadIn =
+    0.32 * ease((p - 0.3) / 0.04) * (1 - ease((p - 0.34) / 0.09));
   const tailAnchor: TourPoint = [
     aircraft[0] + 28 * Math.cos(yaw),
     aircraft[1] + 2.6,
@@ -245,7 +248,10 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     flex: 0.8 + 1.3 * ease((p - 0.22) / 0.4),
     fov,
     offsetX: mix(-0.18, 0, portrait),
-    offsetY: mix(-0.035, -0.12, portrait),
+    offsetY: mix(-0.035, -0.12, portrait) - tailLeadIn,
+    // Lock the lens to the cached silhouette during the precise tail wipe;
+    // otherwise idle camera bob lets the rendered edge drift off the cut.
+    drift: 1 - ease((p - 0.28) / 0.02) * (1 - ease((p - 0.49) / 0.05)),
     bank,
     // Retain the optional shader depth for scenes that interleave glyphs
     // with the airframe; the portfolio uses lasting silhouette wipes.
