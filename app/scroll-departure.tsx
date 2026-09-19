@@ -84,7 +84,13 @@ function toggleImmersive() {
     void root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
   } else root.webkitRequestFullscreen?.();
 }
-import { TOUR_CHAPTERS, tourPhase } from '@/lib/dreamliner-tour';
+import {
+  TOUR_CHAPTERS,
+  applyTourPreset,
+  appsPacing,
+  chapterLanding,
+  tourPhase,
+} from '@/lib/dreamliner-tour';
 import {
   tourScrollLayout,
   tourProgressAt,
@@ -140,11 +146,17 @@ function cutText(text: string) {
   ));
 }
 
+// The stylesheet's phone breakpoint, which places the Apps preview lower.
+const phoneLayout = () => matchMedia('(max-width: 800px)').matches;
 // The CSS adds scroll distance only to Apps. Cache its resolved pacing until
 // the section or browser viewport changes, not on every scroll event.
 function measureScroll(section: HTMLElement, previous: TourScroll | null) {
   const height = section.offsetHeight;
-  if (previous?.height === height && previous.viewport === innerHeight)
+  if (
+    previous?.height === height &&
+    previous.viewport === innerHeight &&
+    previous.width === innerWidth
+  )
     return previous;
   const style = getComputedStyle(section);
   return tourScrollLayout(
@@ -152,8 +164,17 @@ function measureScroll(section: HTMLElement, previous: TourScroll | null) {
     innerHeight,
     parseFloat(style.getPropertyValue('--apps-read-scroll')) || 0,
     parseFloat(style.getPropertyValue('--apps-sweep-scroll')) || 0,
+    appsPacing(innerWidth / innerHeight, phoneLayout()),
+    innerWidth,
   );
 }
+
+// In development `?tour=<preset>` tries an Apps pacing/wipe variant; the
+// production build has one tour. Applied before any layout is measured.
+const devPreset =
+  process.env.NODE_ENV !== 'production'
+    ? () => applyTourPreset(new URLSearchParams(location.search).get('tour'))
+    : () => {};
 
 function updateOpening(
   section: HTMLElement,
@@ -202,6 +223,7 @@ export default function ScrollDeparture({
     readImmersiveMode,
     noMode,
   );
+  useLayoutEffect(devPreset, []);
   useLayoutEffect(() => {
     const section = root.current;
     if (!section || !entry) return;
@@ -211,7 +233,10 @@ export default function ScrollDeparture({
     const chapter = TOUR_CHAPTERS.find((item) => item.phase === entry.chapter);
     let offset = Math.max(0, Math.min(layout.travel, -rect.top));
     if (chapter && !reducedMotion) {
-      offset = tourScrollAt(chapter.at, layout);
+      offset = tourScrollAt(
+        chapterLanding(chapter, innerWidth / innerHeight, phoneLayout()),
+        layout,
+      );
       scrollTo({ top: scrollY + rect.top + offset, behavior: 'instant' });
     }
     progress.current = reducedMotion ? 1 : tourProgressAt(offset, layout);
@@ -290,6 +315,11 @@ export default function ScrollDeparture({
       if (staticSky)
         setPhase(tourPhase(progress.current, innerWidth / innerHeight));
       frame = 0;
+      if (process.env.NODE_ENV !== 'production')
+        // Lets a screenshot harness address the page by flight position.
+        (
+          window as Window & { __tourScrollAt?: (p: number) => number }
+        ).__tourScrollAt = (p) => scrollY + rect.top + tourScrollAt(p, layout);
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -303,14 +333,19 @@ export default function ScrollDeparture({
       removeEventListener('resize', onScroll);
     };
   }, [reducedMotion, status, sceneReady]);
-  const jump = (position: number) => {
+  const jump = (chapter: (typeof TOUR_CHAPTERS)[number]) => {
     const section = root.current;
     if (!section) return;
     const top = scrollY + section.getBoundingClientRect().top;
     const layout = measureScroll(section, scrollLayout.current);
     scrollLayout.current = layout;
     scrollTo({
-      top: top + tourScrollAt(position, layout),
+      top:
+        top +
+        tourScrollAt(
+          chapterLanding(chapter, innerWidth / innerHeight, phoneLayout()),
+          layout,
+        ),
       behavior: reducedMotion ? 'instant' : 'smooth',
     });
   };
@@ -492,7 +527,7 @@ export default function ScrollDeparture({
             <button
               key={chapter.phase}
               className="mono"
-              onClick={() => jump(chapter.at)}
+              onClick={() => jump(chapter)}
               aria-label={chapter.label}
               aria-current={phase === chapter.phase ? 'step' : undefined}
             >
@@ -575,7 +610,7 @@ export default function ScrollDeparture({
             <button
               className="mono"
               disabled={reducedMotion || status === 'unavailable'}
-              onClick={() => jump(0)}
+              onClick={() => jump(TOUR_CHAPTERS[0])}
               aria-label="Return to the open sky"
             >
               <RotateCcw size={15} />

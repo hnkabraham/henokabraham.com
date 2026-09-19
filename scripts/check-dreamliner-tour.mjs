@@ -387,7 +387,7 @@ for (const [width, height] of [
     const shot = sampleDreamlinerTour(p, aspect);
     plane.position.set(...shot.aircraft);
     plane.rotation.order = 'YXZ';
-    plane.rotation.set(shot.bank, shot.heading, 0);
+    plane.rotation.set(shot.bank, shot.heading, shot.pitch);
     plane.updateMatrixWorld(true);
     const c = new T.PerspectiveCamera(shot.fov, aspect, 0.15, 1200);
     c.position.set(...shot.camera);
@@ -584,7 +584,7 @@ for (const [width, height] of [
       const shot = sampleDreamlinerTour(p, aspect);
       plane.position.set(...shot.aircraft);
       plane.rotation.order = 'YXZ';
-      plane.rotation.set(shot.bank, shot.heading, 0);
+      plane.rotation.set(shot.bank, shot.heading, shot.pitch);
       plane.updateMatrixWorld(true);
       const eye = new T.Vector3(...shot.camera);
       model.traverse((mesh) => {

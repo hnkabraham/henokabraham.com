@@ -15,12 +15,15 @@ export const TOUR_CHAPTERS: {
   // after it has gone: the rest of the scroll clears the sky and hands over.
   { at: 0.9, label: 'Explore', phase: 'cruise' },
 ];
+/** How far from landscape (0) to portrait (1) a screen's shape is. */
+const portraitAt = (aspect: number) =>
+  Math.max(0, Math.min(1, (1.15 - aspect) / 0.65));
+// The wing clears the opening sooner in portrait. Reveal Apps in that
+// empty sky, before the reading glide and the wipe that follows it. Keep
+// the wider framing long enough to finish erasing the opening.
+const appsEntrance = (aspect: number) => 0.3 - 0.06 * portraitAt(aspect);
 export function tourPhase(p: number, aspect = 16 / 9): BayPhase {
-  // The wing clears the opening sooner in portrait. Reveal Apps in that
-  // empty sky, before the tail-view reading hold and its elevator wipe.
-  // Keep the wider framing long enough to finish erasing the opening.
-  const portrait = Math.max(0, Math.min(1, (1.15 - aspect) / 0.65));
-  return p < 0.3 - 0.06 * portrait
+  return p < appsEntrance(aspect)
     ? 'preflight'
     : p < 0.49
       ? 'roll'
@@ -35,6 +38,122 @@ const ease = (t: number) => {
   return t * t * (3 - 2 * t);
 };
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/**
+ * The Apps chapter's pacing and its caption wipe, kept in one place so
+ * variants can be tried side by side: in development `?tour=<preset>`
+ * selects one before anything is baked (scroll-departure.tsx).
+ */
+export type TourTuning = {
+  /** What erases the Downshift caption: the airframe less its wings (so
+   * the phones still go with the elevator when the tail passes close), the
+   * whole silhouette, wings included (for a lens that lets the aircraft
+   * recede, where the port wing reaches furthest), or the elevators alone. */
+  wiper: 'airframe' | 'whole' | 'elevators';
+  /** The reading zone as [wide, phone layout]: the flight glides from
+   * `slowStart` to `slowEnd` across the extra Apps scroll instead of
+   * stopping. Equal values pin it, which is the pause this replaced. The
+   * zone ends where the airframe would first touch the caption, which the
+   * phone layout reaches sooner: its preview sits lower and the aircraft
+   * rises into it from below. */
+  slowStart: [number, number];
+  slowEnd: [number, number];
+  /**
+   * `chase`: the lens lunges forward alongside the tail for the wipe and
+   * falls back after it. `still`: the lens keeps its slow drift and the
+   * aircraft's own flight carries it across the caption. The sky behind is
+   * a still photograph, so every lens move reads as the aircraft moving;
+   * a lunge that swings behind the tail reads as the aircraft yawing.
+   */
+  camera: 'chase' | 'still';
+  /** Where the lens begins easing in toward the tail, [landscape, portrait]. */
+  closeStart: [number, number];
+  /** Where the caption wipe's silhouette bake begins. */
+  wipeStart: number;
+  /**
+   * For the whole-silhouette wiper, where the wings join it, [wide, phone
+   * layout]: not before the reading zone has ended, since the port wing
+   * root passes under the phone preview while the tail is still far off.
+   */
+  wingsFrom: [number, number];
+};
+export const TOUR_PRESETS: Record<string, TourTuning> = {
+  // The aircraft keeps flying, slowly, while the preview is read; then
+  // the lens lunges after the tail so its outline sweeps the caption away.
+  glide: {
+    wiper: 'airframe',
+    camera: 'chase',
+    slowStart: [0.31, 0.25],
+    slowEnd: [0.342, 0.3],
+    closeStart: [0.33, 0.29],
+    wipeStart: 0.24,
+    wingsFrom: [Infinity, Infinity],
+  },
+  // The shipped tour: the same glide, but the lens never lunges after the
+  // tail. The aircraft recedes, climbs and banks away as one flight, and
+  // its whole silhouette sweeps the caption on the way past.
+  still: {
+    wiper: 'whole',
+    camera: 'still',
+    slowStart: [0.31, 0.25],
+    slowEnd: [0.342, 0.3],
+    closeStart: [0.33, 0.29],
+    wipeStart: 0.24,
+    wingsFrom: [0.345, 0.305],
+  },
+  // The same glide, wiped by the elevators only (text sits over the fin).
+  elevators: {
+    wiper: 'elevators',
+    camera: 'chase',
+    slowStart: [0.31, 0.25],
+    slowEnd: [0.342, 0.3],
+    closeStart: [0.33, 0.29],
+    wipeStart: 0.24,
+    wingsFrom: [Infinity, Infinity],
+  },
+  // The previous behaviour: a dead stop at 34%, then the elevator wipe.
+  hold: {
+    wiper: 'elevators',
+    camera: 'chase',
+    slowStart: [0.34, 0.34],
+    slowEnd: [0.34, 0.34],
+    closeStart: [0.34, 0.34],
+    wipeStart: 0.34,
+    wingsFrom: [Infinity, Infinity],
+  },
+};
+export const tuning: TourTuning = { ...TOUR_PRESETS.still };
+/** Select a preset by name; anything unknown is the default. */
+export function applyTourPreset(name: string | null | undefined) {
+  Object.assign(tuning, TOUR_PRESETS[name ?? ''] ?? TOUR_PRESETS.still);
+}
+/** A key for caches baked from the tuning, such as the caption wipes. */
+export const tuningKey = () => JSON.stringify(tuning);
+/**
+ * The reading zone's bounds in flight position for this screen. The phone
+ * layout (the stylesheet's 800 px breakpoint) has its own pair; its zone
+ * never starts before the caption has entered, which is by aspect.
+ */
+export function appsPacing(aspect: number, phone: boolean) {
+  const side = phone ? 1 : 0;
+  return {
+    slowStart: Math.max(
+      tuning.slowStart[side],
+      Math.min(tuning.slowEnd[side], appsEntrance(aspect) + 0.012),
+    ),
+    slowEnd: tuning.slowEnd[side],
+  };
+}
+/** Where a chapter button lands: Apps a quarter into its reading zone. */
+export function chapterLanding(
+  chapter: (typeof TOUR_CHAPTERS)[number],
+  aspect: number,
+  phone: boolean,
+) {
+  if (chapter.phase !== 'roll') return chapter.at;
+  const { slowStart, slowEnd } = appsPacing(aspect, phone);
+  return slowStart + (slowEnd - slowStart) * 0.25;
+}
 const point = (a: TourPoint, b: TourPoint, t: number) =>
   a.map((v, i) => mix(v, b[i], t)) as TourPoint;
 type Shot = {
@@ -100,7 +219,7 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   const t = ease((p - a.at) / (b.at - a.at));
   let target = point(a.target, b.target, t);
   let camera = point(a.camera, b.camera, t);
-  const portrait = Math.max(0, Math.min(1, (1.15 - aspect) / 0.65));
+  const portrait = portraitAt(aspect);
   // On a phone, sit a little further back from the engine.
   const distance = 1 + portrait * 0.3;
   camera = camera.map(
@@ -126,7 +245,13 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     aircraft[0] -= travel * Math.cos(h);
     aircraft[2] += travel * Math.sin(h);
   }
-  aircraft[1] += 30 * departure * departure;
+  const steady = tuning.camera === 'still' ? 1 : 0;
+  // The climb: a shallow drift-up, and for the lens that holds a real
+  // climb-out on top of it, so the aircraft's rise on screen is mostly its
+  // own and its nose-up attitude is earned. It begins only once the wing
+  // pass has erased the opening, which the pass's own geometry depends on.
+  const climbOut = Math.max(0, departure - 0.15) / 0.85;
+  aircraft[1] += 30 * departure * departure + steady * 60 * climbOut ** 1.5;
   // After the hold the aim rides with the aircraft, sliding from the port
   // exhaust to the fuselage (a touch to starboard of it, so the whole span
   // sits left of the frame's edge) as the aircraft comes into frame.
@@ -164,14 +289,28 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   // Keep the tail close for its second sweep, then carry that height into
   // the departure until the original climb catches up (never dip back down).
   const wide = Math.max(0, Math.min(1, (aspect - 1.85) / 0.65));
+  const chase = tuning.camera === 'chase' ? 1 : 0;
   const tailRise = mix(0.97, 1.1, portrait) + 0.24 * wide;
-  const up = Math.max(departureUp, tailRise * ease((p - 0.37) / 0.06));
+  // The held lens pans once, slowly and in one direction, carrying the
+  // aircraft up and across to where the later chapters keep it. Along with
+  // its nose-up attitude and real climb this reads as climbing away, where
+  // the chase's lunge behind the tail read as a yaw.
+  // A short, wide screen has less height to spare above the caption, so
+  // its pan completes sooner rather than reaching higher.
+  const carry = steady * ease((p - 0.34) / mix(0.16, 0.12, wide));
+  const up = Math.max(
+    departureUp,
+    chase * tailRise * ease((p - 0.37) / 0.06),
+    carry * (mix(0.95, 1.08, portrait) + 0.12 * wide),
+  );
   const right = -(
     swing * mix(0.86, 0.56, portrait) +
-    0.09 *
+    chase *
+      0.09 *
       (1 - portrait) *
       ease((p - 0.34) / 0.035) *
       (1 - ease((p - 0.85) / 0.15)) +
+    carry * mix(0.14, 0.06, portrait) +
     slip(departure) * mix(0.35, 0.8, portrait)
   );
   if (right || up) {
@@ -193,10 +332,16 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   }
   const yaw = heading(departure);
   // Briefly track the aft fuselage so the elevators still span the caption
-  // while climbing past it. This starts after the opening wing wipe and
-  // releases smoothly into the established wide shot.
+  // while climbing past it. The lens starts easing in during the reading
+  // zone, so the glide has a gentle push-in rather than a zoom that begins
+  // the moment reading ends, and releases smoothly into the wide shot.
+  const closeStart = mix(tuning.closeStart[0], tuning.closeStart[1], portrait);
   const closePass =
-    1 + 0.85 * ease((p - 0.34) / 0.05) * (1 - ease((p - 0.44) / 0.1));
+    1 +
+    chase *
+      0.85 *
+      ease((p - closeStart) / (0.39 - closeStart)) *
+      (1 - ease((p - 0.44) / 0.1));
   const tailAnchor: TourPoint = [
     aircraft[0] + 28 * Math.cos(yaw),
     aircraft[1] + 2.6,
@@ -235,11 +380,19 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
     mix(-0.08, 0.025, arrival) +
     Math.sin(p * Math.PI * 2) * 0.025 +
     0.3 * ease((departure - 0.18) / 0.16) * (1 - ease((departure - 0.7) / 0.2));
+  // Nose-up through the climb-out (a negative Z rotation raises the nose),
+  // easing back toward level as the turn is held.
+  const pitch =
+    -steady *
+    0.16 *
+    ease((departure - 0.15) / 0.25) *
+    (1 - 0.6 * ease((departure - 0.7) / 0.3));
   return {
     camera,
     target,
     aircraft,
     heading: yaw,
+    pitch,
     // Tip lift in metres: a cruise wing is always flexed, and it loads up
     // further as the aircraft climbs away.
     flex: 0.8 + 1.3 * ease((p - 0.22) / 0.4),

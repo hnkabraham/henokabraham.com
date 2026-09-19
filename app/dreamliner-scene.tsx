@@ -9,7 +9,11 @@ import type {
   WebGLRenderer,
 } from 'three';
 import { sceneAsset } from '@/lib/scene-assets';
-import { sampleDreamlinerTour, tourPixelRatio } from '@/lib/dreamliner-tour';
+import {
+  sampleDreamlinerTour,
+  tourPixelRatio,
+  tuningKey,
+} from '@/lib/dreamliner-tour';
 import {
   ENGINE_AXIS,
   EXHAUST_STATION,
@@ -185,7 +189,8 @@ export default function DreamlinerScene({
           ),
         );
         r.setSize(width, height, false);
-        const size = `${width}x${height}`;
+        // The envelopes are baked from the tour, so a tuning change rebakes.
+        const size = `${width}x${height}:${tuningKey()}`;
         if (size !== sweepSize) {
           sweep = createWingSweep(width, height);
           tailSweep = createTailSweep(width, height);
@@ -483,6 +488,7 @@ export default function DreamlinerScene({
         aircraft.position.y += Math.sin(elapsed * 0.65) * 0.08;
         aircraft.rotation.x = shot.bank + Math.sin(elapsed * 0.4) * 0.003;
         aircraft.rotation.y = shot.heading;
+        aircraft.rotation.z = shot.pitch;
         // The wing breathes slowly and, once loaded up, flutters a little.
         flex.value =
           shot.flex +

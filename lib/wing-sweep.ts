@@ -1,6 +1,11 @@
 import { Object3D, PerspectiveCamera } from 'three';
-import { projectWing, projectTail, type WingPolygon } from './dreamliner-cut';
-import { sampleDreamlinerTour } from './dreamliner-tour';
+import {
+  projectAirframe,
+  projectTail,
+  projectWing,
+  type WingPolygon,
+} from './dreamliner-cut';
+import { sampleDreamlinerTour, tuning } from './dreamliner-tour';
 
 const END = 0.34;
 const STEPS = 170;
@@ -51,7 +56,7 @@ export function createWingSweep(width: number, height: number) {
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
     aircraft.position.set(...shot.aircraft);
-    aircraft.rotation.set(shot.bank, shot.heading, 0);
+    aircraft.rotation.set(shot.bank, shot.heading, shot.pitch);
     aircraft.updateMatrixWorld(true);
     const polygons = shot.visible
       ? projectWing(camera, aircraft, shot.flex, width, height)
@@ -74,11 +79,33 @@ export function createWingSweep(width: number, height: number) {
   };
 }
 
-/** Upward tail sweep for Apps; cached separately so the opening is untouched. */
+/**
+ * Upward sweep for Apps, cached separately so the opening is untouched. The
+ * silhouette is the tuning's choice; the bake starts early enough that
+ * nothing sits over the airframe before it, and until the outline reaches
+ * the caption the envelope simply stays open.
+ */
 export function createTailSweep(width: number, height: number) {
-  const start = 0.34,
+  const start = tuning.wipeStart,
     end = 0.49,
-    steps = 150;
+    steps = Math.ceil((end - start) / 0.001);
+  const wingsFrom = tuning.wingsFrom[width <= 800 ? 1 : 0];
+  const project = (
+    camera: PerspectiveCamera,
+    model: Object3D,
+    flex: number,
+    p: number,
+    w: number,
+    h: number,
+  ) =>
+    tuning.wiper === 'elevators'
+      ? projectTail(camera, model, w, h)
+      : tuning.wiper === 'whole' && p >= wingsFrom
+        ? [
+            ...projectAirframe(camera, model, w, h),
+            ...projectWing(camera, model, flex, w, h),
+          ]
+        : projectAirframe(camera, model, w, h);
   const camera = new PerspectiveCamera(34, width / height, 0.15, 1200);
   const aircraft = new Object3D();
   aircraft.rotation.order = 'YXZ';
@@ -86,10 +113,8 @@ export function createTailSweep(width: number, height: number) {
   let previous = new Float32Array(COLUMNS + 1).fill(2);
   rows.push(previous);
   for (let step = 1; step <= steps; step++) {
-    const shot = sampleDreamlinerTour(
-      start + (step / steps) * (end - start),
-      width / height,
-    );
+    const p = start + (step / steps) * (end - start);
+    const shot = sampleDreamlinerTour(p, width / height);
     camera.position.set(...shot.camera);
     camera.lookAt(...shot.target);
     camera.fov = shot.fov;
@@ -104,11 +129,11 @@ export function createTailSweep(width: number, height: number) {
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
     aircraft.position.set(...shot.aircraft);
-    aircraft.rotation.set(shot.bank, shot.heading, 0);
+    aircraft.rotation.set(shot.bank, shot.heading, shot.pitch);
     aircraft.updateMatrixWorld(true);
     // Reflect screen Y to reuse the same envelope math for the upward pass.
-    const polygons = projectTail(camera, aircraft, width, height).map((poly) =>
-      poly.map((v, i) => (i % 3 === 1 ? height - v : v)),
+    const polygons = project(camera, aircraft, shot.flex, p, width, height).map(
+      (poly) => poly.map((v, i) => (i % 3 === 1 ? height - v : v)),
     );
     const row = Float32Array.from(previous, (y, column) =>
       Math.min(

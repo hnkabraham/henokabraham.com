@@ -41,6 +41,56 @@ export const TAIL_OUTLINE: [number, number, number][] = [
   [30.806, 2.168, 1.818],
 ];
 
+/**
+ * The fuselage and fin in side profile, nose to tail cone, from the model's
+ * centreline vertices: the constant section's top and bottom, the fin's
+ * leading edge up to its tip and trailing edge back down to the root, then
+ * the cone. The body is round, so two copies sit out at the shoulders,
+ * where the projected outline is widest from the lens's high, port side.
+ */
+export const BODY_OUTLINE: [number, number, number][] = [
+  [-29, 0.2, 0],
+  [-28.6, 1.9, 0],
+  [-28, 2.95, 0],
+  [-27, 3.45, 0],
+  [-26, 3.8, 0],
+  [-24, 4.2, 0],
+  [-22, 4.35, 0],
+  [16, 4.4, 0],
+  [29.7, 12.4, 0],
+  [33, 13.3, 0],
+  [29.5, 4.4, 0],
+  [33, 2.5, 0],
+  [33, 1.85, 0],
+  [30, 1.3, 0],
+  [26, 0.3, 0],
+  [22, -0.6, 0],
+  [18, -1.1, 0],
+  [16, -1.4, 0],
+  [-8, -1.7, 0],
+  [-24, -1.5, 0],
+  [-27.5, -1, 0],
+  [-28.7, -0.4, 0],
+];
+const SHOULDER = 2.2;
+const BODY_SHOULDER: [number, number, number][] = [
+  [-27, 1.6, 0],
+  [-24.5, 3, 0],
+  [-21, 3.3, 0],
+  [16, 3.3, 0],
+  [22, 3.1, 0],
+  [26, 2.5, 0],
+  [29, 1.9, 0],
+  [30.5, 1.6, 0],
+  [29, 1, 0],
+  [26, 0.2, 0],
+  [22, -0.5, 0],
+  [16, -0.7, 0],
+  [-21, -0.7, 0],
+  [-24.5, -0.4, 0],
+  [-27, 0.4, 0],
+];
+
 /** Vertices as [x, y, depth]: screen px and the view depth there. */
 export type WingPolygon = number[];
 
@@ -107,6 +157,34 @@ export function projectTail(
         ...TAIL_OUTLINE,
         ...[...TAIL_OUTLINE].reverse().map(([x, y, z]) => [x, y, -z]),
       ],
+    ],
+    width,
+    height,
+  );
+}
+
+/**
+ * The airframe less its wings: elevators, fin and fuselage. The wings are
+ * left out on purpose: the port wing root passes under the phone preview
+ * before the elevator does, and the elevator is the wipe that is wanted.
+ */
+export function projectAirframe(
+  camera: PerspectiveCamera,
+  model: Object3D,
+  width: number,
+  height: number,
+): WingPolygon[] {
+  return projectOutlines(
+    camera,
+    model,
+    [
+      [
+        ...TAIL_OUTLINE,
+        ...[...TAIL_OUTLINE].reverse().map(([x, y, z]) => [x, y, -z]),
+      ],
+      BODY_OUTLINE,
+      BODY_SHOULDER.map(([x, y]) => [x, y, SHOULDER]),
+      BODY_SHOULDER.map(([x, y]) => [x, y, -SHOULDER]),
     ],
     width,
     height,

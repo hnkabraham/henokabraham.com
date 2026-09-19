@@ -23,10 +23,41 @@ const { createWingSweep, createTailSweep } = await import(
     './dreamliner-cut': cut,
   })
 );
-const { tourPhase, TOUR_CHAPTERS, sampleDreamlinerTour } = await import(tour);
+const {
+  tourPhase,
+  TOUR_CHAPTERS,
+  sampleDreamlinerTour,
+  appsPacing,
+  chapterLanding,
+  applyTourPreset,
+  TOUR_PRESETS,
+  tuning,
+} = await import(tour);
 const { tourScrollLayout, tourProgressAt, tourScrollAt } = await import(
-  await moduleURL('../lib/tour-scroll.ts')
+  await moduleURL('../lib/tour-scroll.ts', { './dreamliner-tour': tour })
 );
+// The Downshift caption's boxes, in fractions of the canvas, as the page
+// lays them out on each viewport (the wide layout up to the eyebrow; the
+// phone layout below the stylesheet's 800 px breakpoint).
+const captionBoxes = (width) =>
+  width <= 800
+    ? [
+        [0.07, 0.62, 0.13, 0.16],
+        [0.07, 0.62, 0.17, 0.24],
+        [0.07, 0.62, 0.25, 0.29],
+        [0.03, 0.62, 0.3, 0.57],
+      ]
+    : [
+        [0.07, 0.27, 0.16, 0.25],
+        [0.07, 0.27, 0.23, 0.35],
+        [0.07, 0.27, 0.35, 0.41],
+        [0.05, 0.25, 0.41, 0.73],
+      ];
+// Whether an upward envelope has cut into a caption box.
+const clipped = (front, [left, right, , bottom]) =>
+  [...front].some(
+    (y, i) => i / 48 >= left && i / 48 <= right && y < bottom - 0.002,
+  );
 for (const [width, height, captionBottom] of [
   [1589, 952, 0.57],
   [1920, 1080, 0.56],
@@ -71,7 +102,9 @@ for (const [width, height, captionBottom] of [
     `${width}x${height}: opening must be erased before Downshift appears`,
   );
   assert.ok(
-    createTailSweep(width, height)(entrance).every((y) => y === 2),
+    captionBoxes(width).every(
+      (box) => !clipped(createTailSweep(width, height)(entrance), box),
+    ),
     'The earlier Downshift entrance shows the whole preview',
   );
   assert.equal(sampleDreamlinerTour(entrance, width / height).phase, 'roll');
@@ -84,54 +117,73 @@ for (const [width, height, captionBottom] of [
     'Reverse scrolling restores the whole opening',
   );
 }
-// The tail clears the Apps text and the phone preview before Devices.
-// Bounds match the responsive caption: its eyebrow is narrower than the title.
-for (const [width, height, top, right] of [
-  [1589, 952, 0.23, 0.4],
-  [1920, 1080, 0.23, 0.4],
-  [390, 844, 0.13, 0.7],
-  [375, 667, 0.13, 0.7],
-  [844, 390, 64 / 390, 0.36],
-  [781, 914, 0.13, 0.4],
-]) {
-  const sample = createTailSweep(width, height);
-  assert.ok(
-    sample(0.34).every((y) => y === 2),
-    'Apps starts without a tail cut',
-  );
-  let prior = sample(0.34).slice();
-  for (let p = 0.34; p <= 0.4901; p += 0.001) {
-    const front = sample(p);
+// The airframe clears the Apps text and the phone preview before Devices,
+// under every preset: the shipped glide, the elevator-only wipe, and the
+// previous dead stop. Bounds match the responsive caption: its eyebrow is
+// narrower than the title.
+for (const preset of Object.keys(TOUR_PRESETS)) {
+  applyTourPreset(preset);
+  for (const [width, height, top, right] of [
+    [1589, 952, 0.23, 0.4],
+    [1920, 1080, 0.23, 0.4],
+    [390, 844, 0.13, 0.7],
+    [375, 667, 0.13, 0.7],
+    [844, 390, 64 / 390, 0.36],
+    [781, 914, 0.13, 0.4],
+  ]) {
+    const sample = createTailSweep(width, height);
+    const { slowStart, slowEnd } = appsPacing(width / height, width <= 800);
+    const boxes = captionBoxes(width);
     assert.ok(
-      front.every((y, i) => Number.isFinite(y) && y <= prior[i]),
-      'Tail-erased content never comes back while scrolling forward',
+      boxes.every((box) => !clipped(sample(slowStart), box)),
+      `${preset} ${width}x${height}: Apps starts without a cut`,
     );
-    prior = front.slice();
+    assert.ok(
+      boxes.every((box) => !clipped(sample(slowEnd), box)),
+      `${preset} ${width}x${height}: the whole preview is unclipped to the end of the reading zone`,
+    );
+    let prior = sample(tuning.wipeStart).slice();
+    for (let p = tuning.wipeStart; p <= 0.4901; p += 0.001) {
+      const front = sample(p);
+      assert.ok(
+        front.every((y, i) => Number.isFinite(y) && y <= prior[i]),
+        'Erased content never comes back while scrolling forward',
+      );
+      prior = front.slice();
+    }
+    const cleared = sample(0.48).slice();
+    const caption = [...cleared].filter(
+      (_, i) => i / 48 >= 0.0625 && i / 48 <= right,
+    );
+    assert.ok(
+      Math.max(...caption) < top,
+      `${preset} ${width}x${height}: the airframe must clear the whole caption (${Math.max(...caption).toFixed(3)} < ${top})`,
+    );
+    const middle = sample(0.4).slice();
+    sample(1);
+    assert.deepEqual(
+      sample(0.4),
+      middle,
+      'Reverse has no frame-history dependency',
+    );
+    assert.deepEqual(sample(0.48), cleared);
+    assert.ok(
+      boxes.every((box) => !clipped(sample(slowStart), box)),
+      'Reverse restores all Apps content',
+    );
   }
-  const cleared = sample(0.48).slice();
-  const caption = [...cleared].filter(
-    (_, i) => i / 48 >= 0.0625 && i / 48 <= right,
-  );
-  assert.ok(
-    Math.max(...caption) < top,
-    `${width}x${height}: tail must clear the whole caption (${Math.max(...caption).toFixed(3)} < ${top})`,
-  );
-  const middle = sample(0.4).slice();
-  sample(1);
-  assert.deepEqual(
-    sample(0.4),
-    middle,
-    'Tail reverse has no frame-history dependency',
-  );
-  assert.deepEqual(sample(0.48), cleared);
-  assert.ok(
-    sample(0.34).every((y) => y === 2),
-    'Reverse restores all Apps content',
-  );
 }
+applyTourPreset('still');
+assert.deepEqual(
+  tuning,
+  TOUR_PRESETS.still,
+  'The shipped tour is the held lens',
+);
+assert.equal(tuning.camera, 'still');
 
-// Extra scroll distance belongs only to Apps: hold the complete live preview,
-// then run the same aircraft/wipe through a longer physical scroll segment.
+// Extra scroll distance belongs only to Apps: glide the complete live
+// preview past the reader, then run the same aircraft/wipe through a longer
+// physical scroll segment. The flight never stops.
 for (const [width, height, viewport] of [
   [1589, 952, 952],
   [390, 844, 844],
@@ -142,11 +194,13 @@ for (const [width, height, viewport] of [
   const mobile = width <= 800,
     read = mobile ? 110 : 50,
     extra = mobile ? 70 : 30;
+  const pacing = appsPacing(width / viewport, mobile);
   const layout = tourScrollLayout(
     ((420 + read + extra) * height) / 100,
     viewport,
     read,
     extra,
+    pacing,
   );
   const base = 4.2 * height - viewport;
   const close = (a, b, reason) => assert.ok(Math.abs(a - b) < 1e-9, reason);
@@ -156,41 +210,67 @@ for (const [width, height, viewport] of [
     'Additional Apps distance does not alter the opening speed',
   );
   const tail = createTailSweep(width, viewport);
-  for (const p of [0, 0.025, 0.1, 0.2, 0.3, 0.33])
+  const boxes = captionBoxes(width);
+  for (const p of [0, 0.025, 0.1, 0.2, 0.24])
     close(
       tourProgressAt(p * base, layout),
       p,
       'Original wing sweep uses the same scroll pixels',
     );
+  const { slowStart, slowEnd } = pacing;
+  assert.ok(slowEnd > slowStart, 'The reading zone is a glide, not a stop');
+  const glideAt = slowStart * base;
+  const glide = (slowEnd - slowStart) * base + layout.hold;
   for (const fraction of [0.01, 0.25, 0.5, 0.9, 0.99]) {
-    const p = tourProgressAt(0.34 * base + fraction * layout.hold, layout);
-    assert.equal(tourPhase(p), 'roll');
+    const p = tourProgressAt(glideAt + fraction * glide, layout);
+    assert.equal(tourPhase(p, width / viewport), 'roll');
     assert.ok(
-      tail(p).every((y) => y === 2),
-      'The whole preview remains unclipped throughout the reading hold',
+      boxes.every((box) => !clipped(tail(p), box)),
+      'The whole preview remains unclipped throughout the reading glide',
     );
   }
-  const wipeDistance = 0.15 * base + layout.sweep;
+  const rate = (offset) =>
+    (tourProgressAt(offset + 1, layout) - tourProgressAt(offset - 1, layout)) /
+    2;
+  const glideRate = rate(glideAt + glide / 2) * base;
   assert.ok(
-    wipeDistance / (0.15 * base) >= (mobile ? 2.4 : 1.6),
-    'The tail crossing itself is slower',
+    glideRate > 0.08 && glideRate < 0.35,
+    `${width}x${height}: the glide moves at a fraction of the opening's pace (${glideRate.toFixed(3)})`,
   );
-  let prior = -1;
+  const wipeDistance = (0.49 - slowEnd) * base + layout.sweep;
+  assert.ok(
+    wipeDistance / ((0.49 - slowEnd) * base) >= (mobile ? 2.1 : 1.6),
+    'The airframe crossing itself is slower',
+  );
+  let prior = 0;
   for (let offset = 0; offset <= layout.travel; offset += 3) {
     const p = tourProgressAt(offset, layout);
     assert.ok(Number.isFinite(p) && p >= prior && p >= 0 && p <= 1);
+    // Nothing moves faster than the opening does; a jump would.
+    assert.ok(
+      p - prior <= 3 / base + 1e-9,
+      'No jump in flight position between scroll pixels',
+    );
     prior = p;
   }
-  for (const { at, phase } of TOUR_CHAPTERS) {
-    const offset = tourScrollAt(at, layout);
+  for (const chapter of TOUR_CHAPTERS) {
+    const landing = chapterLanding(chapter, width / viewport, mobile);
+    const offset = tourScrollAt(landing, layout);
     close(
       tourProgressAt(offset, layout),
-      at,
+      landing,
       'Chapter buttons and old links use the inverse pacing map',
     );
-    assert.equal(tourPhase(tourProgressAt(offset, layout)), phase);
+    assert.equal(tourPhase(landing, width / viewport), chapter.phase);
+    if (chapter.phase === 'roll')
+      assert.ok(
+        landing > slowStart && landing < slowEnd,
+        'Apps lands inside its reading glide',
+      );
   }
-  for (const p of [0.335, 0.34, 0.35, 0.4, 0.48, 0.49, 0.59, 0.78, 1]) {
+  for (const p of [
+    0.25, 0.3, 0.335, 0.34, 0.35, 0.4, 0.48, 0.49, 0.59, 0.78, 1,
+  ]) {
     const offset = tourScrollAt(p, layout);
     tourProgressAt(layout.travel, layout);
     close(
@@ -200,8 +280,8 @@ for (const [width, height, viewport] of [
     );
   }
   for (const boundary of [
-    0.34 * base,
-    0.34 * base + layout.hold,
+    glideAt,
+    glideAt + glide,
     0.49 * base + layout.hold + layout.sweep,
   ])
     assert.ok(
@@ -209,10 +289,24 @@ for (const [width, height, viewport] of [
         tourProgressAt(boundary + 0.001, layout) -
           tourProgressAt(boundary - 0.001, layout),
       ) < 0.00001,
-      'The hold and slower sweep have continuous boundaries',
+      'The glide and slower sweep have continuous boundaries',
     );
   assert.equal(tourProgressAt(-100, layout), 0);
   assert.equal(tourProgressAt(layout.travel + 100, layout), 1);
+}
+// The previous dead stop still maps: a pinned zone lands a quarter in.
+{
+  applyTourPreset('hold');
+  const pacing = appsPacing(1589 / 952, false);
+  assert.equal(pacing.slowStart, pacing.slowEnd);
+  const layout = tourScrollLayout(5 * 952, 952, 50, 30, pacing);
+  const offset = tourScrollAt(0.34, layout);
+  close_(offset, 0.34 * layout.base + layout.hold * 0.25);
+  assert.equal(tourProgressAt(offset, layout), 0.34);
+  applyTourPreset('still');
+}
+function close_(a, b) {
+  assert.ok(Math.abs(a - b) < 1e-9, `${a} ~ ${b}`);
 }
 
 assert.equal(
@@ -223,7 +317,7 @@ assert.equal(
 assert.equal(
   tourPhase(0.33),
   'roll',
-  'Downshift fills the cleared sky before the tail-view hold',
+  'Downshift fills the cleared sky before the reading glide ends',
 );
 assert.equal(
   tourPhase(0.37),
@@ -313,5 +407,5 @@ assert.deepEqual(
 tailWipe.dispose();
 assert.ok(nodes.every((n) => n.style.clipPath === ''));
 console.log(
-  'Passed: complete wing and tail wipes on six viewports; forward, reverse and jump consistency; chapter timing; Apps reading hold and slower sweep; chapter/link inverse mapping; Safari viewport units; all caption children; idle measurement caching; cleanup.',
+  'Passed: complete wing and airframe wipes on six viewports under three presets; forward, reverse and jump consistency; chapter timing; Apps reading glide and slower sweep; chapter/link inverse mapping; Safari viewport units; all caption children; idle measurement caching; cleanup.',
 );
