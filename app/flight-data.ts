@@ -23,11 +23,16 @@ export type Flight = {
     alt: string;
     caption: string;
   };
+  preview?: { src: string; avif?: string; alt: string };
   features: string[];
 };
 export const flights: Flight[] = [
   {
     id: 'bay-departure',
+    preview: {
+      src: '/images/og-card.jpg',
+      alt: 'Personal Airspace, Henok’s aviation-inspired website',
+    },
     code: 'HA 006',
     name: 'Personal Airspace',
     destination: 'FEATURED ENGINEERING',
@@ -50,6 +55,11 @@ export const flights: Flight[] = [
   },
   {
     id: 'flight-tracker',
+    preview: {
+      src: '/images/live-united-flight-tracker.jpg',
+      avif: '/images/live-united-flight-tracker.avif',
+      alt: 'United Flight Tracker showing live aircraft on a 3D globe',
+    },
     code: 'HA 001',
     name: 'United Flight Tracker',
     destination: 'AVIATION',
@@ -71,6 +81,11 @@ export const flights: Flight[] = [
   },
   {
     id: 'routeloads',
+    preview: {
+      src: '/images/live-routeloads.jpg',
+      avif: '/images/live-routeloads.avif',
+      alt: 'routeloads route search and flight occupancy rankings',
+    },
     code: 'HA 007',
     name: 'routeloads',
     destination: 'AVIATION',
@@ -99,6 +114,11 @@ export const flights: Flight[] = [
   },
   {
     id: 'downshift',
+    preview: {
+      src: '/images/downshift-mockup-static.png',
+      avif: '/images/downshift-mockup-static.avif',
+      alt: 'Downshift’s dashboard, performance and settings screens on three iPhones',
+    },
     code: 'HA 002',
     name: 'Downshift',
     destination: 'AUTOMOTIVE',

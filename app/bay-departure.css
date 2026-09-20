@@ -1025,7 +1025,7 @@
   height: 100lvh;
 }
 @media (prefers-reduced-motion: reduce) {
-  .dreamliner-journey {
+  .dreamliner-journey[data-reduced='true'] {
     height: 100svh;
   }
   .dreamliner-journey .bay-poster,
@@ -1313,7 +1313,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dreamliner-journey {
+  .dreamliner-journey[data-reduced='true'] {
     height: 100lvh;
   }
 }
@@ -1450,4 +1450,91 @@
   font-size: 0.8rem;
   line-height: 1.5;
   color: #9fc3dc;
+}
+
+/* Controls and project access share the existing flight geometry. */
+.tour-project-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  pointer-events: auto;
+  cursor: pointer;
+  text-align: left;
+}
+.tour-project-action {
+  position: absolute;
+  right: -42px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #ffffffbb;
+  border-radius: 8px;
+  color: #173c52;
+  background: #f5f9f5ed;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px #16344818;
+}
+.tour-project-button:hover .tour-project-action {
+  background: #fff;
+}
+.bay-utilities .bay-view-toggle {
+  padding: 8px 10px;
+  border: 1px solid #436c8255;
+  border-radius: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.bay-view-toggle[aria-pressed='true'] {
+  background: #f4f8fae8;
+}
+.dreamliner-journey[data-reduced='true'] .bay-bottom {
+  justify-content: flex-end;
+}
+.dreamliner-journey[data-reduced='true'] .bay-scroll-cue,
+.dreamliner-journey[data-reduced='true'] .bay-progress {
+  display: none;
+}
+@media (max-width: 800px) {
+  .bay-scroll-cue > .mono {
+    display: none;
+  }
+  .bay-utilities {
+    gap: 12px;
+  }
+  .tour-project-action {
+    right: -72px;
+  }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .tour-project-action {
+    right: -130px;
+    bottom: 12px;
+  }
+  #flight[data-reduced='true'] .tour-destinations {
+    display: flex;
+    gap: 20px;
+    width: max-content;
+  }
+}
+
+/* Short landscape screens reserve the bottom row for chapter navigation. */
+@media (max-height: 600px) and (orientation: landscape) {
+  #flight .bay-bottom {
+    top: 55px;
+    bottom: auto;
+    left: auto;
+    right: max(7%, env(safe-area-inset-right));
+  }
+  #flight .bay-loading {
+    top: 50px;
+    bottom: auto;
+    left: auto;
+    right: 0;
+  }
 }

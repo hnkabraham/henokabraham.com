@@ -14,6 +14,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   Globe2,
+  LayoutGrid,
+  Check,
   Maximize2,
   Minimize2,
   RotateCcw,
@@ -189,11 +191,15 @@ function updateOpening(
 
 export default function ScrollDeparture({
   reducedMotion,
+  viewReady,
+  onToggleView,
   entry,
   onProject,
   paused = false,
 }: {
   reducedMotion: boolean;
+  viewReady: boolean;
+  onToggleView: () => void;
   entry: { chapter: BayPhase | null } | null;
   onProject: (id: string) => void;
   paused?: boolean;
@@ -239,7 +245,7 @@ export default function ScrollDeparture({
       );
       scrollTo({ top: scrollY + rect.top + offset, behavior: 'instant' });
     }
-    progress.current = reducedMotion ? 1 : tourProgressAt(offset, layout);
+    progress.current = reducedMotion ? 0 : tourProgressAt(offset, layout);
     reveal.current = updateOpening(section, offset, reducedMotion);
     renderedPhase.current = tourPhase(
       progress.current,
@@ -265,12 +271,16 @@ export default function ScrollDeparture({
   // mask: erased letters must never leave ghost holes in the aircraft.
   useLayoutEffect(() => {
     tailWipe.current?.attach(
-      phase === 'roll' && status !== 'unavailable' ? story.current : null,
+      phase === 'roll' && !reducedMotion && status !== 'unavailable'
+        ? story.current
+        : null,
     );
     openingWipe.current?.attach(
-      phase === 'preflight' && status !== 'unavailable' ? story.current : null,
+      phase === 'preflight' && !reducedMotion && status !== 'unavailable'
+        ? story.current
+        : null,
     );
-  }, [phase, sceneReady, status]);
+  }, [phase, sceneReady, status, reducedMotion]);
   useEffect(() => {
     const section = root.current;
     if (!section) return;
@@ -303,7 +313,7 @@ export default function ScrollDeparture({
       scrollLayout.current = layout;
       const offset = Math.max(0, Math.min(layout.travel, -rect.top));
       const staticSky = reducedMotion || status === 'unavailable';
-      progress.current = staticSky ? 1 : tourProgressAt(offset, layout);
+      progress.current = staticSky ? 0 : tourProgressAt(offset, layout);
       section.style.setProperty(
         '--flight-progress',
         String(offset / layout.travel),
@@ -427,11 +437,13 @@ export default function ScrollDeparture({
             <span className="sr-only">{description}</span>
             <span aria-hidden="true">{cutText(description)}</span>
           </p>
-          {phase === 'preflight' && (
-            <p className="bay-start-hint">
-              <ArrowDown size={15} /> Scroll to explore
-            </p>
-          )}
+          {phase === 'preflight' &&
+            !reducedMotion &&
+            status !== 'unavailable' && (
+              <p className="bay-start-hint">
+                <ArrowDown size={15} /> Scroll to explore
+              </p>
+            )}
           {phase === 'roll' &&
             (reducedMotion ? (
               <picture className="tour-mockup">
@@ -446,7 +458,11 @@ export default function ScrollDeparture({
                 />
               </picture>
             ) : (
-              <span className="tour-mockup">
+              <button
+                className="tour-mockup tour-project-button"
+                onClick={() => onProject('downshift')}
+                aria-label="Explore Downshift"
+              >
                 <picture>
                   <source
                     srcSet="/images/downshift-mockup.avif"
@@ -477,7 +493,10 @@ export default function ScrollDeparture({
                     aria-label="Downshift's dashboard running live"
                   />
                 </span>
-              </span>
+                <span className="tour-project-action">
+                  Explore Downshift <ArrowUpRight size={15} />
+                </span>
+              </button>
             ))}
           {phase === 'liftoff' && (
             <button
@@ -511,7 +530,9 @@ export default function ScrollDeparture({
               <ArrowUpRight size={21} />
             </a>
           )}
-          {phase === 'cruise' && (
+          {(phase === 'cruise' ||
+            reducedMotion ||
+            status === 'unavailable') && (
             <div className="tour-destinations">
               <a href="#departures">
                 All projects <ArrowRight size={17} />
@@ -551,6 +572,16 @@ export default function ScrollDeparture({
             </span>
           </div>
           <div className="bay-utilities">
+            <button
+              className="bay-view-toggle"
+              aria-pressed={reducedMotion}
+              disabled={!viewReady}
+              onClick={onToggleView}
+              title="Use a static sky and browse without 3D animation"
+            >
+              {reducedMotion ? <Check size={15} /> : <LayoutGrid size={15} />}
+              <span>Simple view</span>
+            </button>
             {status === 'loading' && (
               <output className="bay-loading mono">Loading 787</output>
             )}

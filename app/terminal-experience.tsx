@@ -15,6 +15,8 @@ import {
 import { useAirspaceDepth } from './use-airspace-depth';
 import ScrollDeparture from './scroll-departure';
 import { flights, liveSites, openSource } from './flight-data';
+import ProjectPreview from './project-preview';
+import { useViewPreference } from './use-view-preference';
 import { readFlightLink, replaceFlightLink } from '@/lib/flight-links';
 import type { BayPhase } from '@/lib/bay-flight';
 import AviationLogbook from './aviation-logbook';
@@ -80,24 +82,14 @@ export default function TerminalExperience() {
   const projectReturnFocus = useRef<HTMLElement | null>(null);
   const flight = flights[selected];
   const root = useRef<HTMLDivElement>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const {
+    simple: reducedMotion,
+    ready: viewReady,
+    toggle: toggleView,
+  } = useViewPreference();
   const [entry, setEntry] = useState<{ chapter: BayPhase | null } | null>(null);
   useAirspaceDepth(root, !reducedMotion);
   useEffect(() => {
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    // The tour costs a couple of megabytes; a visitor who asked their browser
-    // to save data, or is on a 2G-class link, gets the static sky instead.
-    const connection = (
-      navigator as Navigator & {
-        connection?: { saveData?: boolean; effectiveType?: string };
-      }
-    ).connection;
-    const metered =
-      Boolean(connection?.saveData) ||
-      /^(slow-)?2g$/.test(connection?.effectiveType ?? '');
-    const update = () => setReducedMotion(preference.matches || metered);
-    update();
-    preference.addEventListener('change', update);
     const restore = () => {
       const link = readFlightLink(
         new URL(location.href),
@@ -114,7 +106,6 @@ export default function TerminalExperience() {
     restore();
     addEventListener('popstate', restore);
     return () => {
-      preference.removeEventListener('change', update);
       removeEventListener('popstate', restore);
     };
   }, []);
@@ -165,6 +156,8 @@ export default function TerminalExperience() {
       <main>
         <ScrollDeparture
           reducedMotion={reducedMotion}
+          viewReady={viewReady}
+          onToggleView={toggleView}
           entry={entry}
           paused={projectOpen}
           onProject={(id) => {
@@ -260,6 +253,18 @@ export default function TerminalExperience() {
                   <Plane size={18} />
                 </div>
                 <div className="ticket-body" key={flight.id}>
+                  <DialogTrigger
+                    className="ticket-visual-button"
+                    aria-label={`Explore ${flight.name}`}
+                    onClick={(event) => {
+                      projectReturnFocus.current = event.currentTarget;
+                    }}
+                  >
+                    <ProjectPreview flight={flight} />
+                    <span className="preview-open">
+                      <ArrowUpRight size={17} />
+                    </span>
+                  </DialogTrigger>
                   <p className="ticket-flight mono">
                     {flight.code} / {flight.category}
                   </p>
@@ -498,6 +503,22 @@ export default function TerminalExperience() {
           <div className="about-heading">
             <p className="eyebrow">ABOUT ME</p>
             <h2 id="about-title">Curiosity, put to work.</h2>
+            <figure className="about-window">
+              <picture>
+                <source srcSet="/images/cruise-sky.avif" type="image/avif" />
+                <img
+                  src="/images/cruise-sky.jpg"
+                  alt="Blue sky above a sunlit cloud deck"
+                  width={960}
+                  height={640}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
+              <figcaption className="mono">
+                ALWAYS A WINDOW SEAT <Plane size={16} />
+              </figcaption>
+            </figure>
           </div>
           <div className="about-story">
             <p>
@@ -506,6 +527,27 @@ export default function TerminalExperience() {
             <p className="about-last">
               Usually chasing a good idea. Occasionally a window seat.
             </p>
+            <button
+              className="currently-building"
+              onClick={(event) => {
+                projectReturnFocus.current = event.currentTarget;
+                selectFlight(
+                  flights.findIndex((item) => item.id === 'downshift'),
+                );
+                setProjectOpen(true);
+              }}
+            >
+              <span className="eyebrow">
+                <span className="signal-dot" />
+                CURRENTLY BUILDING
+              </span>
+              <strong>
+                Downshift <ArrowUpRight size={18} />
+              </strong>
+              <span>
+                An iOS driving companion for live car data and better shifts.
+              </span>
+            </button>
             <a className="hangar-link" href="#contact">
               Say hello <ArrowUpRight size={16} />
             </a>
@@ -549,7 +591,15 @@ export default function TerminalExperience() {
           </div>
         </section>
       </main>
-      <footer className="site-footer mono">
+      <footer className="site-footer mono" id="footer">
+        <button
+          className="credits-link"
+          onClick={toggleView}
+          aria-pressed={reducedMotion}
+          disabled={!viewReady}
+        >
+          Simple view {reducedMotion ? 'on' : 'off'}
+        </button>
         <span>© {new Date().getFullYear()} HENOK ABRAHAM</span>
         <span>HENOKABRAHAM.COM</span>
         <Dialog>
@@ -565,7 +615,8 @@ export default function TerminalExperience() {
               measurements contain no visitor identifier, IP address, or message
               text. These measurements respect Do Not Track and Global Privacy
               Control. Contact details are sent only to Henok’s inbox; Turnstile
-              checks submissions for spam.
+              checks submissions for spam. Your Simple view preference stays in
+              this browser.
             </DialogDescription>
             <a
               href="https://www.cloudflare.com/privacypolicy/"
