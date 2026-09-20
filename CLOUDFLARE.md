@@ -55,10 +55,10 @@ References:
 - Primary URL: https://henokabraham.com
 - Workers URL: https://henokabraham-com.henok37.workers.dev
 - Worker: `henokabraham-com`
-- Cloudflare version: `fb056b35-7a30-440c-a821-62abf772bc3d`
+- Cloudflare version: `2884763d-9162-45b4-b0ee-d9ff420a4a33`
 - Previous service verification: homepage and both live-data/config endpoints return HTTP 200; five sampled versioned 3D assets have immutable cache headers and match local SHA-256 hashes. Live origin, Turnstile and metric validation reject invalid requests. Cloudflare confirmed delivery of the test email to my inbox. D1 contains live scene readiness and frame-rate summaries; the 15-minute cron is registered.
-- Current release: left-elevator-only Downshift sweep, source `42e155a` (September 18, 2026).
-- Current validation: TypeScript, lint, wing/tail wipe and scroll-pacing checks, full-airframe camera checks, renderer lifecycle and performance checks, Cloudflare dry run and production deployment passed. Mobile (390 × 844) and desktop (1589 × 952) browser checks show only the left elevator sweeping the phones and lettering; the tail cone stays to the right and the original wider flight resumes afterward. Geometry checks across five viewports keep the fuselage and tail cone outside the elevator shot; six viewport checks verify the complete wipe and reading hold. The live homepage returns HTTP 200; both changed JavaScript chunks and both stylesheets match local build hashes.
+- Current release: held-lens Apps glide with a progressive wing contribution and moving landscape reading interval, source `d8e82ab` (September 20, 2026).
+- Current validation: TypeScript, lint, camera/wipe/pacing, renderer lifecycle and performance checks, Cloudflare dry run and deployment passed. Browser checks at 1589 × 952 confirm the phones remain intact at the former abrupt-cut point and erase progressively afterward. At 667 × 375, 200px of reading scroll advances the flight from 0.3180 to 0.3289 while all Apps content remains visible. Regression checks cover both 667 × 375 and 800 × 600, plus desktop wipe continuity. The live homepage loads the current entry bundle; both changed JavaScript chunks and both stylesheets match local build hashes.
 - Deployment credentials are read from my own, git-ignored `.env.cloudflare.local`. They are excluded from the application build and Worker bindings.
 
 ## Zone settings that affect the opening
@@ -563,3 +563,9 @@ Source `fdff1d2` frames the elevator beneath the whole Downshift preview before 
 ## Left-elevator-only sweep deployed
 
 Source `42e155a` replaces the joined two-elevator/tail-cone wipe silhouette with only the port elevator. A tracking view beneath that elevator keeps the fuselage to the right while one diagonal edge crosses the phones and lettering. The camera blends framing and position into the original departure shot after the wipe; the opening, early Apps entrance and reading hold remain. Mobile and desktop visual checks plus full-model framing, continuity, clearance, wipe, type/lint, lifecycle, performance and Cloudflare checks passed. Production assets match local hashes.
+
+## Held-lens glide and transition fixes
+
+Source `944b697` keeps the camera back while the aircraft climbs away and replaces the Apps stop with a slow reading glide. Source `d8e82ab` fixes two review findings before publishing that change: wings blend into the caption envelope over 4% of flight progress instead of abruptly introducing an already-completed cut, and landscape phones use a later, nonzero reading interval that ends before the fin reaches the copy. The camera and aircraft path are unchanged by these fixes. The wing contribution begins only after the reading interval; full erasure, reverse scrolling and chapter jumps remain deterministic and cached per viewport.
+
+The new regression checks measure loss of visible phone area across the desktop handover and continuous reading motion in narrow landscape viewports. Landscape caption bounds are based on the actual short-screen layout. Cloudflare version `2884763d-9162-45b4-b0ee-d9ff420a4a33`.
