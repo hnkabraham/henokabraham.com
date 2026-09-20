@@ -135,13 +135,22 @@ export const tuningKey = () => JSON.stringify(tuning);
  * never starts before the caption has entered, which is by aspect.
  */
 export function appsPacing(aspect: number, phone: boolean) {
-  const side = phone ? 1 : 0;
+  // Landscape phones reveal Apps at the same flight position as desktop.
+  // Their portrait interval ends before that entrance and would collapse.
+  const side = phone && aspect < 1 ? 1 : 0;
+  // In the short phone layout, finish reading just before the fin reaches
+  // the last line of copy. Keep the development-only hold preset pinned.
+  const slowEnd =
+    tuning.slowEnd[side] -
+    (phone && side === 0 && tuning.slowEnd[side] > tuning.slowStart[side]
+      ? 0.006
+      : 0);
   return {
     slowStart: Math.max(
       tuning.slowStart[side],
-      Math.min(tuning.slowEnd[side], appsEntrance(aspect) + 0.012),
+      Math.min(slowEnd, appsEntrance(aspect) + 0.012),
     ),
-    slowEnd: tuning.slowEnd[side],
+    slowEnd,
   };
 }
 /** Where a chapter button lands: Apps a quarter into its reading zone. */

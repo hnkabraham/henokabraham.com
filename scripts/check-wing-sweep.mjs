@@ -39,20 +39,36 @@ const { tourScrollLayout, tourProgressAt, tourScrollAt } = await import(
 // The Downshift caption's boxes, in fractions of the canvas, as the page
 // lays them out on each viewport (the wide layout up to the eyebrow; the
 // phone layout below the stylesheet's 800 px breakpoint).
-const captionBoxes = (width) =>
-  width <= 800
+const captionBoxes = (width, height) =>
+  width > height && height <= 600
     ? [
-        [0.07, 0.62, 0.13, 0.16],
-        [0.07, 0.62, 0.17, 0.24],
-        [0.07, 0.62, 0.25, 0.29],
-        [0.03, 0.62, 0.3, 0.57],
+        [0.07, 0.07 + 164 / width, 64 / height, 80 / height],
+        [0.07, 0.07 + 164 / width, 90 / height, 126 / height],
+        [0.07, 0.07 + 164 / width, 136 / height, 155 / height],
+        // The landscape media query uses a 90–140px mockup; measured at
+        // 667 × 375, it occupies x=32.7–148.6 and y=162.8–275.3.
+        [
+          0.07 - 14 / width,
+          0.07 -
+            14 / width +
+            (Math.min(140, Math.max(90, 0.3 * height)) * 1.03) / width,
+          163 / height,
+          (163 + Math.min(140, Math.max(90, 0.3 * height))) / height,
+        ],
       ]
-    : [
-        [0.07, 0.27, 0.16, 0.25],
-        [0.07, 0.27, 0.23, 0.35],
-        [0.07, 0.27, 0.35, 0.41],
-        [0.05, 0.25, 0.41, 0.73],
-      ];
+    : width <= 800
+      ? [
+          [0.07, 0.62, 0.13, 0.16],
+          [0.07, 0.62, 0.17, 0.24],
+          [0.07, 0.62, 0.25, 0.29],
+          [0.03, 0.62, 0.3, 0.57],
+        ]
+      : [
+          [0.07, 0.27, 0.16, 0.25],
+          [0.07, 0.27, 0.23, 0.35],
+          [0.07, 0.27, 0.35, 0.41],
+          [0.05, 0.25, 0.41, 0.73],
+        ];
 // Whether an upward envelope has cut into a caption box.
 const clipped = (front, [left, right, , bottom]) =>
   [...front].some(
@@ -102,7 +118,7 @@ for (const [width, height, captionBottom] of [
     `${width}x${height}: opening must be erased before Downshift appears`,
   );
   assert.ok(
-    captionBoxes(width).every(
+    captionBoxes(width, height).every(
       (box) => !clipped(createTailSweep(width, height)(entrance), box),
     ),
     'The earlier Downshift entrance shows the whole preview',
@@ -133,7 +149,7 @@ for (const preset of Object.keys(TOUR_PRESETS)) {
   ]) {
     const sample = createTailSweep(width, height);
     const { slowStart, slowEnd } = appsPacing(width / height, width <= 800);
-    const boxes = captionBoxes(width);
+    const boxes = captionBoxes(width, height);
     assert.ok(
       boxes.every((box) => !clipped(sample(slowStart), box)),
       `${preset} ${width}x${height}: Apps starts without a cut`,
@@ -181,6 +197,40 @@ assert.deepEqual(
 );
 assert.equal(tuning.camera, 'still');
 
+// Reproduce the desktop pop: introducing the wing after it is above the
+// phones used to erase nearly the entire preview in one baked sample. Track
+// visible preview area through the handover, not only its start/end states.
+for (const [width, height] of [
+  [1589, 952],
+  [1920, 1080],
+]) {
+  const sweep = createTailSweep(width, height);
+  const visible = (front) => {
+    const columns = [...front].filter(
+      (_, i) => i / 48 >= 0.06 && i / 48 <= 0.25,
+    );
+    return (
+      columns.reduce(
+        (area, y) => area + Math.max(0, Math.min(1, (y - 0.42) / 0.31)),
+        0,
+      ) / columns.length
+    );
+  };
+  let previous = visible(sweep(0.342));
+  for (let step = 1; step <= 430; step++) {
+    const area = visible(sweep(0.342 + step * 0.0001));
+    assert.ok(
+      previous - area < 0.03,
+      `${width}x${height}: the phones must wipe progressively, not pop away (${previous - area})`,
+    );
+    previous = area;
+  }
+  assert.ok(
+    visible(sweep(0.37)) < visible(sweep(0.35)),
+    'The blended wing still advances through the preview',
+  );
+}
+
 // Extra scroll distance belongs only to Apps: glide the complete live
 // preview past the reader, then run the same aircraft/wipe through a longer
 // physical scroll segment. The flight never stops.
@@ -189,6 +239,8 @@ for (const [width, height, viewport] of [
   [390, 844, 844],
   [375, 667, 667],
   [844, 390, 390],
+  [667, 375, 375], // Narrow landscape phones must glide too.
+  [800, 600, 600],
   [390, 744, 844], // Safari with expanded content area but the same small viewport units.
 ]) {
   const mobile = width <= 800,
@@ -210,7 +262,7 @@ for (const [width, height, viewport] of [
     'Additional Apps distance does not alter the opening speed',
   );
   const tail = createTailSweep(width, viewport);
-  const boxes = captionBoxes(width);
+  const boxes = captionBoxes(width, viewport);
   for (const p of [0, 0.025, 0.1, 0.2, 0.24])
     close(
       tourProgressAt(p * base, layout),
@@ -226,7 +278,7 @@ for (const [width, height, viewport] of [
     assert.equal(tourPhase(p, width / viewport), 'roll');
     assert.ok(
       boxes.every((box) => !clipped(tail(p), box)),
-      'The whole preview remains unclipped throughout the reading glide',
+      `${width}x${height}: the whole preview remains unclipped throughout the reading glide (${p})`,
     );
   }
   const rate = (offset) =>
@@ -234,7 +286,7 @@ for (const [width, height, viewport] of [
     2;
   const glideRate = rate(glideAt + glide / 2) * base;
   assert.ok(
-    glideRate > 0.08 && glideRate < 0.35,
+    glideRate > (mobile && width > viewport ? 0.04 : 0.08) && glideRate < 0.35,
     `${width}x${height}: the glide moves at a fraction of the opening's pace (${glideRate.toFixed(3)})`,
   );
   const wipeDistance = (0.49 - slowEnd) * base + layout.sweep;

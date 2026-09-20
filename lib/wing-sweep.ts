@@ -5,7 +5,7 @@ import {
   projectWing,
   type WingPolygon,
 } from './dreamliner-cut';
-import { sampleDreamlinerTour, tuning } from './dreamliner-tour';
+import { appsPacing, sampleDreamlinerTour, tuning } from './dreamliner-tour';
 
 const END = 0.34;
 const STEPS = 170;
@@ -89,23 +89,14 @@ export function createTailSweep(width: number, height: number) {
   const start = tuning.wipeStart,
     end = 0.49,
     steps = Math.ceil((end - start) / 0.001);
-  const wingsFrom = tuning.wingsFrom[width <= 800 ? 1 : 0];
-  const project = (
-    camera: PerspectiveCamera,
-    model: Object3D,
-    flex: number,
-    p: number,
-    w: number,
-    h: number,
-  ) =>
-    tuning.wiper === 'elevators'
-      ? projectTail(camera, model, w, h)
-      : tuning.wiper === 'whole' && p >= wingsFrom
-        ? [
-            ...projectAirframe(camera, model, w, h),
-            ...projectWing(camera, model, flex, w, h),
-          ]
-        : projectAirframe(camera, model, w, h);
+  const wingsFrom = Math.max(
+    tuning.wingsFrom[width <= 800 ? 1 : 0],
+    appsPacing(width / height, width <= 800).slowEnd + 0.003,
+  );
+  // The wing may already be above the phones when reading ends. Blend its
+  // contribution up from below the viewport instead of inserting a completed
+  // cut in one sample. This changes only the caption, never the camera path.
+  const wingBlendLength = 0.04;
   const camera = new PerspectiveCamera(34, width / height, 0.15, 1200);
   const aircraft = new Object3D();
   aircraft.rotation.order = 'YXZ';
@@ -132,15 +123,33 @@ export function createTailSweep(width: number, height: number) {
     aircraft.rotation.set(shot.bank, shot.heading, shot.pitch);
     aircraft.updateMatrixWorld(true);
     // Reflect screen Y to reuse the same envelope math for the upward pass.
-    const polygons = project(camera, aircraft, shot.flex, p, width, height).map(
-      (poly) => poly.map((v, i) => (i % 3 === 1 ? height - v : v)),
+    const reflect = (polygons: WingPolygon[]) =>
+      polygons.map((poly) =>
+        poly.map((v, i) => (i % 3 === 1 ? height - v : v)),
+      );
+    const polygons = reflect(
+      tuning.wiper === 'elevators'
+        ? projectTail(camera, aircraft, width, height)
+        : projectAirframe(camera, aircraft, width, height),
     );
-    const row = Float32Array.from(previous, (y, column) =>
-      Math.min(
-        y,
-        1 - lowerEdge(polygons, (column / COLUMNS) * width, 4) / height,
-      ),
+    const wingTime = Math.max(
+      0,
+      Math.min(1, (p - wingsFrom) / wingBlendLength),
     );
+    const wingBlend = wingTime * wingTime * (3 - 2 * wingTime);
+    const wings =
+      tuning.wiper === 'whole' && wingBlend > 0
+        ? reflect(projectWing(camera, aircraft, shot.flex, width, height))
+        : [];
+    const row = Float32Array.from(previous, (y, column) => {
+      const x = (column / COLUMNS) * width;
+      const airframe = 1 - lowerEdge(polygons, x, 4) / height;
+      const wing = 1 - lowerEdge(wings, x, 4) / height;
+      const blendedWing = Number.isFinite(wing)
+        ? 1 + (Math.min(1, wing) - 1) * wingBlend
+        : 2;
+      return Math.min(y, airframe, blendedWing);
+    });
     rows.push(row);
     previous = row;
   }
