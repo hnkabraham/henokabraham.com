@@ -522,10 +522,11 @@ export default function TerminalExperience() {
           </div>
           <div className="about-story">
             <p>
-              I’m Henok. I build apps, connect devices, and make things in 3D.
+              I’m Henok. I build iOS apps, wire up the devices around me, and
+              put aviation data on the web.
             </p>
             <p className="about-last">
-              Usually chasing a good idea. Occasionally a window seat.
+              The best ones started as something I just wanted to look up.
             </p>
             <button
               className="currently-building"

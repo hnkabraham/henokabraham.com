@@ -28,7 +28,8 @@ const person = {
   '@type': 'Person',
   name: 'Henok Abraham',
   url: 'https://henokabraham.com/',
-  description: 'I build apps, connect devices, and make things in 3D.',
+  description:
+    'I build iOS apps, wire up the devices around me, and put aviation data on the web.',
   sameAs: ['https://github.com/hnkabraham'],
 };
 const summary =
