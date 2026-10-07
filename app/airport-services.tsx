@@ -7,6 +7,7 @@ import {
   measurementAllowed,
   type EdgeConfig,
 } from '@/lib/flight-metrics';
+import { withTimeout } from '@/lib/abort';
 
 type LiveData = {
   projects: { checkedAt: string; projects: ProjectLive[] } | null;
@@ -21,10 +22,7 @@ export function useAirportLive() {
       if (document.hidden) return;
       try {
         const r = await fetch('/api/live', {
-          signal: AbortSignal.any([
-            controller.signal,
-            AbortSignal.timeout(10000),
-          ]),
+          signal: withTimeout(controller.signal, 10000),
         });
         if (!r.ok) throw new Error('Feed unavailable');
         setData(await r.json());

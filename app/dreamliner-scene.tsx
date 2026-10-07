@@ -36,6 +36,7 @@ import { CONTRAIL_SOURCES, createContrails } from '@/lib/dreamliner-contrails';
 import { VORTEX_SOURCES, createVortices } from '@/lib/dreamliner-vortices';
 import { createFlightTrack, type TrackSource } from '@/lib/dreamliner-track';
 import { recordFlightMetric } from '@/lib/flight-metrics';
+import { withTimeout } from '@/lib/abort';
 
 type Props = {
   progress: RefObject<number>;
@@ -228,10 +229,7 @@ export default function DreamlinerScene({
       resize();
       const fetchBytes = async (path: string) => {
         const response = await fetch(sceneAsset(path), {
-          signal: AbortSignal.any([
-            controller.signal,
-            AbortSignal.timeout(25000),
-          ]),
+          signal: withTimeout(controller.signal, 25000),
         });
         if (!response.ok) throw new Error('Aircraft asset unavailable');
         return response.arrayBuffer();

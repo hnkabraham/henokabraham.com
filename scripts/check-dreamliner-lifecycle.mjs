@@ -62,6 +62,7 @@ const imports = {
     'export class HDRLoader { parse(){return {data:new Uint16Array(4),width:1,height:1,type:1016};} }',
   ),
   '@/lib/scene-assets': uri('export const sceneAsset=p=>p;'),
+  '@/lib/abort': await pure('../lib/abort.ts'),
   '@/lib/dreamliner-tour': await pure('../lib/dreamliner-tour.ts'),
   '@/lib/dreamliner-engine': engine,
   '@/lib/dreamliner-track': track,
@@ -350,8 +351,28 @@ try {
     disposers.forEach((f) => f());
     assert.equal(released, 1, 'Unmounting after a loss frees nothing twice');
   }
+  // Safari before 17.4 has no AbortSignal.any; the scenes' requests must
+  // still combine their cancellation and timeout there, not throw.
+  const { withTimeout } = await import(imports['@/lib/abort']);
+  const native = Object.getOwnPropertyDescriptor(AbortSignal, 'any');
+  try {
+    for (const any of [native.value, undefined]) {
+      Object.defineProperty(AbortSignal, 'any', { ...native, value: any });
+      const owner = new AbortController();
+      const signal = withTimeout(owner.signal, 60000);
+      assert.equal(signal.aborted, false);
+      owner.abort();
+      assert.equal(signal.aborted, true, 'Cancelling aborts the request');
+      const quick = withTimeout(new AbortController().signal, 5);
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      assert.equal(quick.aborted, true, 'The timeout aborts the request');
+      assert.equal(quick.reason?.name, 'TimeoutError');
+    }
+  } finally {
+    Object.defineProperty(AbortSignal, 'any', native);
+  }
   console.log(
-    'Passed: reduced motion skips WebGL; unmount during fetch and parsing; late HDR completion; opening has no draws or idle RAF; first-scroll wake ordering; project modal pause/resume; hidden-document suspension; resources disposed once; a lost context frees the scene and hands the remount to its parent without collapsing the tour.',
+    'Passed: reduced motion skips WebGL; unmount during fetch and parsing; late HDR completion; opening has no draws or idle RAF; first-scroll wake ordering; project modal pause/resume; hidden-document suspension; resources disposed once; a lost context frees the scene and hands the remount to its parent without collapsing the tour; requests cancel and time out without AbortSignal.any.',
   );
 } finally {
   for (const [k, v] of saved) globalThis[k] = v;

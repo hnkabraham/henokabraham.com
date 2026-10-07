@@ -9,6 +9,7 @@ import type {
   WebGLRenderer,
 } from 'three';
 import { sceneAsset } from '@/lib/scene-assets';
+import { withTimeout } from '@/lib/abort';
 
 type Props = {
   reducedMotion: boolean;
@@ -45,7 +46,7 @@ function floorTexture(T: typeof import('@/lib/garage-three')) {
 
 const fetchAsset = async (path: string, signal: AbortSignal) => {
   const response = await fetch(sceneAsset(path), {
-    signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),
+    signal: withTimeout(signal, 25000),
   });
   if (!response.ok) throw new Error('Garage asset unavailable');
   return response.arrayBuffer();
