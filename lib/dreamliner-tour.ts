@@ -219,6 +219,67 @@ const slip = (departure: number) => {
   return u * u * u;
 };
 
+/**
+ * Where the aircraft is and how it sits at a point in the tour, before the
+ * render loop's small sways: the flight the lens frames, and the track its
+ * contrails and wingtip vortices are laid along. It does not depend on the
+ * screen; only the lens does.
+ */
+export function tourAircraft(progress: number) {
+  const p = Math.max(0, Math.min(1, progress));
+  // The aircraft starts just behind the viewer, nose level with the lens and
+  // a little above it, and flies straight past on its own axis: the nacelle
+  // passes some five metres to the right, the wing a few metres overhead.
+  // It is already at speed when its nose crosses into frame (an ease-out,
+  // not the symmetric ease of the lens moves), and decelerates into place
+  // as if the viewer had matched its pace.
+  const arrival = 1 - (1 - Math.max(0, Math.min(1, (p - 0.025) / 0.17))) ** 3;
+  const position: TourPoint = [mix(42, 0, arrival), mix(2.4, 0, arrival), 0];
+  // The departure path, integrated along the heading so the turn is flown
+  // rather than slid: distance = RANGE * departure^1.5.
+  const departure = Math.max(0, Math.min(1, (p - 0.22) / 0.78));
+  const steps = 40,
+    ds = departure / steps;
+  for (let i = 0; i < steps; i++) {
+    const s = (i + 0.5) * ds;
+    const travel = RANGE * 1.5 * Math.sqrt(s) * ds;
+    const h = heading(s);
+    position[0] -= travel * Math.cos(h);
+    position[2] += travel * Math.sin(h);
+  }
+  const steady = tuning.camera === 'still' ? 1 : 0;
+  // The climb: a shallow drift-up, and for the lens that holds a real
+  // climb-out on top of it, so the aircraft's rise on screen is mostly its
+  // own and its nose-up attitude is earned. It begins only once the wing
+  // pass has erased the opening, which the pass's own geometry depends on.
+  const climbOut = Math.max(0, departure - 0.15) / 0.85;
+  position[1] += 30 * departure * departure + steady * 60 * climbOut ** 1.5;
+  // The bank leads the turn in and trails it out, as a coordinated turn does.
+  const bank =
+    mix(-0.08, 0.025, arrival) +
+    Math.sin(p * Math.PI * 2) * 0.025 +
+    0.3 * ease((departure - 0.18) / 0.16) * (1 - ease((departure - 0.7) / 0.2));
+  // Nose-up through the climb-out (a negative Z rotation raises the nose),
+  // easing back toward level as the turn is held.
+  const pitch =
+    -steady *
+    0.16 *
+    ease((departure - 0.15) / 0.25) *
+    (1 - 0.6 * ease((departure - 0.7) / 0.3));
+  return {
+    position,
+    arrival,
+    departure,
+    heading: heading(departure),
+    bank,
+    pitch,
+    // Tip lift in metres: a cruise wing is always flexed, and it loads up
+    // further as the aircraft climbs away.
+    flex: 0.8 + 1.3 * ease((p - 0.22) / 0.4),
+    visible: p > 0.025,
+  };
+}
+
 export function sampleDreamlinerTour(progress: number, aspect: number) {
   const p = Math.max(0, Math.min(1, progress));
   let index = 0;
@@ -234,33 +295,15 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   camera = camera.map(
     (v, i) => target[i] + (v - target[i]) * distance,
   ) as TourPoint;
-  // The aircraft starts just behind the viewer, nose level with the lens and
-  // a little above it, and flies straight past on its own axis: the nacelle
-  // passes some five metres to the right, the wing a few metres overhead.
-  // It is already at speed when its nose crosses into frame (an ease-out,
-  // not the symmetric ease of the lens moves), and decelerates into place
-  // as if the viewer had matched its pace.
-  const arrival = 1 - (1 - Math.max(0, Math.min(1, (p - 0.025) / 0.17))) ** 3;
-  const aircraft: TourPoint = [mix(42, 0, arrival), mix(2.4, 0, arrival), 0];
-  // The departure path, integrated along the heading so the turn is flown
-  // rather than slid: distance = RANGE * departure^1.5.
-  const departure = Math.max(0, Math.min(1, (p - 0.22) / 0.78));
-  const steps = 40,
-    ds = departure / steps;
-  for (let i = 0; i < steps; i++) {
-    const s = (i + 0.5) * ds;
-    const travel = RANGE * 1.5 * Math.sqrt(s) * ds;
-    const h = heading(s);
-    aircraft[0] -= travel * Math.cos(h);
-    aircraft[2] += travel * Math.sin(h);
-  }
+  const {
+    position: aircraft,
+    departure,
+    heading: yaw,
+    bank,
+    pitch,
+    flex,
+  } = tourAircraft(p);
   const steady = tuning.camera === 'still' ? 1 : 0;
-  // The climb: a shallow drift-up, and for the lens that holds a real
-  // climb-out on top of it, so the aircraft's rise on screen is mostly its
-  // own and its nose-up attitude is earned. It begins only once the wing
-  // pass has erased the opening, which the pass's own geometry depends on.
-  const climbOut = Math.max(0, departure - 0.15) / 0.85;
-  aircraft[1] += 30 * departure * departure + steady * 60 * climbOut ** 1.5;
   // After the hold the aim rides with the aircraft, sliding from the port
   // exhaust to the fuselage (a touch to starboard of it, so the whole span
   // sits left of the frame's edge) as the aircraft comes into frame.
@@ -339,7 +382,6 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
       target[2] - fx * step,
     ];
   }
-  const yaw = heading(departure);
   // Briefly track the aft fuselage so the elevators still span the caption
   // while climbing past it. The lens starts easing in during the reading
   // zone, so the glide has a gentle push-in rather than a zoom that begins
@@ -384,27 +426,13 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
       (aircraft[1] + 2.6 - camera[1]) * fy +
       (aircraft[2] - 28 * Math.sin(yaw) - camera[2]) * fz) /
     axis;
-  // The bank leads the turn in and trails it out, as a coordinated turn does.
-  const bank =
-    mix(-0.08, 0.025, arrival) +
-    Math.sin(p * Math.PI * 2) * 0.025 +
-    0.3 * ease((departure - 0.18) / 0.16) * (1 - ease((departure - 0.7) / 0.2));
-  // Nose-up through the climb-out (a negative Z rotation raises the nose),
-  // easing back toward level as the turn is held.
-  const pitch =
-    -steady *
-    0.16 *
-    ease((departure - 0.15) / 0.25) *
-    (1 - 0.6 * ease((departure - 0.7) / 0.3));
   return {
     camera,
     target,
     aircraft,
     heading: yaw,
     pitch,
-    // Tip lift in metres: a cruise wing is always flexed, and it loads up
-    // further as the aircraft climbs away.
-    flex: 0.8 + 1.3 * ease((p - 0.22) / 0.4),
+    flex,
     fov,
     offsetX: mix(-0.18, 0, portrait),
     offsetY: mix(-0.035, -0.12, portrait),

@@ -23,6 +23,7 @@ const pure = async (p, replacements = {}) => {
   return uri(js);
 };
 const engine = await pure('../lib/dreamliner-engine.ts');
+const track = await pure('../lib/dreamliner-track.ts');
 const refs = [];
 const hooks = {
   useRef: (initial) => {
@@ -63,8 +64,14 @@ const imports = {
   '@/lib/scene-assets': uri('export const sceneAsset=p=>p;'),
   '@/lib/dreamliner-tour': await pure('../lib/dreamliner-tour.ts'),
   '@/lib/dreamliner-engine': engine,
+  '@/lib/dreamliner-track': track,
   '@/lib/dreamliner-contrails': await pure('../lib/dreamliner-contrails.ts', {
     './dreamliner-engine': engine,
+    './dreamliner-track': track,
+  }),
+  '@/lib/dreamliner-vortices': await pure('../lib/dreamliner-vortices.ts', {
+    './dreamliner-engine': engine,
+    './dreamliner-track': track,
   }),
   '@/lib/dreamliner-cut': await pure('../lib/dreamliner-cut.ts', {
     './dreamliner-engine': engine,

@@ -11,6 +11,7 @@ import type {
 import { sceneAsset } from '@/lib/scene-assets';
 import {
   sampleDreamlinerTour,
+  tourAircraft,
   tourPixelRatio,
   tuningKey,
 } from '@/lib/dreamliner-tour';
@@ -31,7 +32,9 @@ import { addDepthCut, addEngineFinish, addWingFlex } from '@/lib/airframe-flex';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import type { TextCut } from '@/lib/dreamliner-cut';
 import { createWingSweep, createTailSweep } from '@/lib/wing-sweep';
-import { createContrails } from '@/lib/dreamliner-contrails';
+import { CONTRAIL_SOURCES, createContrails } from '@/lib/dreamliner-contrails';
+import { VORTEX_SOURCES, createVortices } from '@/lib/dreamliner-vortices';
+import { createFlightTrack, type TrackSource } from '@/lib/dreamliner-track';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 
 type Props = {
@@ -436,14 +439,41 @@ export default function DreamlinerScene({
         gltf.scene.add(glow);
         glows.push(glow);
       }
-      // Condensation trails aft of both engines, in the model's own axes so
-      // they follow the aircraft's heading, climb and bank.
+      // The wake: condensation trails aft of both engines and the vortices
+      // off the wingtips, laid into the air along the track the aircraft has
+      // flown, so they stay where they formed as it climbs and turns away.
+      // They belong to the scene, not the aircraft; the loop roots them at
+      // the airframe each frame.
+      const track = createFlightTrack(tourAircraft);
       const contrails = createContrails(T);
-      geometries.add(contrails.geometry);
-      materials.add(contrails.material);
+      const vortices = createVortices(T);
+      for (const part of [contrails, vortices]) {
+        geometries.add(part.geometry);
+        materials.add(part.material);
+        part.uniforms.sun.value.copy(sunlightOffset).normalize();
+        scene.add(part.mesh);
+      }
       textures.add(contrails.noise);
-      contrails.uniforms.sun.value.copy(sunlightOffset).normalize();
-      gltf.scene.add(contrails.mesh);
+      const nozzles = new Float32Array(6),
+        tips = new Float32Array(6),
+        source = new T.Vector3();
+      /** Where the sources sit in the scene now, flexed wing and sway included. */
+      const root = (
+        sources: readonly TrackSource[],
+        lift: number,
+        out: Float32Array,
+      ) =>
+        sources.forEach(([x, y, z, perFlex], j) =>
+          source
+            .set(x, y + perFlex * lift, z)
+            .applyMatrix4(gltf.scene.matrixWorld)
+            .toArray(out, j * 3),
+        );
+      if (process.env.NODE_ENV !== 'production') {
+        const handle = globalThis as typeof globalThis & { __wake?: unknown };
+        handle.__wake = { contrails, vortices };
+        cleanups.push(() => delete handle.__wake);
+      }
       const toGlow = new T.Vector3();
       // Bank about the body axis after the heading, not the world's X.
       aircraft.rotation.order = 'YXZ';
@@ -534,9 +564,19 @@ export default function DreamlinerScene({
           Math.sin(elapsed * 31) * 0.07 +
           Math.sin(elapsed * 17.3) * 0.05;
         turbineMaterial.emissiveIntensity = 0.3 * heat.value;
-        contrails.uniforms.time.value = elapsed;
-        contrails.uniforms.engineY.value =
-          ENGINE_AXIS.y + wingLift(EXHAUST_STATION, ENGINE_AXIS.z, flex.value);
+        aircraft.updateMatrixWorld();
+        root(CONTRAIL_SOURCES, flex.value, nozzles);
+        root(VORTEX_SOURCES, flex.value, tips);
+        contrails.update(track, current, nozzles, flex.value, elapsed);
+        vortices.update(
+          track,
+          current,
+          tips,
+          flex.value,
+          elapsed,
+          r.domElement.height,
+        );
+        contrails.mesh.visible = vortices.mesh.visible = shot.visible;
         for (const glow of glows) {
           // The haze is only convincing looking up the tailpipe: fade it by
           // how far the lens sits off the exhaust axis (+X is astern).

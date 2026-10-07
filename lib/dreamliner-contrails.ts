@@ -10,68 +10,125 @@ import type {
   ShaderMaterial,
   Vector3,
 } from 'three';
-import { ENGINE_AXIS, EXHAUST_STATION } from './dreamliner-engine';
+import { ENGINE_AXIS, EXHAUST_STATION, wingLift } from './dreamliner-engine';
+import {
+  AIR_FLOW,
+  type TrackSource,
+  type createFlightTrack,
+} from './dreamliner-track';
 
 /**
- * Condensation trails behind the 787's two engines, in the model's own
- * metres (nose −X, port +Z, up +Y), so they ride the aircraft's heading,
- * climb and bank the way a trail follows a steady flight path.
+ * Condensation trails behind the 787's two engines, laid into the air along
+ * the track the aircraft has flown (lib/dreamliner-track.ts), so they stay
+ * where they formed while the aircraft banks, climbs and turns away.
  *
  * The exhaust is clear until it has mixed and cooled, so a trail forms some
- * way aft of the nozzle, here 24 m. From there each trail is a line of soft,
- * camera-facing puffs, narrow and dense where it forms, wider and rougher as
- * it ages over 650 m, so it reads as a volume from any angle, including
- * end-on from behind. Puffs near the lens fade out rather than fill the
- * frame; with the gap, that keeps the opening's look up the tailpipe clear.
+ * way aft of the nozzle, here 24 m. From there each trail is a stream of
+ * soft, camera-facing puffs that belong to the air rather than to the
+ * aircraft: each is born at the forming end, drifts aft as the air streams
+ * past, and swells, roughens and thins as it ages over 650 m. Its turbulence
+ * churns as it goes. The wake does the rest: the tip vortices draw the two
+ * trails outboard and down, and far back the pair begins to ripple as the
+ * vortices' slow instability takes hold, waves that grow as the air carries
+ * them aft. Puffs near the lens fade rather than fill the frame; with the
+ * gap, that keeps the opening's look up the tailpipe clear.
  */
-const GAP = 24;
+export const CONTRAIL_GAP = 24;
 const LENGTH = 650;
 const RADIUS_NEAR = 0.55;
 const RADIUS_FAR = 5;
-/** Centre spacing as a share of a puff's radius: each overlaps ~4 others. */
-const SPACING = 0.55;
+/** Track samples per trail; the uniform array holds both trails. */
+const SAMPLES = 64;
+const STEP = (CONTRAIL_GAP + LENGTH) / (SAMPLES - 2);
+/**
+ * The puffs come in three sizes, each set spaced for its own stretch of the
+ * trail and fixed in the air, so the trail's grain moves with the air and
+ * not with the aircraft: [start, end, spacing], in metres aft of the nozzle.
+ * Neighbouring sets overlap and cross-fade where the trail has grown.
+ */
+const LAYERS = [
+  [CONTRAIL_GAP, 90, 0.3],
+  [80, 270, 0.85],
+  [250, CONTRAIL_GAP + LENGTH, 2.3],
+] as const;
 
-const radiusAt = (s: number) =>
-  RADIUS_NEAR +
-  (RADIUS_FAR - RADIUS_NEAR) * Math.min(1, (s - GAP) / LENGTH) ** 0.8;
-/** A fixed scatter, so the trails look the same on every visit. */
-const scatter = (i: number) => {
-  const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
-  return x - Math.floor(x);
-};
+/** The two nozzles: port, then starboard. */
+export const CONTRAIL_SOURCES: TrackSource[] = [1, -1].map((side) => [
+  EXHAUST_STATION,
+  ENGINE_AXIS.y,
+  side * ENGINE_AXIS.z,
+  wingLift(EXHAUST_STATION, ENGINE_AXIS.z, 1),
+]);
 
 const vertexShader = /* glsl */ `
-attribute vec4 trail; // metres aft of the nozzle, side (+1 port), seed, size
-attribute vec2 jitter; // the puff's offset from the trail's axis, in radii
+#define SAMPLES ${SAMPLES}
+attribute vec3 puff; // index in its set, the set, side (+1 port)
+uniform vec4 path[${SAMPLES * 2}]; // the port wake, then starboard
+uniform vec4 layers[3]; // start, spacing, fraction, the newest puff's number
+uniform float air; // the air's position along the track at the nozzle
 uniform float time;
-uniform float engineY;
 uniform vec3 sun;
 varying vec2 vUv;
 varying float vAlpha;
 varying float vSeed;
+varying float vSpin;
 varying float vAge;
 varying float vHaze;
 varying vec3 vSun;
 varying vec2 vAxis;
+uint mixBits(uint x) {
+  x ^= x >> 16; x *= 0x7feb352du;
+  x ^= x >> 15; x *= 0x846ca68bu;
+  return x ^ (x >> 16);
+}
+float random(uint key, uint salt) {
+  return float(mixBits(key * 7u + salt) & 0xffffffu) / 16777215.0;
+}
+vec3 wake(int i) { return path[i].xyz; }
 void main() {
-  float s = trail.x;
-  float u = clamp((s - ${GAP.toFixed(1)}) / ${LENGTH.toFixed(1)}, 0.0, 1.0);
-  float radius = mix(${RADIUS_NEAR.toFixed(2)}, ${RADIUS_FAR.toFixed(2)}, pow(u, 0.8));
-  float aft = s - ${GAP.toFixed(1)};
-  // The wake sinks and the two trails drift apart a little as they age.
-  vec3 centre = vec3(
-    ${EXHAUST_STATION.toFixed(3)} + s,
-    engineY - aft * 0.004,
-    trail.y * (${ENGINE_AXIS.z.toFixed(3)} + aft * 0.004)
-  );
-  centre.yz += jitter * radius * 0.3;
+  int set = int(puff.y);
+  vec4 layer = layers[set];
+  float side = puff.z;
+  float s = layer.x + (layer.z + puff.x) * layer.y;
+  // Every puff is a parcel of the air: its number is fixed while it streams
+  // aft, so its size, offset and turbulence go with it.
+  uint number = uint(int(layer.w) - int(puff.x)) & 0xffffffu;
+  uint key = number * 8u + uint(set) * 2u + (side > 0.0 ? 1u : 0u);
+  // Where on the laid track this parcel is, and which way the track runs.
+  int base = side > 0.0 ? 0 : SAMPLES;
+  float x = clamp(s / ${STEP.toFixed(4)}, 0.0, float(SAMPLES) - 1.001);
+  int i = int(x);
+  float f = x - float(i);
+  vec3 centre = mix(wake(base + i), wake(base + i + 1), f);
+  vec3 before = wake(base + max(i, 1)) - wake(base + max(i, 1) - 1);
+  vec3 here = wake(base + i + 1) - wake(base + i);
+  vec3 after = wake(base + min(i + 2, SAMPLES - 1)) - wake(base + min(i + 1, SAMPLES - 2));
+  vec3 aft = normalize(mix(before + here, here + after, f));
+  vec3 port = normalize(cross(aft, vec3(0.0, 1.0, 0.0)));
+  vec3 lift = cross(port, aft);
+  float u = clamp((s - ${CONTRAIL_GAP.toFixed(1)}) / ${LENGTH.toFixed(1)}, 0.0, 1.0);
+  float parcel = air - s;
+  // The trail billows: the turbulence leaves it fatter in some places than
+  // others, and the swellings travel aft with the air.
+  float swell = 1.0 + smoothstep(0.03, 0.3, u)
+    * (0.13 * sin(6.2832 * parcel / 61.0 + 0.7) + 0.06 * sin(6.2832 * parcel / 23.0));
+  float radius = mix(${RADIUS_NEAR.toFixed(2)}, ${RADIUS_FAR.toFixed(2)}, pow(u, 0.8)) * swell;
+  // The tip vortices draw the trails outboard and down as the wake sinks.
+  centre += side * port * 4.0 * u * u;
+  centre.y -= 7.0 * pow(u, 1.25);
+  // Far back, the vortex pair's slow instability: a ripple, mirrored on the
+  // two trails, that grows with age and travels with the air.
+  float ripple = 2.2 * smoothstep(0.3, 1.0, u) * sin(6.2832 * parcel / 260.0);
+  centre += ripple * 0.7071 * (lift - side * port);
+  vec2 jitter = vec2(random(key, 1u), random(key, 2u)) * 2.0 - 1.0;
+  centre += (port * jitter.x + lift * jitter.y) * radius * 0.3;
   vec4 view = modelViewMatrix * vec4(centre, 1.0);
   float depth = -view.z;
-  float size = radius * trail.w;
+  float size = radius * (0.85 + 0.35 * random(key, 3u));
   // Stretched along the trail as it crosses the screen, so a line of puffs
   // reads as one body rather than a string of beads; seen end-on, from
   // behind, there is nothing to stretch along and they stay round.
-  vec3 along = normalize(mat3(modelViewMatrix) * vec3(1.0, 0.0, 0.0));
+  vec3 along = normalize(mat3(modelViewMatrix) * aft);
   vec2 onScreen = along.xy * depth + view.xy * along.z;
   float reach = length(onScreen) / max(depth, 0.01);
   vec2 axis = reach > 0.0001 ? normalize(onScreen) : vec2(1.0, 0.0);
@@ -79,19 +136,29 @@ void main() {
   view.xy += (axis * position.x * stretch + vec2(-axis.y, axis.x) * position.y) * size;
   gl_Position = projectionMatrix * view;
   // Forming over its first tens of metres, thinning as it spreads, with
-  // lumps of denser vapour drifting aft along it.
+  // lumps of denser vapour that the air carries aft.
   float density = smoothstep(0.0, 0.028, u) * (1.0 - smoothstep(0.35, 1.0, u));
-  float drift = s / 53.0 - time * 0.42 + trail.z;
-  density *= 0.93 * (0.94 + 0.04 * sin(6.2832 * drift) + 0.02 * sin(17.3 * drift));
-  // Each puff overlaps about four neighbours; its own share of the trail's
-  // opacity is the fourth root of what lets through.
-  float share = 1.0 - pow(1.0 - density, 0.25);
+  float lumps = parcel / 47.0;
+  density *= 0.93 * (0.82 + 0.12 * sin(6.2832 * lumps) + 0.06 * sin(17.3 * lumps + 1.3));
+  // A set hands over to the next where the two overlap. Each puff takes its
+  // share of the set's opacity by how many neighbours it overlaps; the
+  // shares multiply back to the trail's density, overlaps included.
+  float weight = set == 0
+    ? 1.0 - smoothstep(80.0, 90.0, s)
+    : set == 1
+      ? smoothstep(80.0, 90.0, s) * (1.0 - smoothstep(250.0, 270.0, s))
+      : smoothstep(250.0, 270.0, s);
+  float overlap = max(1.0, 2.0 * size / layer.y);
+  float share = 1.0 - pow(1.0 - density, weight / overlap);
   float near = smoothstep(25.0, 90.0, depth);
   float projected = size * projectionMatrix[1][1] / max(depth, 0.01);
   float oversize = 1.0 - smoothstep(0.35, 0.8, projected);
   vAlpha = share * near * oversize;
   vUv = position.xy;
-  vSeed = trail.z;
+  vSeed = random(key, 4u);
+  // Each parcel's turbulence turns over slowly, one way or the other.
+  float rate = (0.2 + 0.4 * random(key, 5u)) * (random(key, 6u) > 0.5 ? 1.0 : -1.0);
+  vSpin = vSeed * 6.2832 + time * rate;
   vAge = u;
   vHaze = smoothstep(150.0, 1400.0, depth) * 0.45;
   vSun = normalize(mat3(viewMatrix) * sun);
@@ -101,13 +168,13 @@ void main() {
 
 const fragmentShader = /* glsl */ `
 uniform sampler2D noise;
-uniform float time;
 uniform vec3 lit;
 uniform vec3 shade;
 uniform vec3 haze;
 varying vec2 vUv;
 varying float vAlpha;
 varying float vSeed;
+varying float vSpin;
 varying float vAge;
 varying float vHaze;
 varying vec3 vSun;
@@ -115,10 +182,11 @@ varying vec2 vAxis;
 void main() {
   float r2 = dot(vUv, vUv);
   if (r2 >= 1.0 || vAlpha < 0.002) discard;
-  vec2 drift = vec2(time * 0.03, -time * 0.017);
+  vec2 turn = vec2(cos(vSpin), sin(vSpin));
+  vec2 q = vec2(turn.x * vUv.x - turn.y * vUv.y, turn.y * vUv.x + turn.x * vUv.y);
   float n =
-    texture2D(noise, vUv * 0.45 + vSeed * 7.31 + drift).r * 0.65 +
-    texture2D(noise, vUv * 1.1 - vSeed * 3.17 - drift * 1.6).r * 0.35;
+    texture2D(noise, q * 0.45 + vSeed * 7.31).r * 0.65 +
+    texture2D(noise, q * 1.1 - vSeed * 3.17).r * 0.35;
   // Smooth and dense where it forms; the turbulence breaks the edges up
   // as the trail ages and spreads.
   float rough = mix(0.12, 0.6, vAge);
@@ -137,8 +205,14 @@ void main() {
 }
 `;
 
+/** A fixed scatter, so the noise looks the same on every visit. */
+const scatter = (i: number) => {
+  const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
 /** Tileable value noise, a few octaves, for the puffs' broken edges. */
-function noiseTexture(T: {
+export function noiseTexture(T: {
   DataTexture: typeof DataTexture;
   LinearFilter: typeof LinearFilter;
   RepeatWrapping: typeof RepeatWrapping;
@@ -191,9 +265,10 @@ function noiseTexture(T: {
 export type Contrails = ReturnType<typeof createContrails>;
 
 /**
- * Both trails in one instanced draw. Add `mesh` to the aircraft's model
- * group; each frame set `time` and the nozzle height (`engineY`, which
- * rides the wing's flex). `sun` is the light's world direction.
+ * Both trails in one instanced draw. Add `mesh` to the scene itself, not the
+ * aircraft, and each frame call `update` with the tour's progress, the
+ * nozzles' live scene positions (port then starboard, x, y, z each), the
+ * wing's live flex and the clock. `sun` is the light's world direction.
  */
 export function createContrails(T: {
   BufferAttribute: typeof BufferAttribute;
@@ -207,15 +282,12 @@ export function createContrails(T: {
   ShaderMaterial: typeof ShaderMaterial;
   Vector3: typeof Vector3;
 }) {
-  const trail: number[] = [],
-    jitter: number[] = [];
-  let index = 0;
+  const puffs: number[] = [];
   for (const side of [1, -1])
-    for (let s = GAP; s < GAP + LENGTH; s += SPACING * radiusAt(s)) {
-      index++;
-      trail.push(s, side, scatter(index), 0.8 + 0.45 * scatter(index + 0.5));
-      jitter.push(scatter(index + 0.25) * 2 - 1, scatter(index + 0.75) * 2 - 1);
-    }
+    LAYERS.forEach(([start, end, spacing], set) => {
+      const count = Math.ceil((end - start) / spacing) + 1;
+      for (let i = 0; i < count; i++) puffs.push(i, set, side);
+    });
   const geometry = new T.InstancedBufferGeometry();
   geometry.setAttribute(
     'position',
@@ -226,18 +298,18 @@ export function createContrails(T: {
   );
   geometry.setIndex([0, 1, 2, 0, 2, 3]);
   geometry.setAttribute(
-    'trail',
-    new T.InstancedBufferAttribute(new Float32Array(trail), 4),
+    'puff',
+    new T.InstancedBufferAttribute(new Float32Array(puffs), 3),
   );
-  geometry.setAttribute(
-    'jitter',
-    new T.InstancedBufferAttribute(new Float32Array(jitter), 2),
-  );
-  geometry.instanceCount = index;
+  geometry.instanceCount = puffs.length / 3;
   const noise = noiseTexture(T);
+  const path = new Float32Array(SAMPLES * 2 * 4);
+  const layers = new Float32Array(12);
   const uniforms = {
+    path: { value: path },
+    layers: { value: layers },
+    air: { value: 0 },
     time: { value: 0 },
-    engineY: { value: ENGINE_AXIS.y },
     sun: { value: new T.Vector3(0, 1, 0) },
     noise: { value: noise },
     // The photograph's own cloud tops, their blue-grey shadows, and the
@@ -258,5 +330,40 @@ export function createContrails(T: {
   const mesh = new T.Mesh(geometry, material);
   // The vertex shader places every puff; the quad's own bounds mean nothing.
   mesh.frustumCulled = false;
-  return { mesh, geometry, material, noise, uniforms, count: index };
+  return {
+    mesh,
+    geometry,
+    material,
+    noise,
+    uniforms,
+    count: geometry.instanceCount,
+    update(
+      track: ReturnType<typeof createFlightTrack>,
+      progress: number,
+      nozzles: ArrayLike<number>,
+      flex: number,
+      time: number,
+    ) {
+      const flown = track.lay(
+        progress,
+        CONTRAIL_SOURCES,
+        nozzles,
+        flex,
+        SAMPLES,
+        STEP,
+        path,
+      );
+      const air = flown + time * AIR_FLOW;
+      LAYERS.forEach(([start, , spacing], set) => {
+        const x = (air - start) / spacing;
+        const newest = Math.floor(x);
+        layers[set * 4] = start;
+        layers[set * 4 + 1] = spacing;
+        layers[set * 4 + 2] = x - newest;
+        layers[set * 4 + 3] = newest % 0x1000000;
+      });
+      uniforms.air.value = air;
+      uniforms.time.value = time;
+    },
+  };
 }
