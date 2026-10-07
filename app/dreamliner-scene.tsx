@@ -31,6 +31,7 @@ import { addDepthCut, addEngineFinish, addWingFlex } from '@/lib/airframe-flex';
 import { addLivery, createLiveryTexture } from '@/lib/bay-livery';
 import type { TextCut } from '@/lib/dreamliner-cut';
 import { createWingSweep, createTailSweep } from '@/lib/wing-sweep';
+import { createContrails } from '@/lib/dreamliner-contrails';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 
 type Props = {
@@ -435,6 +436,14 @@ export default function DreamlinerScene({
         gltf.scene.add(glow);
         glows.push(glow);
       }
+      // Condensation trails aft of both engines, in the model's own axes so
+      // they follow the aircraft's heading, climb and bank.
+      const contrails = createContrails(T);
+      geometries.add(contrails.geometry);
+      materials.add(contrails.material);
+      textures.add(contrails.noise);
+      contrails.uniforms.sun.value.copy(sunlightOffset).normalize();
+      gltf.scene.add(contrails.mesh);
       const toGlow = new T.Vector3();
       // Bank about the body axis after the heading, not the world's X.
       aircraft.rotation.order = 'YXZ';
@@ -525,6 +534,9 @@ export default function DreamlinerScene({
           Math.sin(elapsed * 31) * 0.07 +
           Math.sin(elapsed * 17.3) * 0.05;
         turbineMaterial.emissiveIntensity = 0.3 * heat.value;
+        contrails.uniforms.time.value = elapsed;
+        contrails.uniforms.engineY.value =
+          ENGINE_AXIS.y + wingLift(EXHAUST_STATION, ENGINE_AXIS.z, flex.value);
         for (const glow of glows) {
           // The haze is only convincing looking up the tailpipe: fade it by
           // how far the lens sits off the exhaust axis (+X is astern).
