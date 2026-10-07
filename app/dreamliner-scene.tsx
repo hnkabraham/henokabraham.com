@@ -262,12 +262,14 @@ export default function DreamlinerScene({
         .catch(() => {
           /* The aircraft also has ordinary direct and sky lighting. */
         });
-      // A narrow viewport never resolves the 4096² maps, so it takes the
-      // 611 KB variant: the same Draco mesh under 2048² textures. The wide
-      // model is 1.3 MB against 5.3 MB plain. The wasm decoder is served
-      // beside the model; its workers end once parsed.
+      // A phone never resolves the 4096² maps, in either orientation, and
+      // their GPU memory is what a phone reclaims first, so it takes the
+      // 611 KB variant: the same Draco mesh under 2048² textures. A width
+      // test alone sent a phone held sideways (844 × 390) the big one. The
+      // wide model is 1.3 MB against 5.3 MB plain. The wasm decoder is
+      // served beside the model; its workers end once parsed.
       const bytes = await fetchBytes(
-        width < 800
+        width < 800 || height < 500
           ? '/models/dreamliner-787-9-phone.glb'
           : '/models/dreamliner-787-9.glb',
       );

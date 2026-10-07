@@ -771,9 +771,9 @@ assert.ok(
 );
 assert.ok(
   scene.includes(
-    "width < 800\n          ? '/models/dreamliner-787-9-phone.glb'",
+    "width < 800 || height < 500\n          ? '/models/dreamliner-787-9-phone.glb'",
   ),
-  'Narrow viewports fetch the phone aircraft',
+  'Phones fetch the phone aircraft, held upright or sideways',
 );
 // The Golden Gate landmark: a small sprite anchored to the sky photograph
 // inside the poster, on the home page and the 404 page alike.
