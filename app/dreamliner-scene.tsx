@@ -566,7 +566,19 @@ export default function DreamlinerScene({
         if (shown) {
           const sample = performanceControl.sample(now);
           if (sample?.changed) {
-            r.shadowMap.enabled = sample.quality > 0;
+            // Shadows go with the light, not the renderer's switch: turning
+            // that off after the materials have compiled leaves every one of
+            // them reading the last shadow map through a frozen light matrix.
+            // The light's flag changes the lights hash, so they recompile
+            // once without the lookups, and the map is freed until it returns.
+            const shadows = sample.quality > 0;
+            if (sun.castShadow !== shadows) {
+              sun.castShadow = shadows;
+              if (!shadows) {
+                sun.shadow.map?.dispose();
+                sun.shadow.map = null;
+              }
+            }
             resize();
           }
           if (sample) {
