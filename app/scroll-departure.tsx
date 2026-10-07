@@ -428,6 +428,11 @@ export default function ScrollDeparture({
     document.addEventListener('visibilitychange', remount);
   };
   const [eyebrow, heading, description] = copy[phase];
+  // The way on to the projects. The server cannot know the view, so it sends
+  // these too; the stylesheet keeps them out of a full journey's opening and
+  // shows them with scripting off or Simple view already marked.
+  const destinations =
+    phase === 'cruise' || reducedMotion || status === 'unavailable';
   return (
     <section
       className="bay-journey dreamliner-journey"
@@ -595,10 +600,14 @@ export default function ScrollDeparture({
               <ArrowUpRight size={21} />
             </a>
           )}
-          {(phase === 'cruise' ||
-            reducedMotion ||
-            status === 'unavailable') && (
-            <div className="tour-destinations">
+          {(destinations || !viewReady) && (
+            <div
+              className={
+                destinations
+                  ? 'tour-destinations'
+                  : 'tour-destinations until-ready'
+              }
+            >
               <a href="#departures">
                 All projects <ArrowRight size={17} />
               </a>

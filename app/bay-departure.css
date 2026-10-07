@@ -1244,6 +1244,11 @@ html[data-simple-view='true'] .dreamliner-journey,
   margin-top: 22px;
   pointer-events: auto;
 }
+/* Sent before the page's script has decided the view: the pre-paint mark
+   hides them from a full journey, and with no script there is no mark. */
+html[data-simple-view='false'] #flight .tour-destinations.until-ready {
+  display: none;
+}
 .tour-destinations > * {
   display: flex;
   align-items: center;
@@ -1351,6 +1356,17 @@ html[data-simple-view='true'] .dreamliner-journey,
 @media (scripting: none) {
   .dreamliner-journey {
     height: 100lvh;
+  }
+  /* The server sends the full journey's markup, and with no script to mark
+     Simple view, hide what only a running tour can use. */
+  #flight .bay-scroll-cue,
+  #flight .bay-scroll-track,
+  #flight .bay-progress,
+  #flight .bay-loading {
+    display: none;
+  }
+  #flight .bay-bottom {
+    justify-content: flex-end;
   }
 }
 
