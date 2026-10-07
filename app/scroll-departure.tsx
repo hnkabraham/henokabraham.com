@@ -434,7 +434,6 @@ export default function ScrollDeparture({
       ref={root}
       id="flight"
       data-phase={phase}
-      data-reduced={reducedMotion}
       data-status={status}
       aria-label="Explore Henok’s work through a scrolling Boeing 787 journey"
     >

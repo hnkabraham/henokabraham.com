@@ -12,9 +12,19 @@ const uri = (s) =>
 const mock = uri(
   `export const useSyncExternalStore=(...args)=>globalThis.viewTest.store(...args);export const useRef=()=>globalThis.viewTest.anchor;export const useLayoutEffect=(fn)=>{globalThis.viewTest.layout=fn;};`,
 );
+const shared = transpileModule(
+  await fs.readFile(
+    new URL('../lib/view-preference.ts', import.meta.url),
+    'utf8',
+  ),
+  { compilerOptions: { module: ModuleKind.ESNext } },
+).outputText;
+const { VIEW_SCRIPT } = await import(uri(shared));
 const compiled = transpileModule(source, {
   compilerOptions: { module: ModuleKind.ESNext },
-}).outputText.replaceAll("from 'react'", `from '${mock}'`);
+})
+  .outputText.replaceAll("from 'react'", `from '${mock}'`)
+  .replaceAll("from '@/lib/view-preference'", `from '${uri(shared)}'`);
 const saved = new Map();
 const install = (key, value) => {
   saved.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
@@ -93,19 +103,36 @@ try {
     let state = renderPreference();
     assert.equal(
       state.simple,
-      true,
-      'Server/hydration cannot mount either scene',
+      false,
+      'The server sends the full journey, the layout most visitors get',
     );
-    assert.equal(state.ready, false);
-    harness.server = false;
-    state = renderPreference();
-    assert.equal(state.ready, true);
+    assert.equal(
+      state.ready,
+      false,
+      'Server/hydration cannot mount either scene: they wait for ready',
+    );
+    harness.layout();
+    assert.equal(
+      document.documentElement.dataset.simpleView,
+      undefined,
+      'Hydration leaves the pre-paint mark alone',
+    );
     const automatic = [
       'saved-simple',
       'system-reduced',
       'metered',
       'slow-network',
     ].includes(scenario);
+    // The inline script reaches the hook's answer before the first paint.
+    await import(uri(`${VIEW_SCRIPT}\n// ${scenario} ${moduleId}`));
+    assert.equal(
+      document.documentElement.dataset.simpleView,
+      String(automatic),
+      `The pre-paint script agrees with the hook: ${scenario}`,
+    );
+    harness.server = false;
+    state = renderPreference();
+    assert.equal(state.ready, true);
     assert.equal(state.simple, automatic, scenario);
     const cleanup = harness.subscribe(() => harness.notify++);
     state.toggle();
@@ -159,7 +186,7 @@ try {
     saved.clear();
   }
   console.log(
-    'Passed: static server/hydration, saved choices, reduced motion, data saver, slow networks, blocked storage, invalid choices, explicit overrides, section anchoring, cross-tab sync, and subscription cleanup.',
+    'Passed: full-journey server/hydration with scenes held, a pre-paint mark that matches the hook, saved choices, reduced motion, data saver, slow networks, blocked storage, invalid choices, explicit overrides, section anchoring, cross-tab sync, and subscription cleanup.',
   );
 } finally {
   for (const [key, descriptor] of saved) {

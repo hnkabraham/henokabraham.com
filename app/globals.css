@@ -2556,16 +2556,16 @@ a:focus-visible,
       0 16px 30px -14px #203e4f48;
   }
 }
-.airport[data-motion='false'] .sky-background,
-.airport[data-motion='false'] .scene-annotation,
-.airport[data-motion='false'] .welcome-copy,
-.airport[data-motion='false'] .depth-surface {
+html[data-simple-view='true'] .airport .sky-background,
+html[data-simple-view='true'] .airport .scene-annotation,
+html[data-simple-view='true'] .airport .welcome-copy,
+html[data-simple-view='true'] .airport .depth-surface {
   transform: none;
   transition: none;
 }
-.airport[data-motion='false'] *,
-.airport[data-motion='false'] *:before,
-.airport[data-motion='false'] *:after {
+html[data-simple-view='true'] .airport *,
+html[data-simple-view='true'] .airport *:before,
+html[data-simple-view='true'] .airport *:after {
   animation: none !important;
   transition: none !important;
   scroll-behavior: auto !important;
@@ -2822,13 +2822,13 @@ fieldset.flight-list {
 html[data-simple-view='true'] {
   scroll-behavior: auto;
 }
-.airport[data-motion='false'] *,
-.airport[data-motion='false'] *::before,
-.airport[data-motion='false'] *::after {
+html[data-simple-view='true'] .airport *,
+html[data-simple-view='true'] .airport *::before,
+html[data-simple-view='true'] .airport *::after {
   animation: none !important;
   transition: none !important;
 }
-.airport[data-motion='false'] .boarding-pass {
+html[data-simple-view='true'] .airport .boarding-pass {
   transform: none;
 }
 @media (max-width: 800px) {

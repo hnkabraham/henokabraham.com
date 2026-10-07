@@ -1,8 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
-
-const KEY = 'personal-airspace:view';
+import { VIEW_KEY as KEY } from '@/lib/view-preference';
 type Preference = 'auto' | 'simple' | 'full';
 const parsePreference = (value: string | null): Preference =>
   value === 'simple' || value === 'full' ? value : 'auto';
@@ -53,14 +52,21 @@ const subscribe = (notify: () => void) => {
   };
 };
 
-/** Server/hydration stays static; resolve browser preferences before lazy 3D mounts. */
+/**
+ * The server and the hydrating client render the full journey's markup, the
+ * one nearly every visitor gets; the page's layout already follows the mark
+ * the pre-paint script left (lib/view-preference.ts), so Simple view looks
+ * like itself from the first frame too. Lazy 3D scenes wait for `ready`, the
+ * browser's own answer, and only then does this hook take over the mark.
+ */
 export function useViewPreference() {
   const resolved = useSyncExternalStore(subscribe, readSimple, serverView);
-  const simple = resolved ?? true;
+  const simple = resolved ?? false;
   const ready = resolved !== null;
   const anchor = useRef<{ id: string; top: number } | null>(null);
 
   useLayoutEffect(() => {
+    if (!ready) return;
     document.documentElement.dataset.simpleView = String(simple);
     const saved = anchor.current;
     if (saved) {
@@ -72,10 +78,7 @@ export function useViewPreference() {
         });
       anchor.current = null;
     }
-    return () => {
-      delete document.documentElement.dataset.simpleView;
-    };
-  }, [simple]);
+  }, [simple, ready]);
 
   const toggle = () => {
     // Keep the current section in view when the tall flight collapses. In the

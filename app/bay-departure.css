@@ -291,11 +291,11 @@
 .bay-journey[data-phase='cruise'] .bay-scroll-track i {
   background: #21465f;
 }
-.bay-journey[data-reduced='true'] {
+html[data-simple-view='true'] .bay-journey {
   height: 100svh;
 }
-.bay-journey[data-reduced='true'] .bay-chapters,
-.bay-journey[data-reduced='true'] .bay-scroll-track {
+html[data-simple-view='true'] .bay-journey .bay-chapters,
+html[data-simple-view='true'] .bay-journey .bay-scroll-track {
   display: none;
 }
 @keyframes bay-caption {
@@ -607,13 +607,11 @@
 .bay-opening-cloud {
   animation-play-state: paused;
 }
-.bay-journey[data-sky-active='true']:not([data-opening='false']):not(
-    [data-reduced='true']
-  )
+html:not([data-simple-view='true'])
+  .bay-journey[data-sky-active='true']:not([data-opening='false'])
   .bay-poster,
-.bay-journey[data-sky-active='true']:not([data-opening='false']):not(
-    [data-reduced='true']
-  )
+html:not([data-simple-view='true'])
+  .bay-journey[data-sky-active='true']:not([data-opening='false'])
   .bay-opening-cloud {
   animation-play-state: running;
 }
@@ -834,7 +832,7 @@
     display: none;
   }
 }
-.bay-journey[data-reduced='true'] .bay-annotation {
+html[data-simple-view='true'] .bay-journey .bay-annotation {
   display: none;
 }
 
@@ -858,9 +856,11 @@
 .dreamliner-journey .bay-flight-label {
   z-index: -2;
 }
-.dreamliner-journey[data-sky-active='true']:not([data-reduced='true'])
+html:not([data-simple-view='true'])
+  .dreamliner-journey[data-sky-active='true']
   .bay-poster,
-.dreamliner-journey[data-sky-active='true']:not([data-reduced='true'])
+html:not([data-simple-view='true'])
+  .dreamliner-journey[data-sky-active='true']
   .bay-opening-cloud {
   animation-play-state: running;
 }
@@ -1026,12 +1026,12 @@
     display: none;
   }
 }
-.dreamliner-journey[data-reduced='true'],
+html[data-simple-view='true'] .dreamliner-journey,
 .dreamliner-journey[data-status='unavailable'] {
   height: 100lvh;
 }
 @media (prefers-reduced-motion: reduce) {
-  .dreamliner-journey[data-reduced='true'] {
+  html[data-simple-view='true'] .dreamliner-journey {
     height: 100svh;
   }
   .dreamliner-journey .bay-poster,
@@ -1264,7 +1264,7 @@
 .tour-destinations > :hover {
   color: #943d22;
 }
-.dreamliner-journey[data-reduced='true'],
+html[data-simple-view='true'] .dreamliner-journey,
 .dreamliner-journey[data-status='unavailable'] {
   height: 100lvh;
 }
@@ -1344,7 +1344,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dreamliner-journey[data-reduced='true'] {
+  html[data-simple-view='true'] .dreamliner-journey {
     height: 100lvh;
   }
 }
@@ -1412,7 +1412,7 @@
     display: none;
   }
 }
-.dreamliner-journey[data-reduced='true'] .bay-chapters,
+html[data-simple-view='true'] .dreamliner-journey .bay-chapters,
 .dreamliner-journey[data-status='unavailable'] .bay-chapters {
   display: none;
 }
@@ -1524,11 +1524,11 @@
 .bay-view-toggle[aria-pressed='true'] {
   background: #f4f8fae8;
 }
-.dreamliner-journey[data-reduced='true'] .bay-bottom {
+html[data-simple-view='true'] .dreamliner-journey .bay-bottom {
   justify-content: flex-end;
 }
-.dreamliner-journey[data-reduced='true'] .bay-scroll-cue,
-.dreamliner-journey[data-reduced='true'] .bay-progress {
+html[data-simple-view='true'] .dreamliner-journey .bay-scroll-cue,
+html[data-simple-view='true'] .dreamliner-journey .bay-progress {
   display: none;
 }
 @media (max-width: 800px) {
@@ -1547,7 +1547,7 @@
     right: -130px;
     bottom: 12px;
   }
-  #flight[data-reduced='true'] .tour-destinations {
+  html[data-simple-view='true'] #flight .tour-destinations {
     display: flex;
     gap: 20px;
     width: max-content;

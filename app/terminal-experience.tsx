@@ -88,9 +88,27 @@ export default function TerminalExperience() {
     toggle: toggleView,
   } = useViewPreference();
   const [entry, setEntry] = useState<{ chapter: BayPhase | null } | null>(null);
-  useAirspaceDepth(root, !reducedMotion);
+  useAirspaceDepth(root, viewReady && !reducedMotion);
+  const briefingOpen = useRef(false);
+  useEffect(() => {
+    briefingOpen.current = projectOpen;
+  }, [projectOpen]);
+  // The query this page last applied or wrote itself.
+  const appliedQuery = useRef<string | null>(null);
   useEffect(() => {
     const restore = () => {
+      // Back with a briefing open closes it, rather than swapping the project
+      // inside it for whichever one the older history entry names.
+      if (briefingOpen.current) {
+        appliedQuery.current = location.search;
+        setProjectOpen(false);
+        return;
+      }
+      // Anchor links are navigations too, and fire popstate. Only the query
+      // (a shared project or chapter) is ours to restore, so "Say hello"
+      // after a chapter link no longer replays that chapter's landing.
+      if (location.search === appliedQuery.current) return;
+      appliedQuery.current = location.search;
       const link = readFlightLink(
         new URL(location.href),
         flights.map((item) => item.id),
@@ -113,10 +131,11 @@ export default function TerminalExperience() {
     setSelected(index);
     recordFlightMetric('project_open', 1);
     replaceFlightLink({ project: flights[index].id });
+    appliedQuery.current = location.search;
   };
 
   return (
-    <div className="airport" ref={root} data-motion={!reducedMotion}>
+    <div className="airport" ref={root}>
       <a className="skip-link" href="#departures">
         Skip to projects
       </a>
@@ -455,7 +474,8 @@ export default function TerminalExperience() {
           </div>
         </section>
         <AviationLogbook />
-        <GarageSection reducedMotion={reducedMotion} />
+        {/* Its scene, like the flight's, waits for the browser's answer. */}
+        <GarageSection reducedMotion={reducedMotion || !viewReady} />
         <section
           className="open-hangar"
           data-reveal

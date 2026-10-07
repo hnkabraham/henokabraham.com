@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { VIEW_SCRIPT } from '@/lib/view-preference';
 import './globals.css';
 import './bay-departure.css';
 import './airport-services.css';
@@ -74,7 +75,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    // The pre-paint script marks <html> before React hydrates it.
+    <html lang="en" suppressHydrationWarning>
       {/* The framework writes the standard name; iOS still reads this one. */}
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <link
@@ -85,6 +87,8 @@ export default function RootLayout({
         crossOrigin="anonymous"
       />
       <body>
+        {/* Simple view or the full journey, before anything paints. */}
+        <script dangerouslySetInnerHTML={{ __html: VIEW_SCRIPT }} />
         {children}
         <script
           type="application/ld+json"
