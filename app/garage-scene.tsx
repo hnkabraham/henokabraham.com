@@ -191,6 +191,14 @@ export default function GarageScene({ reducedMotion, onStatus }: Props) {
       orbit.maxPolarAngle = Math.PI * 0.49;
       orbit.minPolarAngle = Math.PI * 0.12;
       orbit.enablePan = false;
+      // The viewer sits in the middle of a scrolling page, so it must never
+      // take the page's own gestures. Zoom would cancel every wheel and
+      // trackpad scroll that crosses the car, and the controls' default
+      // `touch-action: none` (set in their constructor) made a swipe that
+      // starts on it turn the car instead of moving the page. Vertical
+      // swipes now scroll; a sideways drag still turns the car.
+      orbit.enableZoom = false;
+      r.domElement.style.touchAction = 'pan-y';
       orbit.update();
       // Declared here (before resize()'s first call below, which requests a
       // render) rather than down by the gltf load — requestRender can be
