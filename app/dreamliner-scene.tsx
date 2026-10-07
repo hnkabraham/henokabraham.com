@@ -47,6 +47,13 @@ type Props = {
     tail: Float32Array,
   ) => void;
   onStatus: (value: 'loading' | 'ready' | 'unavailable') => void;
+  /**
+   * The browser took the WebGL context back (memory pressure, a GPU reset, a
+   * long stay in the background). Nothing failed to load, so the scene frees
+   * itself and leaves the parent to mount a fresh one; without this callback
+   * a lost context counts as a failure.
+   */
+  onLost?: () => void;
 };
 
 export default function DreamlinerScene({
@@ -56,6 +63,7 @@ export default function DreamlinerScene({
   cut,
   onFrame,
   onStatus,
+  onLost,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const status = useRef(onStatus);
@@ -65,6 +73,7 @@ export default function DreamlinerScene({
   }, [onFrame]);
   const pausedRef = useRef(paused);
   const wakeRef = useRef<(() => void) | undefined>(undefined);
+  const lostRef = useRef(onLost);
   useEffect(() => {
     pausedRef.current = paused;
     wakeRef.current?.();
@@ -72,6 +81,9 @@ export default function DreamlinerScene({
   useEffect(() => {
     status.current = onStatus;
   }, [onStatus]);
+  useEffect(() => {
+    lostRef.current = onLost;
+  }, [onLost]);
   useEffect(() => {
     const element = host.current;
     if (!element) return;
@@ -137,7 +149,13 @@ export default function DreamlinerScene({
       element.appendChild(r.domElement);
       const lost = (e: Event) => {
         e.preventDefault();
-        fail();
+        if (!lostRef.current) return fail();
+        if (disposed) return;
+        ready = false;
+        disposed = true;
+        controller.abort();
+        release();
+        lostRef.current();
       };
       r.domElement.addEventListener('webglcontextlost', lost);
       cleanups.push(() =>

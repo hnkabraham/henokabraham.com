@@ -137,12 +137,11 @@ install(
 let constructed = 0,
   draws = 0,
   released = 0;
-const canvas = {
-  addEventListener() {},
-  removeEventListener() {},
+// A real event target, so a lost context can be dispatched at the canvas.
+const canvas = Object.assign(new EventTarget(), {
   remove() {},
   classList: { add() {} },
-};
+});
 class Renderer {
   constructor() {
     constructed++;
@@ -291,8 +290,58 @@ try {
     assert.equal(released, 1);
     assert.equal(frames.size, 0);
   }
+  // A lost context is the browser reclaiming the GPU, not a failed asset:
+  // with a parent to remount it, the scene frees itself and reports the
+  // loss, never 'unavailable' (which would collapse the tour). Without one,
+  // a loss is still the static-sky failure it always was.
+  for (const remountable of [true, false]) {
+    constructed = draws = released = 0;
+    frames.clear();
+    refs.length = 0;
+    const h = (globalThis.tourHarness = makeHarness());
+    install('fetch', (path) =>
+      path.includes('.hdr') ? h.hdrFetch.promise : h.modelFetch.promise,
+    );
+    const statuses = [];
+    let losses = 0;
+    Scene({
+      progress: { current: 0.4 },
+      reducedMotion: false,
+      onStatus: (s) => statuses.push(s),
+      ...(remountable ? { onLost: () => losses++ } : {}),
+    });
+    const disposers = h.effects.map((f) => f()).filter(Boolean);
+    await flush();
+    h.modelFetch.resolve({
+      ok: true,
+      arrayBuffer: async () => new ArrayBuffer(0),
+    });
+    await flush();
+    h.parse.resolve({ scene: new THREE.Group() });
+    h.hdrFetch.resolve({
+      ok: true,
+      arrayBuffer: async () => new ArrayBuffer(0),
+    });
+    await flush();
+    assert.deepEqual(statuses, ['loading', 'ready']);
+    const loss = new Event('webglcontextlost', { cancelable: true });
+    canvas.dispatchEvent(loss);
+    assert.ok(loss.defaultPrevented, 'A lost context asks to be restored');
+    assert.equal(released, 1, 'A lost context frees the scene at once');
+    assert.equal(frames.size, 0, 'A lost context stops scheduled draws');
+    if (remountable) {
+      assert.equal(losses, 1, 'The parent hears about the loss once');
+      assert.deepEqual(
+        statuses,
+        ['loading', 'ready'],
+        'A remountable loss never reports the scene unavailable',
+      );
+    } else assert.deepEqual(statuses, ['loading', 'ready', 'unavailable']);
+    disposers.forEach((f) => f());
+    assert.equal(released, 1, 'Unmounting after a loss frees nothing twice');
+  }
   console.log(
-    'Passed: reduced motion skips WebGL; unmount during fetch and parsing; late HDR completion; opening has no draws or idle RAF; first-scroll wake ordering; project modal pause/resume; hidden-document suspension; resources disposed once.',
+    'Passed: reduced motion skips WebGL; unmount during fetch and parsing; late HDR completion; opening has no draws or idle RAF; first-scroll wake ordering; project modal pause/resume; hidden-document suspension; resources disposed once; a lost context frees the scene and hands the remount to its parent without collapsing the tour.',
   );
 } finally {
   for (const [k, v] of saved) globalThis[k] = v;

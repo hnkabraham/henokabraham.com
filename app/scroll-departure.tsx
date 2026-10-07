@@ -32,6 +32,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { BayPhase } from '@/lib/bay-flight';
+import SceneBoundary from './scene-boundary';
 // The renderer, its shader helpers and their slice of three.js arrive in a
 // chunk of their own, fetched only once a motion visit mounts the scene.
 const DreamlinerScene = lazy(() => import('./dreamliner-scene'));
@@ -219,6 +220,13 @@ export default function ScrollDeparture({
   // Reduced motion never mounts the renderer; the static sky is ready at once.
   const status = reducedMotion ? 'ready' : rendererStatus;
   const [sceneReady, setSceneReady] = useState(false);
+  // A lost WebGL context mounts a fresh scene under a new key; a real
+  // failure collapses the tour to its static sky, and `place` keeps the
+  // visitor where they were across that change in page height.
+  const [sceneKey, setSceneKey] = useState(0);
+  const losses = useRef(0);
+  const resume = useRef<(() => void) | null>(null);
+  const place = useRef<{ id: string; top: number } | null>(null);
   const immersive = useSyncExternalStore(
     subscribeFullscreen,
     readImmersive,
@@ -359,6 +367,66 @@ export default function ScrollDeparture({
       behavior: reducedMotion ? 'instant' : 'smooth',
     });
   };
+  // The static sky is one screen where the flight was several. Before the
+  // tour gives up that height, note what the visitor is looking at: inside
+  // the flight they return to its opening, as the Simple view switch does,
+  // and anything below it keeps its place on screen.
+  const keepPlace = () => {
+    const section = root.current;
+    if (!section) return;
+    if (section.getBoundingClientRect().bottom > 0) {
+      place.current = { id: section.id, top: 0 };
+      return;
+    }
+    const next = [
+      ...document.querySelectorAll<HTMLElement>('main > section[id], footer'),
+    ].find((element) => element.getBoundingClientRect().bottom > 0);
+    if (next?.id)
+      place.current = { id: next.id, top: next.getBoundingClientRect().top };
+  };
+  useLayoutEffect(() => {
+    const saved = place.current;
+    place.current = null;
+    if (!saved || status !== 'unavailable') return;
+    const element = document.getElementById(saved.id);
+    if (element)
+      scrollTo({
+        top: scrollY + element.getBoundingClientRect().top - saved.top,
+        behavior: 'instant',
+      });
+  }, [status]);
+  useEffect(
+    () => () => {
+      if (resume.current)
+        document.removeEventListener('visibilitychange', resume.current);
+    },
+    [],
+  );
+  const report = (value: 'loading' | 'ready' | 'unavailable') => {
+    if (value === 'unavailable') keepPlace();
+    setStatus(value);
+    if (value === 'ready')
+      recordFlightMetric('scene_ready_ms', performance.now());
+    if (value === 'unavailable') recordFlightMetric('scene_unavailable', 1);
+  };
+  // A lost context is the browser reclaiming memory or resetting its GPU,
+  // not a broken download: keep the tour as it is, show it loading, and
+  // mount a fresh scene once the page is in view again. A third loss in one
+  // visit gives up to the static sky.
+  const lost = () => {
+    losses.current += 1;
+    if (losses.current > 2) return report('unavailable');
+    setStatus('loading');
+    const remount = () => {
+      if (document.hidden) return;
+      document.removeEventListener('visibilitychange', remount);
+      resume.current = null;
+      setSceneKey((key) => key + 1);
+    };
+    if (!document.hidden) return remount();
+    resume.current = remount;
+    document.addEventListener('visibilitychange', remount);
+  };
   const [eyebrow, heading, description] = copy[phase];
   return (
     <section
@@ -376,39 +444,37 @@ export default function ScrollDeparture({
       <div className="bay-bar-tint" aria-hidden="true" />
       <div className="bay-sticky">
         {sceneReady && !reducedMotion && (
-          <Suspense fallback={null}>
-            <DreamlinerScene
-              progress={progress}
-              reducedMotion={reducedMotion}
-              paused={paused}
-              onFrame={(value, front, width, height, tail) => {
-                const next = tourPhase(value, width / height);
-                if (renderedPhase.current !== next) {
-                  renderedPhase.current = next;
-                  setPhase(next);
-                }
-                tailWipe.current?.update(
-                  tail,
-                  width,
-                  height,
-                  root.current?.dataset.opening,
-                );
-                openingWipe.current?.update(
-                  front,
-                  width,
-                  height,
-                  root.current?.dataset.opening,
-                );
-              }}
-              onStatus={(value) => {
-                setStatus(value);
-                if (value === 'ready')
-                  recordFlightMetric('scene_ready_ms', performance.now());
-                if (value === 'unavailable')
-                  recordFlightMetric('scene_unavailable', 1);
-              }}
-            />
-          </Suspense>
+          <SceneBoundary onError={() => report('unavailable')}>
+            <Suspense fallback={null}>
+              <DreamlinerScene
+                key={sceneKey}
+                progress={progress}
+                reducedMotion={reducedMotion}
+                paused={paused}
+                onFrame={(value, front, width, height, tail) => {
+                  const next = tourPhase(value, width / height);
+                  if (renderedPhase.current !== next) {
+                    renderedPhase.current = next;
+                    setPhase(next);
+                  }
+                  tailWipe.current?.update(
+                    tail,
+                    width,
+                    height,
+                    root.current?.dataset.opening,
+                  );
+                  openingWipe.current?.update(
+                    front,
+                    width,
+                    height,
+                    root.current?.dataset.opening,
+                  );
+                }}
+                onStatus={report}
+                onLost={lost}
+              />
+            </Suspense>
+          </SceneBoundary>
         )}
         <div className="bay-opening-sky" aria-hidden="true">
           <div className="bay-poster">

@@ -1,5 +1,6 @@
 'use client';
 import { lazy, Suspense, useState } from 'react';
+import SceneBoundary from './scene-boundary';
 import './garage.css';
 
 const GarageScene = lazy(() => import('./garage-scene'));
@@ -45,9 +46,14 @@ export default function GarageSection({
             />
           </picture>
           {showScene && (
-            <Suspense fallback={null}>
-              <GarageScene reducedMotion={reducedMotion} onStatus={setStatus} />
-            </Suspense>
+            <SceneBoundary onError={() => setStatus('unavailable')}>
+              <Suspense fallback={null}>
+                <GarageScene
+                  reducedMotion={reducedMotion}
+                  onStatus={setStatus}
+                />
+              </Suspense>
+            </SceneBoundary>
           )}
         </div>
         <div className="garage-details">
