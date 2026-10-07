@@ -89,7 +89,8 @@ const worker = {
     env: Env,
     ctx: ExecutionContext,
   ) {
-    if (env.LIVE_DATA) ctx.waitUntil(refreshLiveData(env.LIVE_DATA));
+    if (env.LIVE_DATA)
+      ctx.waitUntil(refreshLiveData(env.LIVE_DATA, env.GITHUB_TOKEN));
     if (
       env.FLIGHT_STATS &&
       new Date(_controller.scheduledTime).getUTCMinutes() === 0

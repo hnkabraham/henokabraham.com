@@ -9,6 +9,8 @@ export interface EdgeEnv {
   TURNSTILE_SECRET_KEY?: string;
   WEB_ANALYTICS_TOKEN?: string;
   CONTACT_TO?: string;
+  /** Optional: lifts the project checks' GitHub rate limit (server/live.ts). */
+  GITHUB_TOKEN?: string;
 }
 type Services = {
   sendEmail?: (replyTo: string, body: string) => Promise<void>;

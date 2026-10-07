@@ -202,8 +202,79 @@ try {
     ),
     'An unsuccessful automated check cannot claim that a project is down',
   );
+  // With a token, GitHub requests carry it and nothing else does; when
+  // GitHub refuses (403 is the shared rate limit), the card keeps what was
+  // last known instead of going blank.
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const target = typeof url === 'string' ? url : url.href;
+    requests.push({ url: target, auth: init.headers?.Authorization });
+    if (target.includes('api.github.com'))
+      return new Response('{}', { status: 403 });
+    return new Response(null, { status: 200 });
+  };
+  cache.set(
+    'projects:v1',
+    JSON.stringify({
+      checkedAt: '2026-10-01T00:00:00.000Z',
+      projects: [
+        {
+          id: 'wear-bridge',
+          repo: 'wear-ios-bridge',
+          checkedAt: '2026-10-01T00:00:00.000Z',
+          metadataAvailable: true,
+          updatedAt: '2026-09-30T12:00:00Z',
+        },
+      ],
+    }),
+  );
+  const warnings = [];
+  const warn = console.warn;
+  console.warn = (...args) => warnings.push(args);
+  try {
+    await refreshLiveData(
+      {
+        get: async (key) => cache.get(key),
+        put: async (key, value) => cache.set(key, value),
+      },
+      'test-token',
+    );
+  } finally {
+    console.warn = warn;
+  }
+  assert.ok(
+    requests
+      .filter((request) => request.url.includes('api.github.com'))
+      .every((request) => request.auth === 'Bearer test-token'),
+    'GitHub requests carry the token',
+  );
+  assert.ok(
+    requests
+      .filter((request) => !request.url.includes('api.github.com'))
+      .every((request) => request.auth === undefined),
+    'Website checks never carry it',
+  );
+  const kept = JSON.parse(cache.get('projects:v1')).projects;
+  assert.equal(
+    kept.find((p) => p.id === 'wear-bridge').updatedAt,
+    '2026-09-30T12:00:00Z',
+    'A refused check keeps the last known update',
+  );
+  assert.equal(
+    kept.find((p) => p.id === 'obd-engine').metadataAvailable,
+    false,
+    'Nothing is invented for a repository never seen',
+  );
+  assert.ok(
+    warnings.some(
+      ([event, detail]) =>
+        event === 'project_metadata_unavailable' &&
+        detail.reason === 'Upstream HTTP 403',
+    ),
+    'The log says why a check failed',
+  );
   console.log(
-    'Edge checks passed: request limits, origins, Turnstile, delivery failures, metric privacy, unverified project checks.',
+    'Edge checks passed: request limits, origins, Turnstile, delivery failures, metric privacy, unverified project checks, the GitHub token and last-known project data.',
   );
 } finally {
   globalThis.fetch = realFetch;
