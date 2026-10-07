@@ -41,6 +41,7 @@ npx tsc --noEmit -p .
 npx oxlint app lib scripts
 node scripts/check-dreamliner-tour.mjs
 node scripts/check-dreamliner-lifecycle.mjs
+node scripts/check-dreamliner-trails.mjs
 node scripts/check-personal-flight-log.mjs
 node scripts/check-bay-performance.mjs
 node scripts/check-bay-flight.mjs
