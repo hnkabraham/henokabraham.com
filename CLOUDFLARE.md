@@ -583,3 +583,15 @@ The active checks listed above pass. The older terrain-oriented `check-bay-fligh
 ## About copy deployed
 
 Source `66c9715` replaces the About introduction ("make things in 3D", closing on "Occasionally a window seat" under a photo captioned ALWAYS A WINDOW SEAT) with what I actually build, and moves the Person JSON-LD description with it. Production version `69b881c7-d615-4396-ab4f-bef330c962f6`; the live page serves the new paragraph and structured data, and `/api/config` still reports the contact form enabled.
+
+## Review fixes deployed: Garage scrolling, tour resilience, contrast, polish
+
+Sources `3108e39`, `b8d512c`, `a28976d`, `58b3bd3` and `2fb66d7`, from the 6 October site review. Production version `590fa5ac-b53f-436a-b2fa-e9445968d291`.
+
+- The Garage viewer no longer takes the page's scrolls: on the live site six wheel ticks over the car now scroll 720 px (0 before), a phone swipe that starts on it scrolls 301 px (0 before), and a sideways drag still turns the car.
+- A lost WebGL context remounts the scene over the same tour. Losing it at Devices on the live site keeps scrollY 2150 in the 4000 px journey and the aircraft is back from cache within half a second; the third loss in a visit falls back to the static sky with the visitor returned to the flight's opening rather than dropped into the flight log. Blocking either 3D chunk now leaves that scene's fallback; before this deploy the same block replaced the whole page with vinext's error screen.
+- Quality 0 drops the sun's shadow by `castShadow`, so materials recompile without stale lookups.
+- Text contrast meets AA across desktop, 1024 px, phone and reduced motion, every chapter, section and dialog, and the 404 page (axe plus a pixel check of the departures board and the text over photographs); the small type over the sky carries the white halo.
+- The chapter bar is named, not numbered; the aircraft passes in front of the flight label; the livery is set in Google Sans; the board's preview is an AVIF; hashed `/_next/static/` files are served `public, max-age=31536000, immutable` (checked on the live stylesheet).
+
+All checks pass except the known stale source-text assertion in the retired `check-bay-flight.mjs`; the active-site assertions that follow it pass when it is skipped.
