@@ -2377,9 +2377,20 @@ a:focus-visible,
     opacity 0.8s,
     translate 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.project-dialog[data-open] {
-  animation: briefing-depth 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  transform-origin: center;
+/* The briefing swings in only for visitors who want motion: the rule is
+   important to beat the dialog's own fade, so it has to keep out of the
+   reduced-motion reset's way itself. Simple view keeps the dialogs still too,
+   as it does everything inside the page. */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-simple-view='true']) .project-dialog[data-open] {
+    animation: briefing-depth 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transform-origin: center;
+  }
+}
+html[data-simple-view='true'] [data-slot='dialog-overlay'],
+html[data-simple-view='true'] [data-slot='dialog-content'] {
+  animation: none !important;
+  transition: none !important;
 }
 @keyframes copy-arrival {
   from {
