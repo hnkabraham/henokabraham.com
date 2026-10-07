@@ -296,9 +296,17 @@ console.log(
     new URL('../app/scroll-departure.tsx', import.meta.url),
     'utf8',
   );
+  // A shared chapter link lands where its button does (Apps a quarter into
+  // its reading zone, not at the chapter's own position), and the scene
+  // mounts only after that progress is in place.
   assert.ok(
     scroll.includes('sceneReady &&') &&
-      scroll.includes('progress.current = chapter.at;'),
+      scroll.includes(
+        'chapterLanding(chapter, innerWidth / innerHeight, phoneLayout())',
+      ) &&
+      scroll.includes(
+        'progress.current = reducedMotion ? 0 : tourProgressAt(offset, layout);',
+      ),
     'Scene mounting waits for restored progress',
   );
   const css = await fs.readFile(

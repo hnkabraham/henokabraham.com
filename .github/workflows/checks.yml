@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -26,9 +26,12 @@ jobs:
       - name: Build for Cloudflare
         run: npm run build:cloudflare
       # The scheduled-handler and flight-log checks load the built Worker.
+      # Every check runs even after one fails, so a red run lists them all.
       - name: Scene, edge and data checks
         run: |
+          failed=0
           for check in scripts/check-*.mjs; do
             echo "== $check"
-            node "$check"
+            node "$check" || { echo "::error title=Check failed::$check"; failed=1; }
           done
+          exit $failed
