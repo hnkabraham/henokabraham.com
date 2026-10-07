@@ -31,6 +31,7 @@ export const flights: Flight[] = [
     id: 'bay-departure',
     preview: {
       src: '/images/og-card.jpg',
+      avif: '/images/og-card.avif',
       alt: 'Personal Airspace, Henok’s aviation-inspired website',
     },
     code: 'HA 006',

@@ -241,7 +241,7 @@ export default function TerminalExperience() {
                 setProjectOpen(open);
               }}
             >
-              <aside
+              <section
                 className="boarding-pass depth-surface"
                 data-depth="ticket"
                 data-reveal
@@ -295,7 +295,7 @@ export default function TerminalExperience() {
                   </div>
                   <div className="barcode" aria-hidden="true" />
                 </div>
-              </aside>
+              </section>
               <DialogContent
                 className="project-dialog"
                 showCloseButton={false}

@@ -71,7 +71,7 @@ npm run check:cloudflare
 npm run deploy:cloudflare
 ```
 
-`npm start` serves the same build locally in workerd. JavaScript and CSS under `/_next/static/` and versioned scenery under `/scene/<content-hash>/` use immutable browser caching. The build computes that version from the names and bytes of the four tour files; changes produce new URLs. Plain `/models/`, `/scenery/` and `/tiles/` paths are no longer deployed. The document carries HSTS, `nosniff`, a frame-ancestors policy and a referrer policy from `worker.ts`; static files get `nosniff` from `public/_headers`.
+`npm start` serves the same build locally in workerd. JavaScript and CSS under `/_next/static/` and versioned scenery under `/scene/<content-hash>/` use immutable browser caching. The build computes that version from the names and bytes of the six files the tour and the Garage fetch (`SCENE_FILES` in `scripts/scene-assets.mjs`); changes produce new URLs. Vite still emits the plain `/models/`, `/scenery/` and `/draco/` copies, deliberately uncached, so a tab opened before a deploy can finish loading; `/tiles/` went with the retired terrain. The document carries HSTS, `nosniff`, a frame-ancestors policy and a referrer policy from `worker.ts`; static files get `nosniff` from `public/_headers`.
 
 Retain the existing Sites project ID in `.openai/hosting.json` when publishing there. `vite.config.ts` retains the direct Cloudflare custom domain for `henokabraham.com`.
 

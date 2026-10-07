@@ -852,6 +852,12 @@
   z-index: -1;
   background: transparent;
 }
+/* The flight label is scenery, not a control: the departing aircraft
+   climbs out across the top left, and passes in front of it there as it
+   does the opening headline, rather than behind its lettering. */
+.dreamliner-journey .bay-flight-label {
+  z-index: -2;
+}
 .dreamliner-journey[data-sky-active='true']:not([data-reduced='true'])
   .bay-poster,
 .dreamliner-journey[data-sky-active='true']:not([data-reduced='true'])
@@ -1047,24 +1053,28 @@
   }
   .dreamliner-journey .bay-chapters button {
     gap: 8px;
-    padding: 11px 13px;
+    padding: 11px 16px;
   }
   .dreamliner-journey .bay-chapters button i {
     display: none;
   }
+  /* Chapters go by name, as they already do on phones. The header numbers
+     the page's sections and each caption numbers its own chapter; a third
+     count here put "03 Flight log" and "04 Flight log" on one screen. With
+     no number beside it, each label hugs its word instead of sitting
+     right-aligned in a fixed box. */
   .dreamliner-journey .bay-chapters button span:first-child {
-    font-size: 0.62rem;
-    opacity: 0.7;
+    display: none;
+  }
+  .dreamliner-journey .bay-chapters button span:nth-child(2) {
+    width: auto;
   }
 }
 @media (min-width: 801px) and (max-width: 1150px) {
   .dreamliner-journey .bay-chapters button {
     gap: 0;
-    padding: 10px;
+    padding: 10px 12px;
     font-size: 0.65rem;
-  }
-  .dreamliner-journey .bay-chapters button span:first-child {
-    display: none;
   }
   .dreamliner-journey .bay-scroll-cue > .mono {
     font-size: 0.62rem;

@@ -44,9 +44,12 @@ export const LIVERY_COLORS = {
 const PLANE_GLYPH =
   'M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z';
 
-const SANS =
-  '"Geist", "Geist Sans", Inter, "Helvetica Neue", Helvetica, Arial, sans-serif';
-const MONO = '"Geist Mono", "SF Mono", Menlo, Consolas, monospace';
+// The site's own face, which every page loads (and the head preloads), so
+// the fuselage letters match the page's on every platform instead of
+// falling through to whatever sans the visitor's system has.
+const SANS = '"Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif';
+// The page sets its mono labels in Google Sans too.
+const MONO = SANS;
 
 /** Draws `text` centred in a pixel box, fitted to its width with tracking. */
 function fitText(
@@ -75,7 +78,7 @@ function fitText(
   const natural =
     advances.reduce((sum, advance) => sum + advance, 0) +
     trackingPx * (glyphs.length - 1);
-  // Cap height is about 0.71 em in Geist; keep the letters inside the band.
+  // Cap height is about 0.71 em in Google Sans; keep letters inside the band.
   const capRatio = options.capHeight ?? 0.71;
   const size = Math.min(
     (reference * width) / natural,
@@ -174,8 +177,9 @@ function drawAtlas(context: CanvasRenderingContext2D) {
 }
 
 /**
- * Draws the lettering atlas at load. The page's fonts are normally ready by
- * the time the aircraft loads; if not, the atlas is redrawn once they are.
+ * Draws the lettering atlas at load. The page's font is normally ready by
+ * the time the aircraft loads; if not, the atlas is redrawn once that face
+ * is (not merely once whatever was pending has settled).
  */
 export function createLiveryTexture() {
   const canvas = document.createElement('canvas');
@@ -191,12 +195,16 @@ export function createLiveryTexture() {
   texture.addEventListener('dispose', () => {
     disposed = true;
   });
-  if (typeof document !== 'undefined' && document.fonts?.ready)
-    void document.fonts.ready.then(() => {
-      if (disposed) return;
-      drawAtlas(context);
-      texture.needsUpdate = true;
-    });
+  const face = `640 100px ${SANS}`;
+  if (typeof document !== 'undefined' && !document.fonts?.check(face))
+    void document.fonts
+      ?.load(face)
+      .then(() => {
+        if (disposed) return;
+        drawAtlas(context);
+        texture.needsUpdate = true;
+      })
+      .catch(() => {});
   return texture;
 }
 
