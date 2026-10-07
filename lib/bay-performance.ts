@@ -61,6 +61,11 @@ export function createFlightPerformance() {
   let elapsed = 0;
   let healthy = 0;
   let settle = 2000;
+  // The rate a screen holds every page to, once seen: iOS Low Power Mode caps
+  // requestAnimationFrame at 30 Hz, which no quality setting can raise.
+  let ceiling = Infinity;
+  // The last reduction, until the window after it shows whether it helped.
+  let trial: { from: FlightQuality; fps: number } | null = null;
   const frames: number[] = [];
   return {
     get quality() {
@@ -73,6 +78,7 @@ export function createFlightPerformance() {
       frames.length = 0;
       healthy = 0;
       settle = 2000;
+      trial = null;
     },
     sample(now: number) {
       const ms = prior ? now - prior : 0;
@@ -86,13 +92,39 @@ export function createFlightPerformance() {
       elapsed += ms;
       if (elapsed < 2000 || frames.length < 10) return undefined;
       const summary = summarizeFlightFrames(frames);
-      const slow = summary.fps < 50 || summary.jank > 10;
+      // Faster than the cap: the screen is free again (Low Power Mode off).
+      // This window straddles the change, so it judges nothing.
+      const lifted = summary.fps > ceiling * 1.2;
+      if (lifted) ceiling = Infinity;
+      // Slow against what the screen allows, and a jank frame is one that
+      // missed two of its refreshes.
+      const refresh = 1000 / Math.min(60, ceiling);
+      const jank =
+        (frames.filter((frame) => frame > refresh * 2 + 0.7).length * 100) /
+        frames.length;
+      const slow =
+        !lifted && (summary.fps < Math.min(50, ceiling * 0.85) || jank > 10);
       healthy = summary.fps >= 57 && summary.p95 < 22 ? healthy + elapsed : 0;
       const previous = quality;
-      if (slow && quality > 0) quality = (quality - 1) as FlightQuality;
+      // A reduction that bought nothing at a steady 30 fps met a cap, not a
+      // busy GPU: give the detail back and take the cap as the target.
+      const capped =
+        trial &&
+        summary.fps > 28 &&
+        summary.fps < 32 &&
+        summary.p95 < 40 &&
+        summary.fps < trial.fps * 1.15;
+      if (trial && capped) {
+        ceiling = 30;
+        quality = trial.from;
+      } else if (slow && quality > 0) quality = (quality - 1) as FlightQuality;
       // Recovery takes ten healthy windows; reductions need just one.
       else if (healthy >= 20_000 && quality < 2)
         quality = (quality + 1) as FlightQuality;
+      trial =
+        quality < previous && !capped
+          ? { from: previous, fps: summary.fps }
+          : null;
       if (quality !== previous) {
         healthy = 0;
         settle = 2000;

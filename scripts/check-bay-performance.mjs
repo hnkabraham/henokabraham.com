@@ -61,6 +61,32 @@ assert.equal(control.quality, 2);
 run(20000, 20);
 assert.equal(control.quality, 0);
 assert.equal(run(10000, 20), 0, 'Quality remains bounded');
+// iOS Low Power Mode holds every page to 30 Hz. One reduction is tried;
+// when it buys nothing at a steady 30 fps the detail comes back and stays.
+{
+  const lowPower = createFlightPerformance();
+  let t = 1000,
+    changes = 0;
+  for (const end = t + 30000; t < end;) {
+    t += 1000 / 30;
+    if (lowPower.sample(t)?.changed) changes++;
+  }
+  assert.equal(lowPower.quality, 1, 'A 30 Hz cap keeps the default detail');
+  assert.equal(changes, 2, 'One trial reduction, then the detail returns');
+  // Low Power Mode off: the cap lifts and the usual rules apply again.
+  for (const end = t + 30000; t < end;) {
+    t += 1000 / 120;
+    lowPower.sample(t);
+  }
+  assert.equal(lowPower.quality, 2, 'Once uncapped, headroom earns detail');
+  // A GPU that really is slow at 30 fps is helped, and keeps the reduction.
+  const busy = createFlightPerformance();
+  for (const end = t + 10000; t < end;) {
+    t += 1000 / (busy.quality > 0 ? 30 : 60);
+    busy.sample(t);
+  }
+  assert.equal(busy.quality, 0, 'A reduction that helps is kept');
+}
 const isolated = createFlightPerformance();
 for (let t = 1000; t < 5000; t += 1000 / 60) isolated.sample(t);
 isolated.sample(5150);
@@ -144,5 +170,5 @@ assert.equal(
   'Revisits cannot spam telemetry',
 );
 console.log(
-  'Passed: late-load adaptation, bounded quality and pixel budgets, slow recovery, no background penalties, bidirectional scroll response at 30/60/120 Hz, and moving-frame telemetry.',
+  'Passed: late-load adaptation, bounded quality and pixel budgets, slow recovery, no background penalties, a 30 Hz cap (Low Power Mode) keeps its detail, bidirectional scroll response at 30/60/120 Hz, and moving-frame telemetry.',
 );
