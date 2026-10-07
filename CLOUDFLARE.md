@@ -595,3 +595,7 @@ Sources `3108e39`, `b8d512c`, `a28976d`, `58b3bd3` and `2fb66d7`, from the 6 Oct
 - The chapter bar is named, not numbered; the aircraft passes in front of the flight label; the livery is set in Google Sans; the board's preview is an AVIF; hashed `/_next/static/` files are served `public, max-age=31536000, immutable` (checked on the live stylesheet).
 
 All checks pass except the known stale source-text assertion in the retired `check-bay-flight.mjs`; the active-site assertions that follow it pass when it is skipped.
+
+## Contrails deployed
+
+Source `ea0a45d` gives the 787 a pair of condensation trails (`lib/dreamliner-contrails.ts`): clear for 24 m aft of each nozzle, then bright and narrow, widening and thinning over 650 m, in the model's own axes so they follow the departure's heading, climb and bank. One instanced draw of about a thousand camera-facing puffs, stretched along the trail on screen and faded within about 90 m of the lens, so the opening, the tailpipe close-up and the Downshift preview stay clear. Production version `9c8219eb-85c8-4f1f-9461-41fdb0380c57`. On the live site the Devices, Flight log and Explore stops show the trails on desktop and phone with no console errors; on an M2 Max with vsync off the frame time is unchanged with them on or off.
