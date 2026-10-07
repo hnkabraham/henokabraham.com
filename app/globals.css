@@ -144,7 +144,7 @@ a:focus-visible,
   position: absolute;
   inset: 0 0 auto;
   z-index: 3;
-  color: #163448;
+  color: #132e40;
 }
 .brand {
   display: flex;
@@ -161,7 +161,7 @@ a:focus-visible,
   letter-spacing: 0.17em;
   font-weight: 400;
   margin-top: 5px;
-  color: #244b63;
+  color: #162e3d;
 }
 .brand-symbol {
   display: grid;
@@ -463,7 +463,7 @@ a:focus-visible,
 }
 .terminal-section-label .eyebrow {
   margin: 0 0 3px;
-  color: #79858b;
+  color: #626b70;
   font-size: 0.75rem;
 }
 .terminal-section-label h2 {
@@ -476,7 +476,7 @@ a:focus-visible,
 .terminal-caption {
   font-size: 0.875rem;
   line-height: 1.6;
-  color: #718088;
+  color: #606c73;
   margin: 0;
 }
 .departure-layout {
@@ -530,14 +530,14 @@ a:focus-visible,
 }
 .service-host {
   font-size: 0.75rem;
-  color: #8ea1aa;
+  color: #647278;
   letter-spacing: 0.02em;
   margin: 0 0 11px;
 }
 .service-detail {
   font-size: 0.9375rem;
   line-height: 1.65;
-  color: #68818e;
+  color: #5d747f;
   margin: 0;
 }
 .service-body .project-live-update {
@@ -631,7 +631,7 @@ a:focus-visible,
   display: block;
   font-size: 0.75rem;
   letter-spacing: 0.08em;
-  color: #95a7b0;
+  color: #adbcc3;
   margin-top: 5px;
 }
 .flight-gate {
@@ -697,7 +697,7 @@ a:focus-visible,
 }
 .ticket-flight {
   font-size: 0.75rem;
-  color: #7d8584;
+  color: #656c6b;
   margin: 0 0 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -712,7 +712,7 @@ a:focus-visible,
 .ticket-summary {
   font-size: 0.875rem;
   line-height: 1.65;
-  color: #647880;
+  color: #5b6d75;
   margin: 0;
   min-height: 46px;
 }
@@ -797,7 +797,7 @@ a:focus-visible,
   display: block;
   font-size: 0.75rem;
   letter-spacing: 0.09em;
-  color: #819092;
+  color: #606d6f;
   margin-bottom: 5px;
 }
 .ticket-stub strong {
@@ -1103,10 +1103,10 @@ a:focus-visible,
   gap: 9px;
   font-size: 0.75rem;
   white-space: nowrap;
-  color: #244b63;
+  color: #162e3d;
 }
 .station-clock > span:last-child {
-  color: #315970;
+  color: #192e3a;
   font-size: 0.75rem;
 }
 .station-clock time {
@@ -1114,10 +1114,10 @@ a:focus-visible,
 }
 .terminal-header nav a {
   font-size: 0.875rem;
-  color: #163448;
+  color: #132e40;
 }
 .terminal-header nav a .nav-number {
-  color: #315970;
+  color: #192e3a;
   font-family: var(--font-google-sans);
   font-size: 0.75rem;
 }
@@ -1309,7 +1309,7 @@ a:focus-visible,
 }
 .briefing-code {
   font-size: 0.75rem;
-  color: #778992;
+  color: #63737b;
   letter-spacing: 0.04em;
   margin: 0 0 17px;
 }
@@ -1355,7 +1355,7 @@ a:focus-visible,
   border: 1px solid #cbd5d8;
   padding: 6px 10px;
   border-radius: 3px;
-  color: #607884;
+  color: #5d7480;
   font-size: 0.75rem;
 }
 .briefing-link {
@@ -1412,7 +1412,7 @@ a:focus-visible,
   gap: 15px;
   border-top: 1px dashed #bac9ce;
   padding: 17px 25px;
-  color: #809399;
+  color: #617378;
   font-size: 0.75rem;
   letter-spacing: 0.02em;
 }
@@ -1425,7 +1425,7 @@ a:focus-visible,
   background: #e6ebea;
 }
 .hangar-intro > .eyebrow {
-  color: #7b8c93;
+  color: #5d6a6f;
   font-size: 0.75rem;
   margin: 3px 0 20px;
 }
@@ -1473,18 +1473,18 @@ a:focus-visible,
 .source-row p {
   font-size: 0.9375rem;
   line-height: 1.65;
-  color: #68818e;
+  color: #566b75;
   margin: 0 0 8px;
 }
 .source-number {
   font-size: 0.75rem;
-  color: #8ea1aa;
+  color: #5d6a70;
   align-self: start;
   margin-top: 4px;
 }
 .source-stack {
   font-size: 0.75rem;
-  color: #718d9b;
+  color: #556b75;
   letter-spacing: 0.02em;
 }
 .source-row > svg {
@@ -1503,7 +1503,7 @@ a:focus-visible,
   align-items: center;
   gap: 12px;
   margin: 0 0 29px;
-  color: #7a8a91;
+  color: #627076;
 }
 .about-heading .section-marker {
   width: 27px;
@@ -1551,7 +1551,7 @@ a:focus-visible,
 .about-story p {
   font-size: 1rem;
   line-height: 1.85;
-  color: #607887;
+  color: #5b7180;
   margin: 0 0 20px;
 }
 .about-story .about-last {
@@ -1626,7 +1626,7 @@ a:focus-visible,
 }
 .contact-link small {
   display: block;
-  color: #8fabb9;
+  color: #9db6c2;
   font-size: 0.8125rem;
   margin-top: 6px;
 }
@@ -2771,7 +2771,9 @@ fieldset.flight-list {
   gap: 12px;
   padding: 30px 20px 16px;
   color: #fff;
-  background: linear-gradient(transparent, #173546b8);
+  /* Dense enough where the words sit to hold white type over the brightest
+     cloud tops, still clear at the top of the caption's box. */
+  background: linear-gradient(#17354600, #173546cc 55%, #173546e6);
   font-size: 0.68rem;
   letter-spacing: 0.12em;
 }

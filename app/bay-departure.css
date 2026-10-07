@@ -2,7 +2,7 @@
   height: 680svh;
   position: relative;
   background: #c1d9e8;
-  color: #163448;
+  color: #132e40;
 }
 .bay-sticky {
   position: sticky;
@@ -65,7 +65,7 @@
 }
 .bay-flight-label > span:last-child {
   margin-left: 15px;
-  color: #47677a;
+  color: #1b3446;
 }
 .bay-live-dot {
   height: 5px;
@@ -96,7 +96,7 @@
 }
 .bay-story .eyebrow {
   margin: 0 0 24px;
-  color: #466477;
+  color: #24425a;
 }
 .bay-story h1 {
   font-size: clamp(3.8rem, 6.8vw, 7.5rem);
@@ -110,7 +110,7 @@
   max-width: 330px;
   font-size: 1rem;
   line-height: 1.7;
-  color: #3c5c70;
+  color: #2f4d61;
   margin: 0;
 }
 .bay-explore {
@@ -206,7 +206,7 @@
   gap: 20px;
   /* Dark ink in every phase: the opening puts these controls on white cloud
      tops with no scrim behind them, where the old near-white read at 1.9:1. */
-  color: #21465f;
+  color: #162e3f;
 }
 .bay-scroll-cue {
   display: flex;
@@ -281,7 +281,7 @@
 }
 .bay-journey[data-phase='bay'] .bay-bottom,
 .bay-journey[data-phase='cruise'] .bay-bottom {
-  color: #21465f;
+  color: #162e3f;
 }
 .bay-journey[data-phase='bay'] .bay-scroll-track,
 .bay-journey[data-phase='cruise'] .bay-scroll-track {
@@ -669,7 +669,7 @@
 }
 .bay-journey[data-phase='roll'] .bay-bottom,
 .bay-journey[data-phase='liftoff'] .bay-bottom {
-  color: #21465f;
+  color: #162e3f;
 }
 .bay-journey[data-phase='roll'] .bay-scroll-track,
 .bay-journey[data-phase='liftoff'] .bay-scroll-track {
@@ -918,7 +918,7 @@
   animation: none;
 }
 .dreamliner-journey .bay-bottom {
-  color: #21465f;
+  color: #162e3f;
 }
 .dreamliner-journey .bay-scroll-track {
   border-color: #21465f88;
@@ -1089,6 +1089,27 @@
       0 1px 16px #ffffffa6;
   }
 }
+/* The small type over the photograph gets that halo on every screen. Behind
+   a line the sky runs from pale haze to the deep blue at the top of a large
+   display, and it drifts; measured against the darkest of it, no muted ink
+   reached AA contrast, and an ink dark enough to would flatten the eyebrows
+   into the headline. The halo meets the letters with near white instead.
+   The headline itself is large type and clears the large-text threshold
+   unaided. */
+.dreamliner-journey .bay-flight-label,
+.dreamliner-journey .bay-skip,
+.dreamliner-journey .bay-story .eyebrow,
+.dreamliner-journey .bay-description,
+.dreamliner-journey .bay-start-hint,
+.dreamliner-journey .tour-destinations,
+.terminal-header .brand,
+.terminal-header nav,
+.terminal-header .station-clock {
+  text-shadow:
+    0 0 1px #ffffffee,
+    0 0 8px #ffffffd9,
+    0 1px 16px #ffffffa6;
+}
 
 /* The opening header shares the actual moving sky, then yields to flight controls. */
 .dreamliner-journey .bay-flight-label,
@@ -1222,7 +1243,7 @@
   padding: 11px 0;
   border: 0;
   border-bottom: 1px solid #355d7855;
-  color: #163f57;
+  color: #132e40;
   background: none;
   text-align: left;
   font-size: 0.95rem;
