@@ -126,6 +126,8 @@ declare global {
     turnstile?: Turnstile;
   }
 }
+/** A message written for visitors, safe to show as it is. */
+class TowerError extends Error {}
 let turnstileRequest: Promise<void> | undefined;
 function loadTurnstile() {
   if (window.turnstile) return Promise.resolve();
@@ -161,7 +163,12 @@ export function ContactTower() {
   const [config, setConfig] = useState<EdgeConfig | null>(null);
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
+  // What the form last said, and about what: verification notices clear once
+  // the challenge passes again; a failed send stays until the next attempt.
+  const [notice, setNotice] = useState<{
+    text: string;
+    about: 'verification' | 'send';
+  } | null>(null);
   const [sent, setSent] = useState(false);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -185,7 +192,7 @@ export function ContactTower() {
         if (stopped) return;
         setConfig(c);
         if (!c.contactEnabled || !c.turnstileSiteKey)
-          throw new Error(
+          throw new TowerError(
             'The tower is temporarily unavailable. You can still find me on GitHub.',
           );
         await loadTurnstile();
@@ -197,20 +204,35 @@ export function ContactTower() {
           size: 'flexible',
           callback: (value: string) => {
             setToken(value);
-            setMessage('');
+            setNotice((current) =>
+              current?.about === 'verification' ? null : current,
+            );
           },
           'expired-callback': () => {
             setToken('');
-            setMessage('Verification expired. Please verify again.');
+            setNotice({
+              text: 'Verification expired. Please verify again.',
+              about: 'verification',
+            });
           },
           'error-callback': () => {
             setToken('');
-            setMessage('Verification could not load. Please retry.');
+            setNotice({
+              text: 'Verification could not load. Please retry.',
+              about: 'verification',
+            });
           },
         });
       })
       .catch((e: Error) => {
-        if (!stopped) setMessage(e.message);
+        if (!stopped)
+          setNotice({
+            text:
+              e instanceof TowerError
+                ? e.message
+                : 'Verification could not load. Please retry.',
+            about: 'verification',
+          });
       });
     return () => {
       stopped = true;
@@ -226,7 +248,7 @@ export function ContactTower() {
     const form = event.currentTarget;
     const values = new FormData(form);
     setBusy(true);
-    setMessage('');
+    setNotice(null);
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -239,12 +261,14 @@ export function ContactTower() {
           token,
         }),
       });
-      const result = (await response.json()) as {
+      // An error page from somewhere along the way is not JSON; it still
+      // gets the plain sentence below rather than a parser's complaint.
+      const result = (await response.json().catch(() => ({}))) as {
         ok?: boolean;
         error?: string;
       };
       if (!response.ok || !result.ok)
-        throw new Error(
+        throw new TowerError(
           result.error || 'Your message could not be sent. Please try again.',
         );
       // The verification container unmounts with the form, so drop the widget
@@ -255,13 +279,22 @@ export function ContactTower() {
       }
       setSent(true);
       form.reset();
-      setMessage('Message sent. Thanks for saying hello!');
+      setNotice({
+        text: 'Message sent. Thanks for saying hello!',
+        about: 'send',
+      });
     } catch (e) {
-      setMessage(
-        e instanceof Error
-          ? e.message
-          : 'Connection interrupted. Please try again.',
-      );
+      // The tower's own words when it answered; otherwise the browser's
+      // ("Failed to fetch", "Load failed", a timeout) mean the same thing.
+      setNotice({
+        text:
+          e instanceof TowerError
+            ? e.message
+            : e instanceof DOMException && e.name === 'TimeoutError'
+              ? 'The tower did not answer in time. Please try again.'
+              : 'Connection interrupted. Check your connection and try again.',
+        about: 'send',
+      });
     } finally {
       setBusy(false);
       setToken('');
@@ -328,18 +361,18 @@ export function ContactTower() {
           </p>
         </>
       )}
-      {message && (
+      {notice && (
         <output className={`tower-response ${sent ? 'sent' : ''}`}>
-          {message}
+          {notice.text}
         </output>
       )}
-      {!sent && message && !token && (
+      {!sent && notice?.about === 'verification' && !token && (
         <button
           className="tower-retry"
           type="button"
           onClick={() => {
             setToken('');
-            setMessage('');
+            setNotice(null);
             setRetry((v) => v + 1);
           }}
         >
@@ -352,6 +385,7 @@ export function ContactTower() {
           type="button"
           onClick={() => {
             setSent(false);
+            setNotice(null);
             setRetry((v) => v + 1);
           }}
         >
