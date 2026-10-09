@@ -19,6 +19,7 @@ import ProjectPreview from './project-preview';
 import { useViewPreference } from './use-view-preference';
 import { readFlightLink, replaceFlightLink } from '@/lib/flight-links';
 import type { BayPhase } from '@/lib/bay-flight';
+import type { LiveFeed } from '@/server/live';
 import AviationLogbook from './aviation-logbook';
 import GarageSection from './garage-section';
 import {
@@ -75,8 +76,12 @@ function StationClock() {
   );
 }
 
-export default function TerminalExperience() {
-  const live = useAirportLive();
+export default function TerminalExperience({
+  live: rendered,
+}: {
+  live: LiveFeed | null;
+}) {
+  const live = useAirportLive(rendered);
   const [selected, setSelected] = useState(0);
   const [projectOpen, setProjectOpen] = useState(false);
   const projectReturnFocus = useRef<HTMLElement | null>(null);

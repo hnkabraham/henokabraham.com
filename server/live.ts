@@ -8,6 +8,15 @@ export type ProjectLive = {
   metadataAvailable?: boolean;
 };
 export type LiveStore = Pick<KVNamespace, 'get' | 'put'>;
+export type LiveFeed = {
+  projects: { checkedAt: string; projects: ProjectLive[] } | null;
+};
+/** The scheduled checks' last snapshot, as /api/live serves it. */
+export async function readLiveFeed(store?: LiveStore): Promise<LiveFeed> {
+  return {
+    projects: store ? await store.get('projects:v1', 'json') : null,
+  };
+}
 const headers = {
   'User-Agent': 'HenokAbraham-Portfolio/1.0 (https://henokabraham.com)',
   Accept: 'application/json',

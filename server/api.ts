@@ -1,5 +1,5 @@
 import { writeMetric } from './metrics.ts';
-import type { LiveStore } from './live.ts';
+import { readLiveFeed, type LiveStore } from './live.ts';
 export interface EdgeEnv {
   LIVE_DATA?: LiveStore;
   FLIGHT_STATS?: D1Database;
@@ -100,10 +100,7 @@ export async function handleApi(
         200,
         'public, max-age=60',
       );
-    const projects = env.LIVE_DATA
-      ? await env.LIVE_DATA.get('projects:v1', 'json')
-      : null;
-    return reply({ projects }, 200, 'public, max-age=60');
+    return reply(await readLiveFeed(env.LIVE_DATA), 200, 'public, max-age=60');
   }
   if (!['/api/contact', '/api/metrics'].includes(path))
     return reply({ error: 'Not found' }, 404);

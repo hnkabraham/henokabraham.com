@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { ArrowUpRight, Radio, Send } from 'lucide-react';
-import type { ProjectLive } from '@/server/live';
+import type { LiveFeed, ProjectLive } from '@/server/live';
 import {
   edgeConfig,
   measurementAllowed,
@@ -9,11 +9,13 @@ import {
 } from '@/lib/flight-metrics';
 import { withTimeout } from '@/lib/abort';
 
-type LiveData = {
-  projects: { checkedAt: string; projects: ProjectLive[] } | null;
-};
-export function useAirportLive() {
-  const [data, setData] = useState<LiveData | null>(null);
+/**
+ * The project checks, starting from the snapshot the page was rendered with
+ * (app/page.tsx; null on a dev server with no KV binding) and kept fresh by
+ * polling.
+ */
+export function useAirportLive(rendered: LiveFeed | null) {
+  const [data, setData] = useState<LiveFeed | null>(rendered);
   const [failed, setFailed] = useState(false);
   const [now, setNow] = useState(0);
   useEffect(() => {
