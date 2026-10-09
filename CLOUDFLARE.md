@@ -613,3 +613,13 @@ On the live site, desktop, phone and landscape load the tour and every chapter w
 ## Contact landing deployed
 
 Source `14d4857` renders the project checks with the page: `app/page.tsx` reads the same `projects:v1` snapshot `/api/live` serves (`readLiveFeed` in `server/live.ts`) and hands it to the client, which still polls. Arriving from `/api/live` about 0.4 s after the document, the checks had added some 100 px above the contact section after the browser had aimed its smooth scroll, so `/#contact` stopped 178 px short on desktop and 301 px on a phone. Production version `0ec7e299-5ee9-4c02-9ef9-b622a995b6ce`. On the live site `/#contact` now leaves the section's top at the 24 px scroll padding on a phone, upright or sideways, and at 81 px on desktop, where the page ends below the form; nothing above it changes height after the first paint. The tour still loads on desktop, phone and landscape with no console errors from the site; the only console messages on the contact landing come from inside Turnstile's frame. Without a snapshot the page renders as before and the client fetches.
+
+## Bezel Auth, CT45 Computer Link and the site's source deployed
+
+Source `d7346c8` adds two board entries and links this site's repository. Production version `f6f836b0-2ea4-47ae-8736-7bd98f92d767`; the bindings and the 15-minute schedule are unchanged.
+
+- Bezel Auth (HA 008, LIVE): the twenty free Garmin epix (Gen 2) faces, all approved on Connect IQ at 1.1.0. The preview and the briefing rail are the store listings' own images, with sample data; the link opens the developer page that lists all twenty.
+- CT45 Computer Link (HA 009, OPEN SOURCE): joins `repositories` in `server/live.ts`, so the scheduled check reads its repository and latest release like the other open-source projects. That is two more GitHub requests per run, which makes the optional `GITHUB_TOKEN` secret more useful.
+- The open-source list leads with this site's repository, and the Personal Airspace briefing offers "View the source" beside "Return to the open sky" (`Flight.source`).
+
+On the live site every new image returns 200, the board, briefings and open-source list show the new entries with the right links on desktop and phone, the page is exactly the viewport's width, and `/#contact` still lands at 81 px on desktop and 24 px on a phone, upright or sideways. One desktop run logged a failed request for the Downshift loop video; the file returns 200 and two reruns had no failed requests.
