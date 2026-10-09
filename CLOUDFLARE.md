@@ -623,3 +623,5 @@ Source `d7346c8` adds two board entries and links this site's repository. Produc
 - The open-source list leads with this site's repository, and the Personal Airspace briefing offers "View the source" beside "Return to the open sky" (`Flight.source`).
 
 On the live site every new image returns 200, the board, briefings and open-source list show the new entries with the right links on desktop and phone, the page is exactly the viewport's width, and `/#contact` still lands at 81 px on desktop and 24 px on a phone, upright or sideways. One desktop run logged a failed request for the Downshift loop video; the file returns 200 and two reruns had no failed requests.
+
+The 14:45 UTC run after the deploy left no new snapshot. The 15:00 run listed CT45 but could not read it from GitHub, and with no earlier data to fall back on its card says "Repository updates are temporarily unavailable." It fills in on the first run GitHub answers; the `GITHUB_TOKEN` secret would make that every run.
