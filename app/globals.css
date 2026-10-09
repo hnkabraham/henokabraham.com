@@ -1374,6 +1374,25 @@ a:focus-visible,
 .briefing-link:hover {
   background: #b34120;
 }
+.briefing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.briefing-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #b7c4c9;
+  color: #193848;
+  font-size: 0.9375rem;
+  padding: 14px 19px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.briefing-source:hover {
+  background: #eaf0ee;
+}
 .hangar-note {
   display: flex;
   align-items: center;

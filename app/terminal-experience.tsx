@@ -369,23 +369,36 @@ export default function TerminalExperience({
                       ))}
                     </div>
                     {flight.url ? (
-                      <a
-                        className="briefing-link"
-                        href={flight.url}
-                        target={
-                          flight.url.startsWith('https://')
-                            ? '_blank'
-                            : undefined
-                        }
-                        rel={
-                          flight.url.startsWith('https://')
-                            ? 'noopener noreferrer'
-                            : undefined
-                        }
-                      >
-                        {flight.linkLabel}
-                        <ArrowUpRight size={18} />
-                      </a>
+                      <div className="briefing-actions">
+                        <a
+                          className="briefing-link"
+                          href={flight.url}
+                          target={
+                            flight.url.startsWith('https://')
+                              ? '_blank'
+                              : undefined
+                          }
+                          rel={
+                            flight.url.startsWith('https://')
+                              ? 'noopener noreferrer'
+                              : undefined
+                          }
+                        >
+                          {flight.linkLabel}
+                          <ArrowUpRight size={18} />
+                        </a>
+                        {flight.source && (
+                          <a
+                            className="briefing-source"
+                            href={flight.source}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            View the source
+                            <ArrowUpRight size={18} />
+                          </a>
+                        )}
+                      </div>
                     ) : (
                       <p className="hangar-note">
                         <span className="signal-dot" />{' '}

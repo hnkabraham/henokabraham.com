@@ -12,6 +12,9 @@ export type Flight = {
   stack: string[];
   url?: string;
   linkLabel?: string;
+  // The project's own repository, offered beside `url` when that link goes
+  // somewhere else (this site's briefing returns to the sky).
+  source?: string;
   // A still from the project itself, shown in the briefing's side rail. The
   // rail is a narrow portrait frame, so captures are taken tall; its own
   // dimensions, caption and description travel with it rather than living in
@@ -47,6 +50,7 @@ export const flights: Flight[] = [
     stack: ['TypeScript', 'Three.js', 'GLSL', 'Python'],
     url: '?project=bay-departure&chapter=preflight',
     linkLabel: 'Return to the open sky',
+    source: 'https://github.com/hnkabraham/henokabraham.com',
     features: [
       '4K textures and modeled fan blades',
       'Engine, wing, and tail close-ups',
@@ -114,6 +118,39 @@ export const flights: Flight[] = [
     ],
   },
   {
+    id: 'bezel-auth',
+    preview: {
+      src: '/images/bezel-auth-lineup.jpg',
+      avif: '/images/bezel-auth-lineup.avif',
+      alt: 'Three Bezel Auth watch faces, Atelier, Summit and Prism, showing sample data',
+    },
+    code: 'HA 008',
+    name: 'Bezel Auth',
+    destination: 'WEARABLES',
+    category: 'Garmin watch faces',
+    gate: 'B03',
+    status: 'LIVE',
+    open: true,
+    summary: 'Twenty watch faces. One optional authenticator.',
+    story:
+      'A free collection of twenty watch faces for the Garmin epix (Gen 2), on the Connect IQ store. Each can also show a two-factor code from one account you add yourself.',
+    stack: ['Monkey C', 'Connect IQ', 'TOTP'],
+    url: 'https://apps.garmin.com/developer/9547a1e5-162b-494c-8a14-024066f4f32f/apps',
+    linkLabel: 'See all twenty on Connect IQ',
+    image: {
+      src: '/images/bezel-auth-faces.jpg',
+      width: 690,
+      height: 1035,
+      alt: 'Six more Bezel Auth faces: Vector, Wayfinder, Nightwatch, Tactical, Chrono and Offset',
+      caption: 'SAMPLE DATA',
+    },
+    features: [
+      'Analog, digital and sports layouts, all free',
+      'Optional code: off by default, shown only while awake',
+      'Generated on the watch; no account, server or analytics',
+    ],
+  },
+  {
     id: 'downshift',
     preview: {
       src: '/images/downshift-mockup-static.png',
@@ -163,6 +200,39 @@ export const flights: Flight[] = [
       'Encrypted device-to-device communication',
       'iPhone notifications and health synchronization',
       'Beta; physical-device testing in progress',
+    ],
+  },
+  {
+    id: 'ct45-link',
+    preview: {
+      src: '/images/ct45-desktop.jpg',
+      avif: '/images/ct45-desktop.avif',
+      alt: 'CT45 Computer Link on a desktop: a scanning session with three barcodes and Excel export',
+    },
+    code: 'HA 009',
+    name: 'CT45 Computer Link',
+    destination: 'BARCODE SCANNING',
+    category: 'Desktop + Android',
+    gate: 'C02',
+    status: 'OPEN SOURCE',
+    open: true,
+    summary: 'Scan on the handheld. Land on your computer.',
+    story:
+      'Sends each barcode scanned on a Honeywell CT45 to a Mac or Windows computer over an encrypted local connection, into a searchable log you can export to Excel.',
+    stack: ['Electron', 'Kotlin', 'TLS'],
+    url: 'https://github.com/hnkabraham/CT45-Computer-Link',
+    linkLabel: 'Explore repository',
+    image: {
+      src: '/images/ct45-handheld.jpg',
+      width: 690,
+      height: 1457,
+      alt: 'The CT45 app connected to a computer, with three scans in its history marked Sent',
+      caption: 'ON THE HANDHELD',
+    },
+    features: [
+      'Pair once by scanning the computer’s QR code',
+      'Scans made offline wait on the handheld and resend',
+      'Named sessions, Excel export, or typing into any app',
     ],
   },
   {
@@ -235,6 +305,12 @@ export const liveSites = [
 ];
 export const openSource = [
   {
+    name: 'Personal Airspace',
+    repo: 'henokabraham.com',
+    detail: 'This site: a 787 tour in Three.js and GLSL.',
+    stack: 'TYPESCRIPT / WEBGL',
+  },
+  {
     name: 'iPhone ↔ Wear OS',
     repo: 'wear-ios-bridge',
     detail: 'An encrypted bridge across two device ecosystems.',
@@ -245,6 +321,12 @@ export const openSource = [
     repo: 'swift-obd-engine',
     detail: 'Vehicle diagnostics and simulation for Swift.',
     stack: 'SWIFT',
+  },
+  {
+    name: 'CT45 Computer Link',
+    repo: 'CT45-Computer-Link',
+    detail: 'Barcode scans from a handheld to your desktop.',
+    stack: 'ELECTRON / KOTLIN',
   },
   {
     name: 'Mobile Mode',

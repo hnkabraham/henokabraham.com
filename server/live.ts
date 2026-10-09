@@ -36,6 +36,7 @@ export const repositories = [
   { id: 'wear-bridge', repo: 'wear-ios-bridge' },
   { id: 'obd-engine', repo: 'swift-obd-engine' },
   { id: 'mobile-mode', repo: 'claude-code-mobile-mode' },
+  { id: 'ct45-link', repo: 'CT45-Computer-Link' },
 ];
 export async function refreshProjects(store: LiveStore, token?: string) {
   const checkedAt = new Date().toISOString();

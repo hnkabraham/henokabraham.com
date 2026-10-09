@@ -20,15 +20,18 @@ const modules = [
   ...paths.filter((p) => p.endsWith('.js') && p !== 'index.js'),
 ].map((path) => ({ type: 'ESModule', path: resolve('dist/server', path) }));
 
+// Kept in step with `repositories` in server/live.ts, plus the three sites.
+const REPOSITORIES = [
+  'wear-ios-bridge',
+  'swift-obd-engine',
+  'claude-code-mobile-mode',
+  'CT45-Computer-Link',
+];
 const fetchMock = new MockAgent();
 if (!live) {
   fetchMock.disableNetConnect();
   const github = fetchMock.get('https://api.github.com');
-  for (const repo of [
-    'wear-ios-bridge',
-    'swift-obd-engine',
-    'claude-code-mobile-mode',
-  ]) {
+  for (const repo of REPOSITORIES) {
     github.intercept({ path: `/repos/hnkabraham/${repo}` }).reply(
       200,
       {
@@ -75,7 +78,7 @@ try {
   assert.equal(result.outcome, 'ok');
   const kv = await mf.getKVNamespace('LIVE_DATA');
   const projects = await kv.get('projects:v1', 'json');
-  assert.equal(projects?.projects.length, 6);
+  assert.equal(projects?.projects.length, REPOSITORIES.length + 3);
   assert.equal(
     projects.projects.find((project) => project.id === 'bay-departure')
       ?.reachable,
