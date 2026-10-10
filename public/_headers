@@ -6,3 +6,10 @@
 # build-ID folder), so a repeat visit need not revalidate any of them.
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
+# Images and video keep their names when they change, so
+# they can't be immutable; a day's freshness with a week of revalidating in
+# the background saves a repeat visit some thirty conditional requests.
+/images/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/video/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

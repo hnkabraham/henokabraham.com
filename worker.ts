@@ -5,10 +5,14 @@ import { refreshLiveData } from './server/live';
 import { pruneMetrics } from './server/metrics';
 // The opening sky is useful for every visitor, including reduced motion.
 // It is the AVIF (57 KB against the 357 KB JPEG the stylesheet falls back
-// to); the type lets a browser without AVIF skip the hint. Aircraft assets
-// are fetched by the scene once it decides to run.
-const EARLY_HINTS =
-  '</images/cruise-sky.avif>; rel=preload; as=image; type=image/avif';
+// to); the type lets a browser without AVIF skip the hint. The near cloud
+// over it is the opening's largest paint, so it is hinted too rather than
+// found late in the stylesheet. Aircraft assets are fetched by the scene
+// once it decides to run.
+const EARLY_HINTS = [
+  '</images/cruise-sky.avif>; rel=preload; as=image; type=image/avif',
+  '</images/cloud-sprite.avif>; rel=preload; as=image; type=image/avif',
+].join(', ');
 // Static assets take their headers from public/_headers; the document is
 // rendered here, so its transport and embedding policy is set here. No
 // script or connect directives: the page carries inline framework scripts

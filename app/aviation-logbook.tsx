@@ -125,6 +125,20 @@ export default function AviationLogbook() {
             .join('; ')}
           .
         </figcaption>
+        {/* The land is an <img> under the map, not an SVG <image> in it: an
+            <img> can wait until the visitor scrolls near, where an SVG
+            image loads with the page. Both are 2:1 and centred, so the
+            routes land where they did. */}
+        {/* oxlint-disable-next-line next/no-img-element */}
+        <img
+          className="logbook-land"
+          src="/images/flight-log-world.svg"
+          alt=""
+          width={1000}
+          height={500}
+          loading="lazy"
+          decoding="async"
+        />
         {/* An inline map with live route paths cannot be an <img>; its airports are named in the caption above. */}
         {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
         <svg role="img" aria-label="Travel route map with international destination flags"
@@ -151,11 +165,6 @@ export default function AviationLogbook() {
             </clipPath>
           </defs>
           <rect width="1000" height="500" fill="url(#logbook-grid)" />
-          <image
-            href="/images/flight-log-world.svg"
-            width="1000"
-            height="500"
-          />
           {routes.map((route) => (
             <path
               key={route.key}

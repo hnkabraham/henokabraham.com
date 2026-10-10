@@ -53,9 +53,18 @@
   background: radial-gradient(ellipse at 50% 45%, #254b6133, transparent 70%);
 }
 .logbook-map {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
+}
+.logbook-land {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 .logbook-route {
   fill: none;
