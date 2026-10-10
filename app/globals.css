@@ -874,19 +874,62 @@ main > section:not(#flight) :is(h2, h3),
   font-size: 0.8125rem;
   font-weight: 450;
 }
-.barcode {
-  width: 68px;
-  height: 35px;
-  background: repeating-linear-gradient(
-    90deg,
-    #193c4c 0 1px,
-    transparent 1px 3px,
-    #193c4c 3px 5px,
-    transparent 5px 7px,
-    #193c4c 7px 8px,
-    transparent 8px 12px
-  );
-  opacity: 0.65;
+/* The stub: flight, gate and seat above the passenger, and the pass's code,
+   two pixels a module with its four-module quiet zone kept light. */
+.stub-details {
+  min-width: 0;
+}
+.stub-fields {
+  display: flex;
+  gap: 18px;
+  margin: 0 0 12px;
+}
+.stub-fields dt {
+  margin-bottom: 3px;
+}
+.stub-fields dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #193c4c;
+  white-space: nowrap;
+}
+.flap {
+  display: inline-flex;
+}
+.flap > span {
+  display: inline-block;
+  transform-origin: 50% 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-simple-view='true']) .flap > span {
+    animation: flap-depth 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+.boarding-code {
+  flex: 0 0 auto;
+  width: 82px;
+  height: 82px;
+  background: #fff;
+  border-radius: 3px;
+}
+.boarding-code path {
+  fill: #193c4c;
+}
+/* The tablet's narrow ticket: tighter fields and a slightly smaller code,
+   still two device pixels a module on a 2x screen. */
+@media (min-width: 801px) and (max-width: 1100px) {
+  .ticket-stub {
+    padding-inline: 18px;
+  }
+  .stub-fields {
+    gap: 12px;
+  }
+  .boarding-code {
+    width: 74px;
+    height: 74px;
+  }
 }
 .simple-about {
   padding: 50px 7%;

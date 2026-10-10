@@ -38,3 +38,8 @@ export function replaceFlightLink(values: {
   if (next !== `${location.pathname}${location.search}${location.hash}`)
     history.replaceState(history.state, '', next);
 }
+
+/** The link a project's boarding pass carries, absolute so a phone camera
+ * that reads its code opens this site at that project. */
+export const boardingLink = (project: string) =>
+  `https://henokabraham.com/?project=${project}`;

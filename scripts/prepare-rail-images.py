@@ -15,7 +15,13 @@ from pathlib import Path
 from PIL import Image
 
 IMAGES = Path(__file__).resolve().parent.parent / 'public' / 'images'
-RAIL = ['routeloads-hero', 'downshift-dashboard', 'ct45-handheld', 'bezel-auth-modes']
+RAIL = [
+    'flight-tracker-phone',
+    'routeloads-hero',
+    'downshift-dashboard',
+    'ct45-handheld',
+    'bezel-auth-modes',
+]
 WIDTHS = [360, 525]
 
 

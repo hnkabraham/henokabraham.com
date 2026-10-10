@@ -42,9 +42,9 @@ export const flights: Flight[] = [
   {
     id: 'bay-departure',
     preview: {
-      src: '/images/og-card.jpg',
-      avif: '/images/og-card.avif',
-      alt: 'Personal Airspace, Henok’s aviation-inspired website',
+      src: '/images/personal-airspace-preview.jpg',
+      avif: '/images/personal-airspace-preview.avif',
+      alt: 'The site’s opening: “A different perspective.” under the wing of a Boeing 787-9, its engine beside the Golden Gate in the clouds',
     },
     code: 'HA 001',
     name: 'Personal Airspace',
@@ -87,6 +87,13 @@ export const flights: Flight[] = [
     stack: ['CesiumJS', 'Python', 'Flight data'],
     url: 'https://unitedflighttracker.com',
     linkLabel: 'Explore live project',
+    image: {
+      src: '/images/flight-tracker-phone.jpg',
+      width: 690,
+      height: 1360,
+      alt: 'United Flight Tracker on a phone: hundreds of United aircraft over North America on a 3D globe, with counts by phase of flight',
+      caption: 'ON A PHONE',
+    },
     features: [
       'Live aircraft tracking on a 3D globe',
       'Fleet insights and airport operations',
@@ -96,9 +103,9 @@ export const flights: Flight[] = [
   {
     id: 'routeloads',
     preview: {
-      src: '/images/live-routeloads.jpg',
-      avif: '/images/live-routeloads.avif',
-      alt: 'routeloads route search and flight occupancy rankings',
+      src: '/images/routeloads-preview.jpg',
+      avif: '/images/routeloads-preview.avif',
+      alt: 'routeloads: “How full are flight routes in America?” beside a ranked list of the emptiest routes',
     },
     code: 'HA 003',
     name: 'routeloads',
@@ -292,8 +299,9 @@ export const flights: Flight[] = [
  * The two projects anyone can open right now, shown side by side with a
  * screenshot each. The ids match the board's and the scheduled probe's, so a
  * card carries the same reachability check the briefing does. The captures
- * are framed to leave out each site's live chrome — a flight count is
- * plausible on any day, but a "data through" date would age the page.
+ * leave out each site's dated chrome — a flight count is plausible on any
+ * day, but a "data through" date would age the page — so routeloads is shot
+ * with its data-through pill and its stats row hidden in place.
  */
 export const liveSites = [
   {

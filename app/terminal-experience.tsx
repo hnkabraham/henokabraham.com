@@ -18,7 +18,12 @@ import ScrollDeparture from './scroll-departure';
 import { flights, liveSites, openSource } from './flight-data';
 import ProjectPreview from './project-preview';
 import { useViewPreference } from './use-view-preference';
-import { readFlightLink, replaceFlightLink } from '@/lib/flight-links';
+import {
+  boardingLink,
+  readFlightLink,
+  replaceFlightLink,
+} from '@/lib/flight-links';
+import { boardingCode, boardingCodePath } from '@/lib/boarding-code';
 import type { BayPhase } from '@/lib/bay-flight';
 import type { LiveFeed } from '@/server/live';
 import AviationLogbook from './aviation-logbook';
@@ -47,6 +52,32 @@ const railSources = (src: string, format: 'avif' | 'jpg') => {
   const base = src.replace(/\.jpg$/, '');
   return `${base}-360.${format} 360w, ${base}-525.${format} 525w, ${base}.${format} 690w`;
 };
+
+// Each pass's code, made once: the same on the server and in the browser.
+const boardingCodes = Object.fromEntries(
+  flights.map((item) => [
+    item.id,
+    boardingCodePath(boardingCode(boardingLink(item.id))),
+  ]),
+);
+
+/** A stub field's characters, each turning over like a split-flap display
+ * when the pass changes; read as one word. The fields are codes and gates,
+ * plain ASCII, so splitting by UTF-16 unit is splitting by character. */
+function Flap({ text }: { text: string }) {
+  return (
+    <>
+      <span className="sr-only">{text}</span>
+      <span className="flap" aria-hidden="true">
+        {text.split('').map((character, index) => (
+          <span key={index} style={{ animationDelay: `${index * 45}ms` }}>
+            {character === ' ' ? '\u00a0' : character}
+          </span>
+        ))}
+      </span>
+    </>
+  );
+}
 
 // The breakpoint where the departures layout becomes one column (globals.css).
 const singleColumn = () => matchMedia('(max-width: 800px)').matches;
@@ -481,11 +512,45 @@ export default function TerminalExperience({
                 </div>
                 <div className="ticket-tear" />
                 <div className="ticket-stub">
-                  <div>
-                    <span className="mono">PASSENGER</span>
-                    <strong>The curious ones.</strong>
+                  <div className="stub-details">
+                    <dl className="stub-fields" key={flight.id}>
+                      <div>
+                        <dt className="mono">FLIGHT</dt>
+                        <dd>
+                          <Flap text={flight.code} />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="mono">GATE</dt>
+                        <dd>
+                          <Flap text={flight.gate} />
+                        </dd>
+                      </div>
+                      <div>
+                        {/* Always a window seat, as the About section says. */}
+                        <dt className="mono">SEAT</dt>
+                        <dd>
+                          <Flap text="1A" />
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="stub-passenger">
+                      <span className="mono">PASSENGER</span>
+                      <strong>The curious ones.</strong>
+                    </div>
                   </div>
-                  <div className="barcode" aria-hidden="true" />
+                  {/* A real code: a phone camera held up to it opens this
+                      project's link. The page around it says the same, so
+                      it is hidden from screen readers. */}
+                  <svg
+                    className="boarding-code"
+                    viewBox="-4 -4 41 41"
+                    aria-hidden="true"
+                    shapeRendering="crispEdges"
+                  >
+                    <title>{boardingLink(flight.id)}</title>
+                    <path d={boardingCodes[flight.id]} />
+                  </svg>
                 </div>
               </section>
               <DialogContent

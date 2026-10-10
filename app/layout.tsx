@@ -29,7 +29,7 @@ const card = {
   url: '/images/og-card.jpg',
   width: 1200,
   height: 630,
-  alt: 'A Boeing 787-9 passing above a cloud deck, its wing slicing between the two lines of the headline',
+  alt: 'The headline “A different perspective.” under the wing of a Boeing 787-9 above the clouds, its engine beside the Golden Gate Bridge towers, with Henok Abraham · henokabraham.com along the bottom',
 };
 export const metadata: Metadata = {
   metadataBase: new URL('https://henokabraham.com'),
