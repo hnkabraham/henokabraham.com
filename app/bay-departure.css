@@ -197,7 +197,8 @@
 .bay-bottom {
   --bars: calc(100lvh - 100svh);
   position: absolute;
-  bottom: calc(35px + var(--bars) + env(safe-area-inset-bottom));
+  /* Clear of the credits chip in the corner below the row. */
+  bottom: calc(42px + var(--bars) + env(safe-area-inset-bottom));
   left: max(4.5%, env(safe-area-inset-left));
   right: max(4.5%, env(safe-area-inset-right));
   display: flex;
@@ -455,7 +456,8 @@ html[data-simple-view='true'] .bay-journey .bay-scroll-track {
   .bay-bottom {
     left: max(7%, env(safe-area-inset-left));
     right: max(7%, env(safe-area-inset-right));
-    bottom: calc(29px + var(--bars) + env(safe-area-inset-bottom));
+    /* Clear of the credits chip in the corner below the row. */
+    bottom: calc(38px + var(--bars) + env(safe-area-inset-bottom));
     gap: 10px;
   }
   .bay-scroll-cue {
@@ -683,9 +685,22 @@ html:not([data-simple-view='true'])
   min-height: 44px;
   cursor: pointer;
 }
-.bay-utilities button:last-child {
+.bay-utilities button:has(> svg:only-child) {
   min-width: 30px;
   justify-content: center;
+}
+/* On larger screens the loading note floats above the row rather than in
+   it, so nothing in the row moves when it goes. Phones place it themselves. */
+@media (min-width: 801px) and (min-height: 601px) {
+  .bay-utilities {
+    position: relative;
+  }
+  .bay-utilities .bay-loading {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 2px);
+    white-space: nowrap;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .bay-canvas canvas {
@@ -1590,7 +1605,8 @@ html[data-simple-view='true'] .dreamliner-journey .bay-progress {
 /* Short landscape screens reserve the bottom row for chapter navigation. */
 @media (max-height: 600px) and (orientation: landscape) {
   #flight .bay-bottom {
-    top: 55px;
+    /* Below the 90px header, not against the end of its nav. */
+    top: calc(94px + env(safe-area-inset-top));
     bottom: auto;
     left: auto;
     right: max(7%, env(safe-area-inset-right));

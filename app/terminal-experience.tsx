@@ -104,6 +104,9 @@ export default function TerminalExperience({
   const [projectOpen, setProjectOpen] = useState(false);
   const projectReturnFocus = useRef<HTMLElement | null>(null);
   const flight = flights[selected];
+  const flightLive = live.data?.projects?.projects.find(
+    (item) => item.id === flight.id,
+  );
   const root = useRef<HTMLDivElement>(null);
   const {
     simple: reducedMotion,
@@ -444,13 +447,21 @@ export default function TerminalExperience({
                   </p>
                   <h3>{flight.name}</h3>
                   <p className="ticket-summary">{flight.summary}</p>
-                  <ProjectUpdate
-                    item={live.data?.projects?.projects.find(
-                      (item) => item.id === flight.id,
-                    )}
-                    now={live.now}
-                    failed={live.failed}
-                  />
+                  {flightLive ? (
+                    <ProjectUpdate
+                      item={flightLive}
+                      now={live.now}
+                      failed={live.failed}
+                    />
+                  ) : (
+                    // Projects the scheduled check doesn't follow still fill
+                    // the same block, so the ticket keeps its height as the
+                    // selection moves.
+                    <div className="project-live-update">
+                      <p className="mono">STATUS · {flight.status}</p>
+                      {flight.note && <span>{flight.note}</span>}
+                    </div>
+                  )}
                   <DialogTrigger
                     className="ticket-button"
                     onClick={(event) => {

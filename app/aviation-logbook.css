@@ -1,5 +1,5 @@
 .aviation-logbook {
-  padding: 68px 7% 42px;
+  padding: 68px 5.4% 42px;
   background: #102c3e;
   color: #edf5fa;
   position: relative;
@@ -209,7 +209,7 @@
 }
 @media (max-width: 800px) {
   .aviation-logbook {
-    padding: 44px 6% 28px;
+    padding: 44px 5% 28px;
   }
   .logbook-heading {
     align-items: center;

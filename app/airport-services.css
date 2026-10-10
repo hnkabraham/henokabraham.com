@@ -12,6 +12,12 @@
   font-size: 0.75rem;
   margin: 0;
 }
+/* On the ticket, room for its longest block (a check, an update and a
+   release), so the pass keeps one height as the selection moves. */
+.ticket-body .project-live-update {
+  min-height: 5.75rem;
+  align-content: start;
+}
 .project-live-update a {
   display: flex;
   gap: 0.4rem;
@@ -45,6 +51,8 @@
   background: #fff;
   border: 1px solid #c7d0d4;
   border-top: 3px solid #db4f24;
+  /* The same corners as the GitHub card beside it. */
+  border-radius: 5px;
   padding: 1.7rem;
   box-shadow: 0 10px 35px #162d3d08;
 }

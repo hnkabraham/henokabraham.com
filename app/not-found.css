@@ -46,7 +46,8 @@
   align-items: center;
   min-height: 46px;
   padding: 0 22px;
-  border-radius: 999px;
+  /* The same corners as the site's other buttons. */
+  border-radius: 4px;
   background: #162d3de0;
   color: #fff;
   text-decoration: none;
@@ -56,6 +57,15 @@
 .diverted-link:hover,
 .diverted-link:focus-visible {
   background: #db4f24;
+}
+/* Three links don't fit one phone row; stacked, none is left on its own. */
+@media (max-width: 520px) {
+  .diverted nav {
+    flex-direction: column;
+  }
+  .diverted-link {
+    justify-content: center;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .diverted .bay-poster,

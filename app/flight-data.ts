@@ -156,6 +156,7 @@ export const flights: Flight[] = [
       'Optional code: off by default, shown only while awake',
       'Generated on the watch; no account, server, or analytics',
     ],
+    note: 'Free on the Connect IQ Store.',
   },
   {
     id: 'wear-bridge',
@@ -242,7 +243,7 @@ export const flights: Flight[] = [
       'Session recording, lap timing, and telemetry',
       'Simulator mode for testing without hardware',
     ],
-    note: 'In the hangar now: the project I’m building.',
+    note: 'The project I’m building now.',
   },
   {
     id: 'spoolbrush',

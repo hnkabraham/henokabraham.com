@@ -648,17 +648,9 @@ export default function ScrollDeparture({
                   : 'SCROLL TO EXPLORE'}
             </span>
           </div>
+          {/* Simple view sits last, at the row's anchored end, so it stays put
+              when the loading note and the Immersive control come and go. */}
           <div className="bay-utilities">
-            <button
-              className="bay-view-toggle"
-              aria-pressed={reducedMotion}
-              disabled={!viewReady}
-              onClick={onToggleView}
-              title="Use a static sky and browse without 3D animation"
-            >
-              {reducedMotion ? <Check size={15} /> : <LayoutGrid size={15} />}
-              <span>Simple view</span>
-            </button>
             {status === 'loading' && (
               <output className="bay-loading mono">Loading 787</output>
             )}
@@ -723,11 +715,21 @@ export default function ScrollDeparture({
             >
               <RotateCcw size={15} />
             </button>
+            <button
+              className="bay-view-toggle"
+              aria-pressed={reducedMotion}
+              disabled={!viewReady}
+              onClick={onToggleView}
+              title="Use a static sky and browse without 3D animation"
+            >
+              {reducedMotion ? <Check size={15} /> : <LayoutGrid size={15} />}
+              <span>Simple view</span>
+            </button>
           </div>
         </div>
         <div className="bay-source-note">
           <a
-            href="/credits/dreamliner.html"
+            href="/credits/dreamliner"
             target="_blank"
             rel="noopener noreferrer"
           >

@@ -39,6 +39,12 @@
 :root,
 .dark {
   --font-google-sans: 'Google Sans', Arial, sans-serif;
+  /* The small uppercase labels: one tracking for codes, statuses and ticket
+     lines, a wider one for column heads and destinations, and one ink for
+     every section eyebrow (4.5:1 or better on each light band). */
+  --track-label: 0.04em;
+  --track-caps: 0.08em;
+  --eyebrow-ink: #5e6b71;
   --background: #eeefec;
   --foreground: #162d3d;
   --card: #fff;
@@ -106,6 +112,52 @@ a:focus-visible,
   outline: 2px solid #dc5026;
   outline-offset: 5px;
 }
+/* Over the sky the orange ring is barely 1.2:1. There it is navy (4.2:1 or
+   better against the sky) around a white ring, which also keeps it visible
+   on the navy chapter pill and over white cloud. */
+.terminal-header :is(a, button):focus-visible,
+#flight :is(a, button, [tabindex]):focus-visible {
+  outline: 3px solid #102c3e;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fff;
+}
+/* Headings break into even lines and paragraphs avoid a lone last word.
+   The tour's captions are left alone: their lines are set by hand. */
+main > section:not(#flight) :is(h2, h3),
+.site-footer,
+.project-dialog :is(h2, h3) {
+  text-wrap: balance;
+}
+.ticket-summary,
+.briefing-description,
+.service-detail,
+.source-row p,
+.about-story p,
+.terminal-caption {
+  text-wrap: pretty;
+}
+.flight-status,
+.board-title > .mono,
+.project-live-update time {
+  white-space: nowrap;
+}
+/* Windows High Contrast flattens every fill, so selected and current states
+   would vanish: mark them with the system's own highlight instead. The sky
+   keeps its picture, which is scenery, not information. */
+@media (forced-colors: active) {
+  .flight-row.selected,
+  .bay-chapters button[aria-current='step'],
+  [aria-pressed='true'] {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+  }
+  .flight-row.selected :is(.flight-code, strong) {
+    color: Highlight;
+  }
+  .bay-opening-sky {
+    forced-color-adjust: none;
+  }
+}
 ::selection {
   background: #dc5026;
   color: white;
@@ -125,7 +177,8 @@ a:focus-visible,
   top: -100px;
   left: 20px;
   padding: 13px 20px;
-  background: #db4f24;
+  /* 5:1 with its white text; the brand orange is 4.1:1. */
+  background: #c2441d;
   color: #fff;
   z-index: 100;
 }
@@ -172,6 +225,13 @@ a:focus-visible,
   color: #f7f4e9;
   border-radius: 50%;
   transform: rotate(-20deg);
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* Home is the top of the page: the plane noses up toward it. */
+@media (hover: hover) {
+  .brand:hover .brand-symbol {
+    transform: rotate(-45deg);
+  }
 }
 .terminal-header nav {
   display: flex;
@@ -463,7 +523,7 @@ a:focus-visible,
 }
 .terminal-section-label .eyebrow {
   margin: 0 0 3px;
-  color: #626b70;
+  color: var(--eyebrow-ink);
   font-size: 0.75rem;
 }
 .terminal-section-label h2 {
@@ -589,7 +649,7 @@ a:focus-visible,
 .board-columns {
   padding: 15px 24px 12px;
   font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   color: #8d9da5;
 }
 .flight-row {
@@ -626,7 +686,7 @@ a:focus-visible,
 .flight-code {
   color: #c0ccd1;
   font-size: 0.8125rem;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--track-label);
 }
 .flight-destination {
   min-width: 0;
@@ -640,7 +700,7 @@ a:focus-visible,
 .flight-destination small {
   display: block;
   font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-caps);
   color: #adbcc3;
   margin-top: 5px;
 }
@@ -1214,7 +1274,7 @@ a:focus-visible,
 }
 .flight-status {
   line-height: 1.6;
-  letter-spacing: 0;
+  letter-spacing: var(--track-label);
 }
 .flight-row.selected .flight-code {
   color: #f0b765;
@@ -1231,7 +1291,7 @@ a:focus-visible,
   line-height: 1.5;
 }
 .ticket-flight {
-  letter-spacing: 0;
+  letter-spacing: var(--track-label);
 }
 .ticket-body h3 {
   font-size: 1.8rem;
@@ -1472,7 +1532,7 @@ a:focus-visible,
   background: #e6ebea;
 }
 .hangar-intro > .eyebrow {
-  color: #5d6a6f;
+  color: var(--eyebrow-ink);
   font-size: 0.75rem;
   margin: 3px 0 20px;
 }
@@ -1539,7 +1599,7 @@ a:focus-visible,
   flex-shrink: 0;
 }
 .about-section {
-  padding: 83px 7%;
+  padding: 83px 5.4%;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 70px;
@@ -1550,7 +1610,7 @@ a:focus-visible,
   align-items: center;
   gap: 12px;
   margin: 0 0 29px;
-  color: #627076;
+  color: var(--eyebrow-ink);
 }
 .about-heading .section-marker {
   width: 27px;
@@ -1621,7 +1681,7 @@ a:focus-visible,
 .contact-section {
   background: #173546;
   color: #ecf2f4;
-  padding: 30px 7% 27px;
+  padding: 30px 5.4% 27px;
 }
 .contact-top {
   display: flex;
@@ -1699,6 +1759,10 @@ a:focus-visible,
 }
 .contact-bottom a {
   color: #c3d3da;
+  transition: color 0.2s;
+}
+.contact-bottom a:hover {
+  color: #fff;
 }
 .site-footer {
   display: flex;
@@ -1757,9 +1821,8 @@ a:focus-visible,
   }
 }
 @media (min-width: 1600px) {
-  .open-hangar {
-    padding-inline: 9%;
-  }
+  .open-hangar,
+  .aviation-logbook,
   .about-section,
   .contact-section {
     padding-inline: 9%;
@@ -1818,6 +1881,11 @@ a:focus-visible,
     /* The stops past the edge are reachable by dragging the strip, which a
        hidden scrollbar gives no sign of; the last one fades out instead. */
     mask-image: linear-gradient(90deg, #000 84%, transparent);
+    /* The scroller clips what overflows it, the links' soft white halo
+       included, which left hard-edged pale boxes behind them: room above
+       and below for the halo, taken back by the margin. */
+    padding: 14px 0 14px 14px;
+    margin: -14px 0 -14px -14px;
   }
   .terminal-header nav::-webkit-scrollbar {
     display: none;
@@ -2658,6 +2726,20 @@ html[data-simple-view='true'] .airport *:after {
   min-height: 0;
   margin-bottom: 22px;
 }
+/* Beside the board, the ticket keeps one height whichever row is chosen:
+   room for a two-line summary, and on the narrow ticket of a tablet for a
+   name that wraps. */
+@media (min-width: 801px) {
+  .ticket-body .ticket-summary {
+    min-height: 3.2em;
+  }
+}
+@media (min-width: 801px) and (max-width: 1100px) {
+  .ticket-body h3 {
+    min-height: 2.3em;
+    text-wrap: balance;
+  }
+}
 .about-section {
   padding-block: 62px;
 }
@@ -2683,10 +2765,8 @@ html[data-simple-view='true'] .airport *:after {
   }
 }
 
-fieldset.flight-list {
-  border: 0;
-  padding: 0;
-  margin: 0;
+/* The board's rows, a radio group (a div since it stopped being a fieldset). */
+.flight-list {
   min-width: 0;
 }
 

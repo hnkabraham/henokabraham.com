@@ -1,3 +1,4 @@
+import { Plane } from 'lucide-react';
 import './not-found.css';
 
 // A wrong address lands on the same opening sky as the tour, with the three
@@ -13,6 +14,20 @@ export const metadata = {
 export default function NotFound() {
   return (
     <main className="diverted">
+      {/* The site's own header, brand only: a diverted visitor still knows
+          whose field they are on. */}
+      {/* oxlint-disable next/no-html-link-for-pages */}
+      <header className="terminal-header">
+        <a href="/" className="brand" aria-label="Henok Abraham, home">
+          <span className="brand-symbol" aria-hidden="true">
+            <Plane size={21} strokeWidth={1.6} />
+          </span>
+          <span>
+            HENOK ABRAHAM<small>PERSONAL AIRSPACE</small>
+          </span>
+        </a>
+      </header>
+      {/* oxlint-enable next/no-html-link-for-pages */}
       <div className="bay-opening-sky" aria-hidden="true">
         <div className="bay-poster">
           <div className="bay-landmark" />
