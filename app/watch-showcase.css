@@ -1,0 +1,242 @@
+/* Bezel Auth's faces on a night band, the colour of the departures board:
+   their black screens read as the watch's own AMOLED rather than as images
+   on paper. */
+.wrist-section {
+  padding: 56px max(5.4%, env(safe-area-inset-right)) 52px
+    max(5.4%, env(safe-area-inset-left));
+  background: #0f1d25;
+  color: #e5eaeb;
+}
+.wrist-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 30px;
+  margin-bottom: 40px;
+}
+.wrist-top .eyebrow {
+  margin: 0 0 6px;
+  color: #93a6ae;
+}
+.wrist-top h2 {
+  font-weight: 500;
+  font-size: 2.2rem;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+  margin: 0 0 12px;
+}
+.wrist-caption {
+  max-width: 34rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: #a9b9bf;
+}
+/* Awake / Always on, set like the board's status column. */
+.wrist-mode {
+  display: inline-flex;
+  flex-shrink: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid #2b414c;
+  border-radius: 6px;
+  background: #0a141a;
+}
+.wrist-mode button {
+  border: 0;
+  border-radius: 4px;
+  padding: 9px 14px;
+  background: transparent;
+  color: #93a6ae;
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.wrist-mode button:hover {
+  color: #e5eaeb;
+}
+.wrist-mode button[aria-pressed='true'] {
+  background: #213844;
+  color: #f8ca86;
+}
+.wrist-mode button:focus-visible {
+  outline: 2px solid #f8ca86;
+  outline-offset: 2px;
+}
+.wrist-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 44px 32px;
+}
+.wrist-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: inherit;
+}
+/* A plain ring, not a watch: the screen is the subject. */
+.wrist-dial {
+  position: relative;
+  display: block;
+  width: min(100%, 272px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  box-shadow:
+    0 0 0 1px #000,
+    0 0 0 7px #16252d,
+    0 0 0 8px #304651,
+    0 22px 40px -18px #000;
+  transition:
+    translate 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s;
+}
+.wrist-dial img,
+.wrist-dial canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.wrist-dial canvas {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.wrist-dial canvas[data-drawn='true'] {
+  opacity: 1;
+}
+.wrist-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 26px;
+  font-size: 1.125rem;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  transition: color 0.2s;
+}
+.wrist-name svg {
+  color: #7f949c;
+  transition: color 0.2s;
+}
+.wrist-line {
+  max-width: 17rem;
+  margin-top: 6px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #93a6ae;
+  text-wrap: pretty;
+}
+@media (hover: hover) {
+  .wrist-face:hover .wrist-dial {
+    translate: 0 -4px;
+    box-shadow:
+      0 0 0 1px #000,
+      0 0 0 7px #1b2e37,
+      0 0 0 8px #4b6774,
+      0 28px 44px -18px #000;
+  }
+  .wrist-face:hover .wrist-name,
+  .wrist-face:hover .wrist-name svg {
+    color: #f8ca86;
+  }
+}
+.wrist-face:focus-visible {
+  outline: none;
+}
+.wrist-face:focus-visible .wrist-dial {
+  box-shadow:
+    0 0 0 1px #000,
+    0 0 0 7px #16252d,
+    0 0 0 10px #f8ca86;
+}
+.wrist-face:focus-visible .wrist-name {
+  color: #f8ca86;
+}
+/* The ring dims with the screen. */
+.wrist-section[data-mode='always-on'] .wrist-dial {
+  box-shadow:
+    0 0 0 1px #000,
+    0 0 0 7px #111d23,
+    0 0 0 8px #22333b,
+    0 22px 40px -18px #000;
+}
+.wrist-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px 30px;
+  flex-wrap: wrap;
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px dashed #2b414c;
+}
+.wrist-foot p {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: #7f949c;
+}
+.wrist-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: #e5eaeb;
+  transition: color 0.2s;
+}
+.wrist-foot a:hover {
+  color: #f8ca86;
+}
+@media (max-width: 800px) {
+  .wrist-section {
+    padding-top: 44px;
+    padding-bottom: 44px;
+  }
+  .wrist-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 22px;
+    margin-bottom: 32px;
+  }
+  .wrist-top h2 {
+    font-size: 1.85rem;
+  }
+  .wrist-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 34px 18px;
+  }
+  .wrist-dial {
+    box-shadow:
+      0 0 0 1px #000,
+      0 0 0 5px #16252d,
+      0 0 0 6px #304651,
+      0 16px 30px -14px #000;
+  }
+  .wrist-name {
+    margin-top: 20px;
+    font-size: 1rem;
+  }
+  .wrist-line {
+    font-size: 0.8125rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wrist-dial,
+  .wrist-dial canvas {
+    transition: none;
+  }
+}

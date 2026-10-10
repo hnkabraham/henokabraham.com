@@ -24,6 +24,7 @@ import type { BayPhase } from '@/lib/bay-flight';
 import type { LiveFeed } from '@/server/live';
 import AviationLogbook from './aviation-logbook';
 import GarageSection from './garage-section';
+import WatchShowcase from './watch-showcase';
 import {
   useAirportLive,
   ProjectUpdate,
@@ -677,6 +678,7 @@ export default function TerminalExperience({
             ))}
           </div>
         </section>
+        <WatchShowcase />
         <AviationLogbook />
         {/* Its scene, like the flight's, waits for the browser's answer. */}
         <GarageSection reducedMotion={reducedMotion || !viewReady} />
