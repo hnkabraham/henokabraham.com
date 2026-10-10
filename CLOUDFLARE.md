@@ -637,3 +637,11 @@ Sources `1e9da05` through `3d69f67`. Production version `379ab061-5d73-4a51-a622
 - The scheduled check reads this site's repository, wear-ios-bridge and CT45 (six GitHub requests a run, down from twelve); it no longer probes this site.
 
 On the live site, across desktop, laptop, tablet, phone, small phone and landscape: no horizontal overflow (measured against the visual viewport, which caught a 91 px phone overflow during testing), no console errors from the site, one ticket height per layout, `/#contact` at 81 px on desktop and 24 px on phones, `?project=bezel-auth` landing on its ticket, Back closing a briefing in place, and the live page's QR codes read back exactly by Vision. The first run of the new check (22:01Z) had GitHub refuse this site's repository, so its ticket says the updates are temporarily unavailable until a later run gets through.
+
+## GT350 roof stripes deployed
+
+Source `73150ee`. Production version `a221509f-c9d9-4475-82c1-51ab08cd4d10`; the bindings and the 15-minute schedule are unchanged.
+
+- The Garage car's roof now samples the same paint swatch as the hood and trunk (its UVs rewritten from world X, `scripts/prepare-garage-car.py`), so its stripes are as wide as theirs, with the same gray gap and dark pinstripe; before, a flat-color split drew them out to ±110 mm instead of ±180 mm, with no pinstripe. The poster is re-rendered from the new model.
+
+On the live site, `/models/garage-gt350r.glb` (the viewer's URL), its `/scene/bd009ca06831b506/` copy and both poster files return 200 with the same SHA-256 as the committed files.
