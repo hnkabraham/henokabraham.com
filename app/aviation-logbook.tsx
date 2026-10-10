@@ -1,12 +1,37 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type KeyboardEvent } from 'react';
 import { ArrowUpRight, Plane } from 'lucide-react';
 import { flightAtlas } from './flight-atlas';
 import { mapPoint, routePath } from '@/lib/personal-flight-log';
 import { countryFlag, countryName } from '@/lib/flight-atlas';
 
 const number = (n: number) => n.toLocaleString('en-US');
+// A row of toggles is one Tab stop; the arrow keys, Home and End move along
+// it, as in a toolbar, so the 27 marks don't each cost a Tab.
+function moveAlong(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+  const buttons = [
+    ...(event.currentTarget.closest('[role="toolbar"]')?.querySelectorAll('button') ?? []),
+  ];
+  const last = buttons.length - 1;
+  const next =
+    event.key === 'ArrowRight' || event.key === 'ArrowDown'
+      ? index === last
+        ? 0
+        : index + 1
+      : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+        ? index === 0
+          ? last
+          : index - 1
+        : event.key === 'Home'
+          ? 0
+          : event.key === 'End'
+            ? last
+            : null;
+  if (next === null) return;
+  event.preventDefault();
+  buttons[next]?.focus();
+}
 const compact = new Intl.NumberFormat('en-US', {
   notation: 'compact',
   maximumFractionDigits: 1,
@@ -25,6 +50,9 @@ export default function AviationLogbook() {
   );
   const countries = period.countryCodes;
   const selectedAirline = period.airlines.find((item) => item.code === airline);
+  // Which mark in each row takes the row's Tab stop: the last one focused.
+  const [flagStop, setFlagStop] = useState(0);
+  const [airlineStop, setAirlineStop] = useState(0);
   const routes = useMemo(
     () =>
       period.routes.map(([from, to]) => {
@@ -245,17 +273,23 @@ export default function AviationLogbook() {
         ))}
       </dl>
       <div className="logbook-passport">
-        <ul
+        <div
           className="logbook-flags"
+          role="toolbar"
           aria-label="Visited countries and regions"
         >
-          {countries.map((code) => (
-            <li key={code}>
+          {countries.map((code, index) => (
+            <div key={code}>
               <button
                 type="button"
                 className="logbook-country"
                 aria-label={countryName(code)}
                 aria-pressed={country === code}
+                tabIndex={
+                  index === Math.min(flagStop, countries.length - 1) ? 0 : -1
+                }
+                onFocus={() => setFlagStop(index)}
+                onKeyDown={(event) => moveAlong(event, index)}
                 title={countryName(code)}
                 onClick={() => setCountry(country === code ? null : code)}
               >
@@ -270,28 +304,36 @@ export default function AviationLogbook() {
                   decoding="async"
                 />
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
         <p className="logbook-country-name" aria-live="polite">
           {country ? countryName(country) : '\u00a0'}
         </p>
       </div>
       <div className="logbook-carriers">
-        <ul
+        <div
           className="logbook-airlines"
+          role="toolbar"
           aria-label="Airlines flown, ordered by flight count"
         >
-          {period.airlines.map((item) => {
+          {period.airlines.map((item, index) => {
             const brand = flightAtlas.airlines[item.code];
             return (
-              <li key={item.code}>
+              <div key={item.code}>
                 <button
                   type="button"
                   className="logbook-airline"
                   data-airline={item.code}
                   aria-label={`${brand.name} · ${item.flights} ${item.flights === 1 ? 'flight' : 'flights'}`}
                   aria-pressed={airline === item.code}
+                  tabIndex={
+                    index === Math.min(airlineStop, period.airlines.length - 1)
+                      ? 0
+                      : -1
+                  }
+                  onFocus={() => setAirlineStop(index)}
+                  onKeyDown={(event) => moveAlong(event, index)}
                   title={brand.name}
                   onClick={() =>
                     setAirline(airline === item.code ? null : item.code)
@@ -307,10 +349,10 @@ export default function AviationLogbook() {
                     decoding="async"
                   />
                 </button>
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
         <p className="logbook-airline-caption" aria-live="polite">
           {selectedAirline
             ? `${flightAtlas.airlines[selectedAirline.code].name} · ${selectedAirline.flights} ${selectedAirline.flights === 1 ? 'flight' : 'flights'}`

@@ -164,16 +164,16 @@
   margin: 0;
   list-style: none;
 }
-.logbook-flags li {
+.logbook-flags > div {
   position: relative;
   flex: 0 0 auto;
 }
-.logbook-flags li + li {
+.logbook-flags > div + div {
   margin-left: -18px;
 }
-.logbook-flags li:hover,
-.logbook-flags li:focus-within,
-.logbook-flags li:has([aria-pressed='true']) {
+.logbook-flags > div:hover,
+.logbook-flags > div:focus-within,
+.logbook-flags > div:has([aria-pressed='true']) {
   z-index: 1;
 }
 .logbook-country {
@@ -242,7 +242,7 @@
   .logbook-passport {
     margin-top: 28px;
   }
-  .logbook-flags li + li {
+  .logbook-flags > div + div {
     margin-left: -22px;
   }
   .logbook-country {
@@ -272,7 +272,7 @@
 }
 
 @media (max-width: 360px) {
-  .logbook-flags li + li {
+  .logbook-flags > div + div {
     margin-left: -24px;
   }
 }
@@ -290,7 +290,7 @@
   padding: 0;
   margin: 0 auto;
 }
-.logbook-airlines li {
+.logbook-airlines > div {
   flex: 0 0 auto;
 }
 .logbook-airline {
@@ -312,6 +312,31 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transform: scale(var(--mark, 1));
+}
+/* Matched weight: measured on the row, the solid marks (United's tile,
+   Southwest's heart) cover about 70% of their box and the wordmarks and
+   slim marks 10-16%. The heavy ones step down, the wordmarks take the rest
+   of the button's width, so no mark shouts or vanishes beside the others. */
+.logbook-airline:is([data-airline='UA'], [data-airline='WN']) {
+  --mark: 0.8;
+}
+.logbook-airline:is(
+  [data-airline='DL'],
+  [data-airline='LX'],
+  [data-airline='F9']
+) {
+  --mark: 0.92;
+}
+.logbook-airline:is(
+  [data-airline='AS'],
+  [data-airline='BA'],
+  [data-airline='NK'],
+  [data-airline='AR'],
+  [data-airline='P5'],
+  [data-airline='SK']
+) {
+  --mark: 1.12;
 }
 /* Lift the existing dark blue ink without replacing its brand color. */
 .logbook-airline:is([data-airline='AS'], [data-airline='SK']) img {

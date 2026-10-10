@@ -520,10 +520,15 @@ html[data-simple-view='true'] .bay-journey .bay-scroll-track {
   position: absolute;
   inset: -7%;
   background: url('/images/cruise-sky.jpg') center / cover;
-  background-image: image-set(
-    url('/images/cruise-sky.avif') type('image/avif'),
-    url('/images/cruise-sky.jpg') type('image/jpeg')
-  );
+  /* Under the photograph, the same sky at 24 px (156 bytes inline), so the
+     first paint is that sky blurred rather than a flat blue field while the
+     photograph arrives. */
+  background-image:
+    image-set(
+      url('/images/cruise-sky.avif') type('image/avif'),
+      url('/images/cruise-sky.jpg') type('image/jpeg')
+    ),
+    url('data:image/webp;base64,UklGRmwAAABXRUJQVlA4IGAAAADwAwCdASoYAA4APu1iqU2ppaOiMAgBMB2JaACdMoAC+yZOfXrgDdCAAPx+VNc5HUORRIia6wWfMHwdsLvc6nxStmuJZPuwFGnAbOPXflzHTnnUlzk+xGGT41/+aT7gAAA=');
   animation: bay-sky-drift 32s linear infinite alternate;
   animation-delay: -8s;
   /* A size container, so the landmark can follow the photo's cover scaling. */
