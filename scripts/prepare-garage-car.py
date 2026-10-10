@@ -10,9 +10,11 @@ one primitive per material; the body paint's flat-color swatch is repainted
 from its default scheme to gray-with-blue-stripes; two small trim regions in
 a second flat-color swatch (the front splitter/rocker skirts/rear wing, and
 a stray washer-nozzle wire that rendered as a bright sliver) which rendered
-plain white/gold in the source model are repainted carbon-dark; the mirror
-caps and exhaust tips, which share UV space with parts that must stay a
-different color, are split out into their own materials rather than
+plain white/gold in the source model are repainted carbon-dark; the
+engine-bay atlas's yellow label squares, which the cowl panel and the parts
+showing through the hood's shut lines sample, are repainted its dark field;
+the mirror caps and exhaust tips, which share UV space with parts that must
+stay a different color, are split out into their own materials rather than
 recolored in place (see the module-level comments below for how each region
 was identified). The rear wing is removed and the detailed wheel atlas is
 brightened toward gunmetal; the remaining R-trim body and wheel geometry
@@ -107,6 +109,23 @@ COLOURED_REFS = {
 COLOURED_TARGETS = {'light_gray': CARBON_DARK, 'gold_brown': CARBON_DARK}
 COLOURED_MATCH_DIST = 30  # only remap pixels close to a known ref; leave the rest (e.g. the dark-navy seal cell) untouched
 
+# The engine-bay mesh (one 13,625-triangle prim) also forms the cowl panel at
+# the base of the windshield and whatever shows through the hood's shut lines,
+# and those read as yellow: a line along the hood's leading edge, a sliver by
+# the headlight, a patch on the front wheel-arch lip and a spot at the
+# windshield's corner. Found by drawing every primitive in a flat id color
+# from the viewer's camera (the yellow pixels were all this material), then
+# its triangles by index over 720 orbit views across the viewer's whole
+# range: 1,340 of them are ever visible, and 98.8% of their pixels sample the
+# atlas's yellow label squares -- read with V from the top, as glTF does;
+# from the bottom, USD's own origin, the same triangles land wholly in the
+# atlas's dark field. Its yellow cells are repainted that dark field rather
+# than flipping one material's V, since every other atlas here has been
+# matched by eye as converted. Yellow = red and green close together and
+# well above blue; that leaves the atlas's red text, orange tab and beige
+# oval alone, and catches most of the JPEG fringe around each square.
+ENGINE_DARK_FIELD = (38, 38, 38)  # the atlas's own background, sampled
+
 
 def recolor_paint(path):
     im = Image.open(path).convert('RGB')
@@ -136,6 +155,16 @@ def recolor_coloured(path):
         mask = dist < COLOURED_MATCH_DIST
         out_flat[mask] = COLOURED_TARGETS[name]
     return Image.fromarray(out.astype(np.uint8), 'RGB')
+
+
+def recolor_engine(path):
+    im = Image.open(path).convert('RGB')
+    arr = np.array(im).astype(np.float64)
+    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
+    chroma = (r + g) / 2 - b
+    yellow = (chroma > 40) & (np.abs(r - g) < chroma * 0.5 + 20)
+    arr[yellow] = ENGINE_DARK_FIELD
+    return Image.fromarray(arr.astype(np.uint8), 'RGB')
 
 
 def recolor_wheels(path):
@@ -499,7 +528,8 @@ def _run(text, tex_src, out_dir):
                 'stripes (Henok’s actual car) from the original flat-color '
                 'swatch. Rear wing and supports removed (1,428 triangles); '
                 'wheel atlas brightened toward gunmetal with a continuous '
-                'levels curve. Trim recolored; mirror caps and exhaust tips '
+                'levels curve. Trim recolored, and the engine-bay atlas’s '
+                'yellow cells repainted dark; mirror caps and exhaust tips '
                 'split into separate finishes; roof stripes geometrically '
                 'clipped. Textures re-encoded to WebP. Represents a 2017 '
                 'Shelby GT350 (non-R), with remaining GT350R body and wheel '
@@ -732,6 +762,7 @@ def _run(text, tex_src, out_dir):
             recolor_fn = {
                 'shFord_ShelbyGT350R_2016PaintA_Material1': recolor_paint,
                 'shFord_ShelbyGT350R_2016Coloured_Material1': recolor_coloured,
+                'shFord_ShelbyGT350R_2016EngineA_Material1': recolor_engine,
                 'shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1': recolor_wheels,
             }.get(mat_name)
             gray_pack = None
