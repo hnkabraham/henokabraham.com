@@ -19,13 +19,40 @@ const load = async (path) => {
 const codeUnits = (a, b) => (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0);
 const { personalFlights } = await load('./data/personal-flights.ts');
 const { flightLogStats } = await load('../lib/personal-flight-log.ts');
+// OurAirports' municipality names, where a visitor would look for another:
+// the accent it drops, the city an airport serves rather than its suburb, and
+// the en dash between two cities.
+const cityNames = {
+  BOG: 'Bogotá',
+  DFW: 'Dallas–Fort Worth',
+  EZE: 'Buenos Aires',
+  IAD: 'Washington Dulles',
+  NRT: 'Tokyo',
+};
 const airports = Object.fromEntries(
   [
     ...new Map(
-      personalFlights.flatMap((f) => [f.from, f.to]).map((a) => [a.code, a]),
+      personalFlights
+        .flatMap((f) => [f.from, f.to])
+        .map((a) => [
+          a.code,
+          cityNames[a.code] ? { ...a, city: cityNames[a.code] } : a,
+        ]),
     ).entries(),
   ].sort(codeUnits),
 );
+// The day the Flighty export was imported, as the data notice records it,
+// so the logbook can say how current it is. Published only as the label the
+// mark prints, day-month-year as aviation writes it (13 SEP 2026): the
+// published data carries no ISO dates at all (check-flight-log-view.mjs).
+const importDate = (
+  await readFile(
+    new URL('../public/credits/flight-log-data.txt', import.meta.url),
+    'utf8',
+  )
+).match(/imported (\d{4})-(\d{2})-(\d{2})/);
+if (!importDate) throw new Error('The flight log notice has no import date');
+const imported = `${Number(importDate[3])} ${'JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC'.split(' ')[importDate[2] - 1]} ${importDate[1]}`;
 const years = [
   ...new Set(
     personalFlights.flatMap((f) => (f.date ? [f.date.slice(0, 4)] : [])),
@@ -39,7 +66,8 @@ for (const flight of personalFlights) {
   if (!code || !flight.airline)
     throw new Error('Airline identification is missing');
   airlines[code] = {
-    name: code === 'P5' ? 'Wingo (Aero Republica)' : flight.airline,
+    // Wingo flies under Aero República's code; it is the name on the aircraft.
+    name: code === 'P5' ? 'Wingo' : flight.airline,
     logo: `/images/airlines/${code.toLowerCase()}.${code === 'P5' ? 'png' : 'svg'}`,
   };
 }
@@ -75,7 +103,7 @@ for (const period of ['all', ...years]) {
   };
 }
 // Only totals, visited airports and unique routes leave the import source.
-const output = `import type { FlightAtlas } from '@/lib/flight-atlas';\n\n// Generated summary only. No individual flight records are sent to visitors.\nexport const flightAtlas: FlightAtlas = ${JSON.stringify({ airports, airlines, years, periods }, null, 2)};\n`;
+const output = `import type { FlightAtlas } from '@/lib/flight-atlas';\n\n// Generated summary only. No individual flight records are sent to visitors.\nexport const flightAtlas: FlightAtlas = ${JSON.stringify({ imported, airports, airlines, years, periods }, null, 2)};\n`;
 const destination = new URL('../app/flight-atlas.ts', import.meta.url);
 const previous = await readFile(destination, 'utf8').catch(() => '');
 if (previous !== output) await writeFile(destination, output);

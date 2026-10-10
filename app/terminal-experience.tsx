@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
   ArrowUpRight,
   Plane,
   PlaneTakeoff,
@@ -37,6 +39,10 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+
+const liveSiteCount =
+  ['No', 'One', 'Two', 'Three', 'Four'][liveSites.length] ??
+  String(liveSites.length);
 
 function StationClock() {
   const [clock, setClock] = useState({ time: '--:--:--', zone: 'PT' });
@@ -247,7 +253,7 @@ export default function TerminalExperience({
                       className={`flight-status mono ${item.open ? 'available' : ''}`}
                     >
                       {item.status}
-                      <ArrowUpRight size={15} />
+                      <ArrowRight size={15} />
                     </span>
                   </button>
                 ))}
@@ -286,7 +292,7 @@ export default function TerminalExperience({
                   >
                     <ProjectPreview flight={flight} />
                     <span className="preview-open">
-                      <ArrowUpRight size={17} />
+                      <ArrowRight size={17} />
                     </span>
                   </DialogTrigger>
                   <p className="ticket-flight mono">
@@ -368,7 +374,7 @@ export default function TerminalExperience({
                         </span>
                       ))}
                     </div>
-                    {flight.url ? (
+                    {flight.url && (
                       <div className="briefing-actions">
                         <a
                           className="briefing-link"
@@ -385,7 +391,11 @@ export default function TerminalExperience({
                           }
                         >
                           {flight.linkLabel}
-                          <ArrowUpRight size={18} />
+                          {flight.url.startsWith('https://') ? (
+                            <ArrowUpRight size={18} />
+                          ) : (
+                            <ArrowUp size={18} />
+                          )}
                         </a>
                         {flight.source && (
                           <a
@@ -399,12 +409,10 @@ export default function TerminalExperience({
                           </a>
                         )}
                       </div>
-                    ) : (
+                    )}
+                    {flight.note && (
                       <p className="hangar-note">
-                        <span className="signal-dot" />{' '}
-                        {flight.status === 'IN DEVELOPMENT'
-                          ? 'In development. More to come.'
-                          : 'A personal project, still in the hangar.'}
+                        <span className="signal-dot" /> {flight.note}
                       </p>
                     )}
                   </div>
@@ -449,7 +457,7 @@ export default function TerminalExperience({
               </div>
             </div>
             <p className="terminal-caption">
-              Two aviation data sites, open to anyone.
+              {liveSiteCount} aviation data sites, open to anyone.
             </p>
           </div>
           <div className="service-pair" data-reveal>
@@ -581,14 +589,14 @@ export default function TerminalExperience({
                 CURRENTLY BUILDING
               </span>
               <strong>
-                Downshift <ArrowUpRight size={18} />
+                Downshift <ArrowRight size={18} />
               </strong>
               <span>
                 An iOS driving companion for live car data and better shifts.
               </span>
             </button>
             <a className="hangar-link" href="#contact">
-              Say hello <ArrowUpRight size={16} />
+              Say hello <ArrowDown size={16} />
             </a>
           </div>
         </section>
@@ -639,7 +647,10 @@ export default function TerminalExperience({
         >
           Simple view {reducedMotion ? 'on' : 'off'}
         </button>
-        <span>© {new Date().getFullYear()} HENOK ABRAHAM</span>
+        {/* The server renders in UTC; the browser's own year differs from it
+            for a few hours around New Year, and the mismatch would make React
+            discard the server's HTML. */}
+        <span>© {new Date().getUTCFullYear()} HENOK ABRAHAM</span>
         <span>HENOKABRAHAM.COM</span>
         <Dialog>
           <DialogTrigger className="credits-link">
@@ -667,22 +678,24 @@ export default function TerminalExperience({
           </DialogContent>
         </Dialog>
         <Dialog>
-          <DialogTrigger className="credits-link">Scene credits</DialogTrigger>
+          <DialogTrigger className="credits-link">
+            Aircraft &amp; sky credits
+          </DialogTrigger>
           <DialogContent className="credits-dialog">
-            <DialogTitle>Scene credits</DialogTitle>
+            <DialogTitle>Aircraft &amp; sky credits</DialogTitle>
             <DialogDescription>
               Boeing 787-9 and GEnx exterior adapted from the FlightGear
               787-family project, GPL-2.0, with a personal livery. Editable
-              aircraft sources, conversion script and license are included.
+              aircraft sources, conversion script, and license are included.
               Daylight reflections: Greg Zaal and Jarod Guest, Poly Haven, CC0.
               Sky and cloud artwork generated for this portfolio.
             </DialogDescription>
             <a
-              href="/credits/dreamliner.html"
+              href="/credits/dreamliner"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Full sources, licenses and scene notes <ArrowUpRight size={14} />
+              Full sources, licenses, and scene notes <ArrowUpRight size={14} />
             </a>
           </DialogContent>
         </Dialog>

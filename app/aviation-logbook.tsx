@@ -80,9 +80,12 @@ export default function AviationLogbook() {
       aria-labelledby="logbook-title"
     >
       <div className="logbook-heading">
-        <div>
-          <p className="eyebrow">AWAY FROM THE KEYBOARD</p>
-          <h2 id="logbook-title">My flight log.</h2>
+        <div className="terminal-section-label">
+          <span className="section-marker">03</span>
+          <div>
+            <p className="eyebrow">AWAY FROM THE KEYBOARD</p>
+            <h2 id="logbook-title">My flight log.</h2>
+          </div>
         </div>
         {years.length > 1 && (
           <label className="logbook-filter">
@@ -105,7 +108,8 @@ export default function AviationLogbook() {
           </label>
         )}
         <span className="logbook-mark">
-          <Plane size={17} /> FLIGHTY · {years.at(-1)}–{years[0]}
+          <Plane size={17} /> FLIGHTY · {years.at(-1)}–{years[0]} · AS OF{' '}
+          {flightAtlas.imported}
         </span>
       </div>
       <figure className="logbook-atlas">
@@ -197,14 +201,22 @@ export default function AviationLogbook() {
             </g>
           ))}
         </svg>
-        <a
-          className="logbook-map-credit"
-          href="https://www.naturalearthdata.com/about/terms-of-use/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Natural Earth <ArrowUpRight size={10} />
-        </a>
+        <span className="logbook-map-credit">
+          <a
+            href="https://www.naturalearthdata.com/about/terms-of-use/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Natural Earth <ArrowUpRight size={10} />
+          </a>
+          <a
+            href="/credits/flight-log"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Data &amp; marks <ArrowUpRight size={10} />
+          </a>
+        </span>
       </figure>
       <dl className="logbook-stats">
         {(
@@ -240,7 +252,8 @@ export default function AviationLogbook() {
               >
                 {/* A 44 px local SVG mark gains nothing from next/image, and the atlas check renders this view outside the framework. */}
                 {/* oxlint-disable-next-line next/no-img-element */}
-                <img src={countryFlag(code)}
+                <img
+                  src={countryFlag(code)}
                   alt=""
                   width="44"
                   height="44"
@@ -276,7 +289,8 @@ export default function AviationLogbook() {
                   }
                 >
                   {/* oxlint-disable-next-line next/no-img-element */}
-                  <img src={brand.logo}
+                  <img
+                    src={brand.logo}
                     alt=""
                     width="48"
                     height="48"

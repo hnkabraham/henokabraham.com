@@ -917,6 +917,23 @@ html:not([data-simple-view='true'])
   position: relative;
   z-index: -2;
 }
+/* One scroll cue at a time: the corner cue where it fits, and the line under
+   the caption only where the corner cue is hidden (narrow laptops and
+   tablets, and phones held sideways). */
+.dreamliner-journey .bay-start-hint {
+  display: none;
+}
+@media (min-width: 801px) and (max-width: 1150px),
+  (max-height: 600px) and (orientation: landscape) {
+  .dreamliner-journey .bay-start-hint {
+    display: flex;
+  }
+}
+@media (scripting: none) {
+  .dreamliner-journey .bay-start-hint {
+    display: none;
+  }
+}
 /* A stable caption lets the wing, rather than a separate slide, erase it.
    Clip individual children so the story never traps them above the canvas. */
 .dreamliner-journey[data-phase='preflight'] .bay-story,

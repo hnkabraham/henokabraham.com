@@ -3,7 +3,12 @@ import './not-found.css';
 // A wrong address lands on the same opening sky as the tour, with the three
 // places a visitor is most likely to have wanted. The framework's default
 // is a bare white page; this one keeps the field's voice.
-export const metadata = { title: 'Diverted — Henok Abraham' };
+// No canonical: the layout's points at the home page, which a wrong address
+// is not.
+export const metadata = {
+  title: 'Diverted — Henok Abraham',
+  alternates: { canonical: null },
+};
 
 export default function NotFound() {
   return (
@@ -19,8 +24,8 @@ export default function NotFound() {
         <p className="diverted-eyebrow mono">404 · DIVERTED</p>
         <h1>No such gate.</h1>
         <p>
-          This address doesn’t land anywhere on the field. Everything is one
-          hop away: the tour, the projects and the flight log.
+          This address doesn’t land anywhere on the field. Everything is one hop
+          away: the tour, the projects, and the flight log.
         </p>
         {/* Plain anchors: the 404 boundary renders outside the client
             navigation runtime, where next/link's prefetch throws, and a full
@@ -33,7 +38,7 @@ export default function NotFound() {
           <a className="diverted-link" href="/#departures">
             Projects
           </a>
-          <a className="diverted-link" href="/?chapter=bay">
+          <a className="diverted-link" href="/#logbook">
             Flight log
           </a>
         </nav>

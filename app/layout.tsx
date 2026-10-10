@@ -23,16 +23,6 @@ export const viewport = {
   viewportFit: 'cover',
   themeColor: skyColor,
 };
-// What search engines may attach to the name; only facts the page states.
-const person = {
-  '@context': 'https://schema.org',
-  '@type': 'Person',
-  name: 'Henok Abraham',
-  url: 'https://henokabraham.com/',
-  description:
-    'I build iOS apps, wire up the devices around me, and put aviation data on the web.',
-  sameAs: ['https://github.com/hnkabraham'],
-};
 const summary =
   'iOS apps, flight tracking, connected hardware, and things worth building.';
 const card = {
@@ -49,7 +39,8 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'Henok Abraham',
+    // The same short name the web manifest gives Android's home screen.
+    title: 'Henok',
     statusBarStyle: 'black-translucent',
   },
   title,
@@ -68,7 +59,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title,
     description: summary,
-    images: [card.url],
+    images: [card],
   },
 };
 export default function RootLayout({
@@ -90,11 +81,6 @@ export default function RootLayout({
         {/* Simple view or the full journey, before anything paints. */}
         <script dangerouslySetInnerHTML={{ __html: VIEW_SCRIPT }} />
         {children}
-        <script
-          type="application/ld+json"
-          // Structured data is inert: the browser never runs it.
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(person) }}
-        />
       </body>
     </html>
   );

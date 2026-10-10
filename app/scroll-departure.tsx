@@ -12,7 +12,6 @@ import {
 import {
   ArrowDown,
   ArrowRight,
-  ArrowUpRight,
   Globe2,
   LayoutGrid,
   Check,
@@ -107,22 +106,26 @@ import { flightAtlas } from './flight-atlas';
 
 const copy: Record<BayPhase, [string, string, string]> = {
   preflight: [
-    'HENOK ABRAHAM',
+    'NOW BOARDING',
     'A different\nperspective.',
     'Developer. Maker. Aviation enthusiast.',
   ],
-  roll: ['01 / APPS', 'Downshift.', 'Live car data. Better shifts.'],
+  roll: ['LEG 1 / APPS', 'Downshift.', 'Live car data. Better shifts.'],
   liftoff: [
-    '02 / CONNECTED DEVICES',
+    'LEG 2 / CONNECTED DEVICES',
     'iPhone ↔\nWear OS.',
     'Different ecosystems. Connected.',
   ],
   bay: [
-    '03 / AWAY FROM THE KEYBOARD',
+    'LEG 3 / AWAY FROM THE KEYBOARD',
     'A few miles\nof memories.',
     'My personal flight log.',
   ],
-  cruise: ['04 / KEEP EXPLORING', 'Made with\ncuriosity.', 'Explore the rest.'],
+  cruise: [
+    'LEG 4 / KEEP EXPLORING',
+    'Made with\ncuriosity.',
+    'Explore the rest.',
+  ],
 };
 
 // The story text a word to a box, so the renderer can rasterize each word
@@ -489,11 +492,11 @@ export default function ScrollDeparture({
         </div>
         <div className="bay-scrim" />
         <div className="bay-flight-label mono">
-          <span className="bay-live-dot" /> H.A / BOEING 787–9{' '}
+          <span className="bay-live-dot" /> HA 001 / BOEING 787-9 / N787HA{' '}
           <span>SAN FRANCISCO, CA</span>
         </div>
         <a className="bay-skip" href="#departures">
-          Skip to projects <ArrowUpRight size={15} />
+          Skip to projects <ArrowDown size={15} />
         </a>
         <div className="bay-story" key={phase} ref={story}>
           <p className="eyebrow">
@@ -523,7 +526,7 @@ export default function ScrollDeparture({
                 />
                 <img
                   src="/images/downshift-mockup-static.png"
-                  alt="Downshift's dashboard, performance and settings screens, each on its own iPhone"
+                  alt="Downshift’s dashboard, performance, and settings screens on three iPhones"
                   loading="lazy"
                 />
               </picture>
@@ -540,7 +543,7 @@ export default function ScrollDeparture({
                   />
                   <img
                     src="/images/downshift-mockup.png"
-                    alt="Downshift's performance and settings screens, each on its own iPhone"
+                    alt="Downshift’s performance and settings screens, each on its own iPhone"
                     loading="lazy"
                   />
                 </picture>
@@ -560,11 +563,11 @@ export default function ScrollDeparture({
                     loop
                     muted
                     playsInline
-                    aria-label="Downshift's dashboard running live"
+                    aria-label="Downshift’s dashboard running live"
                   />
                 </span>
                 <span className="tour-project-action">
-                  Explore Downshift <ArrowUpRight size={15} />
+                  Explore Downshift <ArrowRight size={15} />
                 </span>
               </button>
             ))}
@@ -579,9 +582,9 @@ export default function ScrollDeparture({
                 <Watch size={25} strokeWidth={1.3} />
               </span>
               <span>
-                See the bridge<small>Swift · Kotlin · Bluetooth</small>
+                See the bridge<small>Swift · Kotlin · Bluetooth LE</small>
               </span>
-              <ArrowUpRight size={21} />
+              <ArrowRight size={21} />
             </button>
           )}
           {phase === 'bay' && (
@@ -597,7 +600,7 @@ export default function ScrollDeparture({
                     : 'Routes coming soon'}
                 </small>
               </span>
-              <ArrowUpRight size={21} />
+              <ArrowDown size={21} />
             </a>
           )}
           {(destinations || !viewReady) && (
@@ -609,10 +612,10 @@ export default function ScrollDeparture({
               }
             >
               <a href="#departures">
-                All projects <ArrowRight size={17} />
+                All projects <ArrowDown size={17} />
               </a>
               <a href="#contact">
-                Say hello <ArrowUpRight size={17} />
+                Say hello <ArrowDown size={17} />
               </a>
             </div>
           )}
@@ -671,7 +674,7 @@ export default function ScrollDeparture({
                 onClick={toggleImmersive}
               >
                 {immersive ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-                <span>{immersive ? 'EXIT' : 'IMMERSIVE'}</span>
+                <span>{immersive ? 'Exit' : 'Immersive'}</span>
               </button>
             )}
             {immersiveMode === 'install' && (
@@ -681,7 +684,7 @@ export default function ScrollDeparture({
                   aria-label="Immersive view: how to fill the screen"
                 >
                   <Maximize2 size={15} />
-                  <span>IMMERSIVE</span>
+                  <span>Immersive</span>
                 </DialogTrigger>
                 <DialogContent
                   className="immersive-dialog"

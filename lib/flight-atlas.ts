@@ -1,6 +1,9 @@
 import type { LogAirport } from './personal-flight-log';
 
 export type FlightAtlas = {
+  /** When the Flighty export behind it was imported, as the logbook prints
+   * it (13 SEP 2026). */
+  imported: string;
   airports: Record<string, LogAirport>;
   airlines: Record<string, { name: string; logo: string }>;
   years: string[];

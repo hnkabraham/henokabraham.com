@@ -8,7 +8,9 @@ import {
 } from 'lucide-react';
 import type { Flight } from './flight-data';
 
-/** Real captures where available; small illustrations for unreleased tools. */
+/** Real captures where available; small illustrations for unreleased tools,
+ * captioned with the stack, since the ticket below already names the project
+ * and gives its summary. */
 export default function ProjectPreview({ flight }: { flight: Flight }) {
   if (flight.preview)
     return (
@@ -43,7 +45,7 @@ export default function ProjectPreview({ flight }: { flight: Flight }) {
             </span>
             <Watch size={60} strokeWidth={1.1} />
           </span>
-          <span className="preview-caption">iPhone ↔ Wear OS</span>
+          <span className="preview-caption">{flight.stack.join(' · ')}</span>
         </>
       ) : flight.id === 'spoolbrush' ? (
         <>
@@ -64,7 +66,7 @@ export default function ProjectPreview({ flight }: { flight: Flight }) {
               <i />
             </span>
           </span>
-          <span className="preview-caption">Paint a mesh. Print in color.</span>
+          <span className="preview-caption">{flight.stack.join(' · ')}</span>
         </>
       ) : (
         <>
@@ -72,7 +74,7 @@ export default function ProjectPreview({ flight }: { flight: Flight }) {
             <ScanLine size={114} strokeWidth={0.7} />
             <Box size={65} strokeWidth={0.9} />
           </span>
-          <span className="preview-caption">Capture the world in 3D.</span>
+          <span className="preview-caption">{flight.stack.join(' · ')}</span>
         </>
       )}
     </span>

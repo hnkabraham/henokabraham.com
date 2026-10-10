@@ -2,6 +2,7 @@ import type { FlightAtlas } from '@/lib/flight-atlas';
 
 // Generated summary only. No individual flight records are sent to visitors.
 export const flightAtlas: FlightAtlas = {
+  "imported": "13 SEP 2026",
   "airports": {
     "AMS": {
       "code": "AMS",
@@ -30,7 +31,7 @@ export const flightAtlas: FlightAtlas = {
     "BOG": {
       "code": "BOG",
       "name": "El Dorado International Airport",
-      "city": "Bogota",
+      "city": "Bogotá",
       "country": "CO",
       "latitude": 4.70159,
       "longitude": -74.1469
@@ -102,7 +103,7 @@ export const flightAtlas: FlightAtlas = {
     "DFW": {
       "code": "DFW",
       "name": "Dallas Fort Worth International Airport",
-      "city": "Dallas-Fort Worth",
+      "city": "Dallas–Fort Worth",
       "country": "US",
       "latitude": 32.896801,
       "longitude": -97.038002
@@ -134,7 +135,7 @@ export const flightAtlas: FlightAtlas = {
     "EZE": {
       "code": "EZE",
       "name": "Ezeiza International Airport - Ministro Pistarini",
-      "city": "Buenos Aires (Ezeiza)",
+      "city": "Buenos Aires",
       "country": "AR",
       "latitude": -34.8222,
       "longitude": -58.5358
@@ -142,7 +143,7 @@ export const flightAtlas: FlightAtlas = {
     "IAD": {
       "code": "IAD",
       "name": "Washington Dulles International Airport",
-      "city": "Dulles",
+      "city": "Washington Dulles",
       "country": "US",
       "latitude": 38.9445,
       "longitude": -77.455803
@@ -222,7 +223,7 @@ export const flightAtlas: FlightAtlas = {
     "NRT": {
       "code": "NRT",
       "name": "Narita International Airport",
-      "city": "Narita",
+      "city": "Tokyo",
       "country": "JP",
       "latitude": 35.76858,
       "longitude": 140.388714
@@ -378,7 +379,7 @@ export const flightAtlas: FlightAtlas = {
       "logo": "/images/airlines/sk.svg"
     },
     "P5": {
-      "name": "Wingo (Aero Republica)",
+      "name": "Wingo",
       "logo": "/images/airlines/p5.png"
     },
     "AV": {

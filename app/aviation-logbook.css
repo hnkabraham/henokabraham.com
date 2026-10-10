@@ -102,10 +102,26 @@
   bottom: 10px;
   right: 0;
   display: flex;
-  gap: 4px;
+  gap: 14px;
   align-items: center;
   font-size: 0.75rem;
   color: #c6d6df;
+}
+.logbook-map-credit a {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+  color: inherit;
+}
+.logbook-map-credit a:hover {
+  color: #fff;
+}
+/* The section's number, inverted for the dark band so it reads as the same
+   marker the light sections carry. */
+.aviation-logbook .section-marker {
+  background: #e6eef2;
+  color: #102c3e;
 }
 .logbook-stats {
   display: grid;
