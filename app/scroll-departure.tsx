@@ -503,9 +503,9 @@ export default function ScrollDeparture({
             <span className="sr-only">{eyebrow}</span>
             <span aria-hidden="true">{cutText(eyebrow)}</span>
           </p>
-          <h1 id="welcome-title" aria-label={heading.replace('\n', ' ')}>
+          <h2 id="welcome-title" aria-label={heading.replace('\n', ' ')}>
             <span aria-hidden="true">{cutText(heading)}</span>
-          </h1>
+          </h2>
           <p className="bay-description">
             <span className="sr-only">{description}</span>
             <span aria-hidden="true">{cutText(description)}</span>

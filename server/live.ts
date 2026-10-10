@@ -10,11 +10,15 @@ export type ProjectLive = {
 export type LiveStore = Pick<KVNamespace, 'get' | 'put'>;
 export type LiveFeed = {
   projects: { checkedAt: string; projects: ProjectLive[] } | null;
+  /** When the snapshot was read (ms), the clock its checks' age is told by
+   * until the browser's own takes over. */
+  readAt: number;
 };
 /** The scheduled checks' last snapshot, as /api/live serves it. */
 export async function readLiveFeed(store?: LiveStore): Promise<LiveFeed> {
   return {
     projects: store ? await store.get('projects:v1', 'json') : null,
+    readAt: Date.now(),
   };
 }
 const headers = {
@@ -32,10 +36,13 @@ async function json(url: string, sent: Record<string, string>) {
   }
   return r.json();
 }
+// The repositories whose updates a ticket shows: the board's open-source
+// projects and this site's own, two GitHub requests each per run. Without a
+// token those runs share an hourly budget with every other Worker on the
+// same addresses, so nothing is checked that no card displays.
 export const repositories = [
+  { id: 'bay-departure', repo: 'henokabraham.com' },
   { id: 'wear-bridge', repo: 'wear-ios-bridge' },
-  { id: 'obd-engine', repo: 'swift-obd-engine' },
-  { id: 'mobile-mode', repo: 'claude-code-mobile-mode' },
   { id: 'ct45-link', repo: 'CT45-Computer-Link' },
 ];
 export async function refreshProjects(store: LiveStore, token?: string) {
@@ -117,8 +124,9 @@ export async function refreshProjects(store: LiveStore, token?: string) {
     }),
   );
   const websites = await Promise.all(
+    // This site's ticket shows its repository instead: a page reporting
+    // itself reachable to someone already reading it says nothing.
     [
-      { id: 'bay-departure', url: 'https://henokabraham.com/' },
       { id: 'flight-tracker', url: 'https://unitedflighttracker.com/' },
       { id: 'routeloads', url: 'https://routeloads.com/' },
     ].map(async ({ id, url }) => {

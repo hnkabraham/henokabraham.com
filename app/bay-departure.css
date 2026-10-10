@@ -98,7 +98,7 @@
   margin: 0 0 24px;
   color: #24425a;
 }
-.bay-story h1 {
+.bay-story h2 {
   font-size: clamp(3.8rem, 6.8vw, 7.5rem);
   line-height: 1.02;
   font-weight: 430;
@@ -127,14 +127,14 @@
   top: auto;
   bottom: 18%;
 }
-.bay-journey:not([data-phase='preflight']) .bay-story h1 {
+.bay-journey:not([data-phase='preflight']) .bay-story h2 {
   font-size: clamp(2.5rem, 4vw, 4.5rem);
 }
 .bay-journey[data-phase='cruise'] .bay-story {
   top: 18%;
   bottom: auto;
 }
-.bay-journey[data-phase='cruise'] .bay-story h1 {
+.bay-journey[data-phase='cruise'] .bay-story h2 {
   font-size: clamp(3.6rem, 6.5vw, 7rem);
 }
 .bay-chapters {
@@ -399,7 +399,7 @@ html[data-simple-view='true'] .bay-journey .bay-scroll-track {
     top: 14%;
     max-width: 85%;
   }
-  .bay-story h1 {
+  .bay-story h2 {
     font-size: clamp(3rem, 11vw, 5rem);
     letter-spacing: -0.065em;
     margin-bottom: 19px;
@@ -415,13 +415,13 @@ html[data-simple-view='true'] .bay-journey .bay-scroll-track {
   .bay-journey:not([data-phase='preflight']) .bay-story {
     bottom: 22%;
   }
-  .bay-journey:not([data-phase='preflight']) .bay-story h1 {
+  .bay-journey:not([data-phase='preflight']) .bay-story h2 {
     font-size: 2.5rem;
   }
   .bay-journey[data-phase='cruise'] .bay-story {
     top: 16%;
   }
-  .bay-journey[data-phase='cruise'] .bay-story h1 {
+  .bay-journey[data-phase='cruise'] .bay-story h2 {
     font-size: 3.4rem;
   }
   .bay-chapters {
@@ -713,7 +713,7 @@ html:not([data-simple-view='true'])
   .bay-story {
     top: 20%;
   }
-  .bay-story h1 {
+  .bay-story h2 {
     font-size: 4rem;
   }
   .bay-chapters {
@@ -740,7 +740,7 @@ html:not([data-simple-view='true'])
   .bay-journey[data-phase='cruise'] .bay-story {
     top: 14%;
   }
-  .bay-journey[data-phase='cruise'] .bay-story h1 {
+  .bay-journey[data-phase='cruise'] .bay-story h2 {
     font-size: 3rem;
   }
 }
@@ -880,14 +880,14 @@ html:not([data-simple-view='true'])
 }
 .dreamliner-journey:not([data-phase='preflight']):not([data-phase='cruise'])
   .bay-story
-  h1 {
+  h2 {
   font-size: clamp(2.8rem, 4.4vw, 5rem);
   letter-spacing: -0.065em;
 }
 /* The fuselage titles pass behind the headline at the Apps and Devices
    stops; a soft white halo keeps the two lines of lettering apart. */
-.dreamliner-journey[data-phase='roll'] .bay-story h1,
-.dreamliner-journey[data-phase='liftoff'] .bay-story h1 {
+.dreamliner-journey[data-phase='roll'] .bay-story h2,
+.dreamliner-journey[data-phase='liftoff'] .bay-story h2 {
   text-shadow:
     0 0 2px #ffffffe6,
     0 0 14px #ffffffcc,
@@ -902,7 +902,7 @@ html:not([data-simple-view='true'])
   z-index: -2;
 }
 .dreamliner-journey[data-phase='preflight'] .bay-story .eyebrow,
-.dreamliner-journey[data-phase='preflight'] .bay-story h1,
+.dreamliner-journey[data-phase='preflight'] .bay-story h2,
 .dreamliner-journey[data-phase='preflight'] .bay-description {
   position: relative;
   z-index: -2;
@@ -984,12 +984,12 @@ html:not([data-simple-view='true'])
     bottom: auto;
     max-width: 88%;
   }
-  .dreamliner-journey .bay-story h1 {
+  .dreamliner-journey .bay-story h2 {
     font-size: clamp(2.8rem, 11vw, 4rem);
   }
   .dreamliner-journey:not([data-phase='preflight']):not([data-phase='cruise'])
     .bay-story
-    h1 {
+    h2 {
     font-size: clamp(2.3rem, 8.5vw, 3.4rem);
     margin-bottom: 12px;
   }
@@ -1036,7 +1036,7 @@ html:not([data-simple-view='true'])
   .dreamliner-journey .bay-story {
     top: 16%;
   }
-  .dreamliner-journey .bay-story h1 {
+  .dreamliner-journey .bay-story h2 {
     font-size: 3rem;
   }
   .dreamliner-journey .bay-annotation {
@@ -1105,7 +1105,7 @@ html[data-simple-view='true'] .dreamliner-journey,
    the same soft white halo the headline already carries at the Apps/Devices
    stops, so text stays legible over the photo at phone brightness/contrast
    without a panel flattening the scene behind it. The more specific
-   roll/liftoff headline rule above still wins for h1 there. */
+   roll/liftoff headline rule above still wins for the headline there. */
 @media (max-width: 800px) {
   .dreamliner-journey .bay-flight-label,
   .dreamliner-journey .bay-skip,
@@ -1339,7 +1339,7 @@ html[data-simple-view='true'] .dreamliner-journey,
   .dreamliner-journey:not([data-opening='false']) .bay-story {
     top: 105px;
   }
-  .dreamliner-journey .bay-story h1 {
+  .dreamliner-journey .bay-story h2 {
     font-size: 2.6rem;
     margin-bottom: 12px;
   }
@@ -1412,7 +1412,7 @@ html[data-simple-view='true'] .dreamliner-journey,
     margin-top: 8px;
     height: clamp(90px, 30vh, 140px);
   }
-  #flight .bay-story h1 {
+  #flight .bay-story h2 {
     font-size: 2.2rem;
     margin-bottom: 10px;
   }

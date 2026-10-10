@@ -12,12 +12,14 @@ import { withTimeout } from '@/lib/abort';
 /**
  * The project checks, starting from the snapshot the page was rendered with
  * (app/page.tsx; null on a dev server with no KV binding) and kept fresh by
- * polling.
+ * polling. A check's age starts from the server's clock at that read, so the
+ * server's render and the browser's agree until the browser's own takes over.
  */
 export function useAirportLive(rendered: LiveFeed | null) {
   const [data, setData] = useState<LiveFeed | null>(rendered);
   const [failed, setFailed] = useState(false);
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(rendered?.readAt ?? 0);
+  const renderedSnapshot = useRef(rendered !== null);
   useEffect(() => {
     const controller = new AbortController();
     const update = async () => {
@@ -34,7 +36,9 @@ export function useAirportLive(rendered: LiveFeed | null) {
         if (!controller.signal.aborted) setFailed(true);
       }
     };
-    void update();
+    // The page arrived with the latest snapshot; ask again only on the
+    // schedule, or straight away when it came without one.
+    if (!renderedSnapshot.current) void update();
     const poll = setInterval(update, 15 * 60000);
     const clock = setInterval(() => setNow(Date.now()), 60000);
     const visibility = () => {
@@ -53,25 +57,28 @@ export function useAirportLive(rendered: LiveFeed | null) {
   }, []);
   return { data, failed, now };
 }
-const utc = (date: string) =>
-  new Date(date).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  }) + ' UTC';
-const calendar = (date: string) =>
-  new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+// Check times in the style of an operations log: day, month, year and Zulu
+// time (10 OCT 2026 · 1915Z), while the header's station clock keeps the
+// airport's local time. Spelled out by hand, in UTC, so the server's render
+// and the browser's agree whatever either's locale.
+const months = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
+const calendar = (date: string) => {
+  const d = new Date(date);
+  return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+};
+const zulu = (date: string) => {
+  const d = new Date(date);
+  return `${String(d.getUTCHours()).padStart(2, '0')}${String(d.getUTCMinutes()).padStart(2, '0')}Z`;
+};
 export function ProjectUpdate({
   item,
   now,
+  failed = false,
 }: {
   item?: ProjectLive;
   now: number;
+  /** The latest ask for fresh checks went unanswered. */
+  failed?: boolean;
 }) {
   if (!item) return null;
   const stale = now - Date.parse(item.checkedAt) > 45 * 60000;
@@ -80,9 +87,12 @@ export function ProjectUpdate({
       <p className="mono">
         {stale ? 'LAST CHECK' : 'LATEST CHECK'} ·{' '}
         <time dateTime={item.checkedAt}>
-          {calendar(item.checkedAt)} · {utc(item.checkedAt)}
+          {calendar(item.checkedAt).toUpperCase()} · {zulu(item.checkedAt)}
         </time>
       </p>
+      {stale && failed && (
+        <span>The checks are delayed; this is the last one received.</span>
+      )}
       {item.reachable !== undefined && (
         <span>
           {stale ? 'Previous check: ' : ''}
@@ -106,14 +116,6 @@ export function ProjectUpdate({
       )}
     </div>
   );
-}
-export function SourceUpdate({ item }: { item?: ProjectLive }) {
-  return item?.updatedAt ? (
-    <span className="source-live">
-      Updated {calendar(item.updatedAt)}
-      {item.release ? ` · ${item.release.name}` : ''}
-    </span>
-  ) : null;
 }
 
 type Turnstile = {

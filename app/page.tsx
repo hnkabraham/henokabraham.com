@@ -1,7 +1,50 @@
 import { env } from 'cloudflare:workers';
+import type { Metadata } from 'next';
 import type { EdgeEnv } from '@/server/api';
 import { readLiveFeed, type LiveFeed } from '@/server/live';
+import { flights } from './flight-data';
 import TerminalExperience from './terminal-experience';
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+// The board row a `?project=` link names, or the first row.
+const sharedProject = async (searchParams: SearchParams) => {
+  const id = (await searchParams).project;
+  return Math.max(
+    0,
+    flights.findIndex((flight) => flight.id === id),
+  );
+};
+
+// A shared project link previews as that project, with its own capture where
+// it has one; the home page keeps the layout's card.
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const id = (await searchParams).project;
+  const flight = flights.find((item) => item.id === id);
+  if (!flight) return {};
+  const title = `${flight.name} — Henok Abraham`;
+  const images = flight.preview
+    ? [{ url: flight.preview.src, alt: flight.preview.alt }]
+    : undefined;
+  return {
+    title,
+    description: flight.story,
+    openGraph: {
+      title,
+      description: flight.summary,
+      url: `/?project=${flight.id}`,
+      ...(images ? { images } : {}),
+    },
+    twitter: {
+      title,
+      description: flight.summary,
+      ...(images ? { images } : {}),
+    },
+  };
+}
 
 // The project checks are read with the page rather than fetched after it, so
 // the cards above the contact form have their final height when the browser
@@ -29,7 +72,12 @@ const structuredData = [
   },
 ];
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const initialProject = await sharedProject(searchParams);
   let live: LiveFeed | null = null;
   try {
     live = await readLiveFeed((env as EdgeEnv).LIVE_DATA);
@@ -38,7 +86,7 @@ export default async function Home() {
   }
   return (
     <>
-      <TerminalExperience live={live} />
+      <TerminalExperience live={live} initialProject={initialProject} />
       <script
         type="application/ld+json"
         // Structured data is inert: the browser never runs it.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import Image from 'next/image';
 import {
   ArrowDown,
@@ -40,6 +40,9 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 
+// The breakpoint where the departures layout becomes one column (globals.css).
+const singleColumn = () => matchMedia('(max-width: 800px)').matches;
+
 const liveSiteCount =
   ['No', 'One', 'Two', 'Three', 'Four'][liveSites.length] ??
   String(liveSites.length);
@@ -66,9 +69,15 @@ function StationClock() {
         zone: parts.find((part) => part.type === 'timeZoneName')?.value ?? 'PT',
       });
     };
-    update();
-    const interval = window.setInterval(update, 1000);
-    return () => window.clearInterval(interval);
+    // Each tick waits for the next whole second, so the display turns over
+    // with the second itself rather than wherever in it the page mounted.
+    let timer = 0;
+    const tick = () => {
+      update();
+      timer = window.setTimeout(tick, 1000 - (Date.now() % 1000));
+    };
+    tick();
+    return () => window.clearTimeout(timer);
   }, []);
   return (
     <div
@@ -84,11 +93,14 @@ function StationClock() {
 
 export default function TerminalExperience({
   live: rendered,
+  initialProject,
 }: {
   live: LiveFeed | null;
+  /** The board row a shared `?project=` link names, rendered selected. */
+  initialProject: number;
 }) {
   const live = useAirportLive(rendered);
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(initialProject);
   const [projectOpen, setProjectOpen] = useState(false);
   const projectReturnFocus = useRef<HTMLElement | null>(null);
   const flight = flights[selected];
@@ -101,16 +113,62 @@ export default function TerminalExperience({
   const [entry, setEntry] = useState<{ chapter: BayPhase | null } | null>(null);
   useAirspaceDepth(root, viewReady && !reducedMotion);
   const briefingOpen = useRef(false);
+  // An open briefing adds a history entry of its own, so Back closes it
+  // rather than leaving the page. Closing it any other way (its button,
+  // Escape, a click outside) steps back over that entry, and the popstate
+  // that causes is ours to ignore.
+  const briefingEntry = useRef(false);
+  const ownPopstate = useRef(false);
+  // Something to do once that step back has landed: "Return to the open sky".
+  const afterClose = useRef<(() => void) | null>(null);
   useEffect(() => {
     briefingOpen.current = projectOpen;
+    if (projectOpen && !briefingEntry.current) {
+      briefingEntry.current = true;
+      // vinext restores a traversal's scroll from these keys; record where
+      // the page is, so Back returns exactly here.
+      history.replaceState(
+        {
+          ...history.state,
+          __vinext_scrollX: scrollX,
+          __vinext_scrollY: scrollY,
+        },
+        '',
+      );
+      history.pushState(
+        { ...history.state, briefing: true },
+        '',
+        location.href,
+      );
+    } else if (!projectOpen && briefingEntry.current) {
+      briefingEntry.current = false;
+      if (history.state?.briefing) {
+        ownPopstate.current = true;
+        history.back();
+      }
+    }
   }, [projectOpen]);
   // The query this page last applied or wrote itself.
   const appliedQuery = useRef<string | null>(null);
   useEffect(() => {
+    let first = true;
     const restore = () => {
+      if (ownPopstate.current) {
+        ownPopstate.current = false;
+        const action = afterClose.current;
+        afterClose.current = null;
+        // After vinext's own scroll restore for the step back, which runs
+        // over the next frame or two.
+        if (action)
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => requestAnimationFrame(action)),
+          );
+        return;
+      }
       // Back with a briefing open closes it, rather than swapping the project
       // inside it for whichever one the older history entry names.
       if (briefingOpen.current) {
+        briefingEntry.current = false;
         appliedQuery.current = location.search;
         setProjectOpen(false);
         return;
@@ -131,6 +189,23 @@ export default function TerminalExperience({
         ),
       );
       setEntry({ chapter: link.chapter });
+      // A shared project link opens on its ticket, not the tour's first
+      // screen. Only on arrival: a reload or Back keeps its own place.
+      const navigation = performance.getEntriesByType('navigation')[0] as
+        | PerformanceNavigationTiming
+        | undefined;
+      if (
+        first &&
+        link.project &&
+        !link.chapter &&
+        (!navigation || navigation.type === 'navigate')
+      )
+        requestAnimationFrame(() =>
+          document
+            .getElementById(singleColumn() ? 'selected-project' : 'departures')
+            ?.scrollIntoView({ block: 'start', behavior: 'instant' }),
+        );
+      first = false;
     };
     restore();
     addEventListener('popstate', restore);
@@ -144,6 +219,39 @@ export default function TerminalExperience({
     replaceFlightLink({ project: flights[index].id });
     appliedQuery.current = location.search;
   };
+  const rows = useRef<(HTMLButtonElement | null)[]>([]);
+  // One stop in the Tab order for the whole board; the arrow keys move
+  // between rows and select as they go, as in any radio group.
+  const moveSelection = (event: KeyboardEvent, index: number) => {
+    const last = flights.length - 1;
+    const next =
+      event.key === 'ArrowDown' || event.key === 'ArrowRight'
+        ? index === last
+          ? 0
+          : index + 1
+        : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
+          ? index === 0
+            ? last
+            : index - 1
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? last
+              : null;
+    if (next === null) return;
+    event.preventDefault();
+    selectFlight(next);
+    rows.current[next]?.focus();
+  };
+  useEffect(() => {
+    // For anyone who opens the console: the aircraft's registration, and
+    // where the code that draws it lives.
+    console.log(
+      '%c✈ N787HA%c  Personal Airspace is open source: https://github.com/hnkabraham/henokabraham.com',
+      'font-weight:600;color:#d34d26',
+      'color:inherit',
+    );
+  }, []);
 
   return (
     <div className="airport" ref={root}>
@@ -184,6 +292,9 @@ export default function TerminalExperience({
       </header>
       <FlightMeasurements />
       <main>
+        {/* The tour's captions change as it plays, so the page's one
+            first-level heading is this, and they are second-level. */}
+        <h1 className="sr-only">Henok Abraham — Personal Airspace</h1>
         <ScrollDeparture
           reducedMotion={reducedMotion}
           viewReady={viewReady}
@@ -233,13 +344,41 @@ export default function TerminalExperience({
                 <span>GATE</span>
                 <span>STATUS</span>
               </div>
-              <fieldset className="flight-list" aria-label="Choose a project">
+              <div
+                className="flight-list"
+                role="radiogroup"
+                aria-label="Choose a project"
+              >
                 {flights.map((item, index) => (
                   <button
                     key={item.id}
+                    ref={(row) => {
+                      rows.current[index] = row;
+                    }}
                     className={`flight-row ${selected === index ? 'selected' : ''}`}
-                    onClick={() => selectFlight(index)}
-                    aria-pressed={selected === index}
+                    // A button, not an input: Enter opens the briefing, and a
+                    // tap on a phone does too.
+                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+                    role="radio"
+                    aria-checked={selected === index}
+                    tabIndex={selected === index ? 0 : -1}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        projectReturnFocus.current = event.currentTarget;
+                        setProjectOpen(true);
+                      } else moveSelection(event, index);
+                    }}
+                    onClick={(event) => {
+                      selectFlight(index);
+                      // In one column the ticket sits below the whole board,
+                      // so a tap there would change something out of sight:
+                      // open the briefing instead.
+                      if (singleColumn()) {
+                        projectReturnFocus.current = event.currentTarget;
+                        setProjectOpen(true);
+                      }
+                    }}
                     aria-controls="selected-project"
                     aria-label={`${item.code}, ${item.name}, ${item.destination.toLowerCase()}, gate ${item.gate}, ${item.status.toLowerCase()}`}
                   >
@@ -257,7 +396,7 @@ export default function TerminalExperience({
                     </span>
                   </button>
                 ))}
-              </fieldset>
+              </div>
               <div className="board-bottom mono">
                 <span>
                   <span className="signal-dot" /> BUILT BY HENOK
@@ -282,6 +421,11 @@ export default function TerminalExperience({
                   <span>PROJECT PREVIEW</span>
                   <Plane size={18} />
                 </div>
+                {/* Outside the keyed body, which is replaced on every
+                    selection: a live region inserted afresh is not read. */}
+                <p className="sr-only" aria-live="polite" aria-atomic="true">
+                  {`${flight.name}. ${flight.summary}`}
+                </p>
                 <div className="ticket-body" key={flight.id}>
                   <DialogTrigger
                     className="ticket-visual-button"
@@ -298,15 +442,14 @@ export default function TerminalExperience({
                   <p className="ticket-flight mono">
                     {flight.code} / {flight.category}
                   </p>
-                  <div aria-live="polite" aria-atomic="true">
-                    <h3>{flight.name}</h3>
-                    <p className="ticket-summary">{flight.summary}</p>
-                  </div>
+                  <h3>{flight.name}</h3>
+                  <p className="ticket-summary">{flight.summary}</p>
                   <ProjectUpdate
                     item={live.data?.projects?.projects.find(
                       (item) => item.id === flight.id,
                     )}
                     now={live.now}
+                    failed={live.failed}
                   />
                   <DialogTrigger
                     className="ticket-button"
@@ -388,6 +531,29 @@ export default function TerminalExperience({
                             flight.url.startsWith('https://')
                               ? 'noopener noreferrer'
                               : undefined
+                          }
+                          onClick={
+                            flight.url.startsWith('https://')
+                              ? undefined
+                              : (event) => {
+                                  // The tour is on this page: fly back to it
+                                  // rather than reload it. The link stays for
+                                  // a new tab, or a page without scripts.
+                                  if (event.metaKey || event.ctrlKey) return;
+                                  event.preventDefault();
+                                  projectReturnFocus.current =
+                                    document.querySelector<HTMLElement>(
+                                      '.brand',
+                                    );
+                                  afterClose.current = () =>
+                                    scrollTo({
+                                      top: 0,
+                                      behavior: reducedMotion
+                                        ? 'instant'
+                                        : 'smooth',
+                                    });
+                                  setProjectOpen(false);
+                                }
                           }
                         >
                           {flight.linkLabel}
@@ -493,6 +659,7 @@ export default function TerminalExperience({
                       (item) => item.id === site.id,
                     )}
                     now={live.now}
+                    failed={live.failed}
                   />
                 </div>
               </article>

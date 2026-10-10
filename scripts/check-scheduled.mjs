@@ -20,11 +20,10 @@ const modules = [
   ...paths.filter((p) => p.endsWith('.js') && p !== 'index.js'),
 ].map((path) => ({ type: 'ESModule', path: resolve('dist/server', path) }));
 
-// Kept in step with `repositories` in server/live.ts, plus the three sites.
+// Kept in step with `repositories` in server/live.ts, plus the two sites.
 const REPOSITORIES = [
+  'henokabraham.com',
   'wear-ios-bridge',
-  'swift-obd-engine',
-  'claude-code-mobile-mode',
   'CT45-Computer-Link',
 ];
 const fetchMock = new MockAgent();
@@ -58,7 +57,6 @@ if (!live) {
     else release.reply(404, { message: 'Not Found' });
   }
   for (const site of [
-    'https://henokabraham.com',
     'https://unitedflighttracker.com',
     'https://routeloads.com',
   ])
@@ -78,11 +76,12 @@ try {
   assert.equal(result.outcome, 'ok');
   const kv = await mf.getKVNamespace('LIVE_DATA');
   const projects = await kv.get('projects:v1', 'json');
-  assert.equal(projects?.projects.length, REPOSITORIES.length + 3);
+  assert.equal(projects?.projects.length, REPOSITORIES.length + 2);
   assert.equal(
     projects.projects.find((project) => project.id === 'bay-departure')
-      ?.reachable,
+      ?.metadataAvailable,
     true,
+    'This site reports its repository, not its own reachability',
   );
   if (!live) {
     // Every canned upstream was consumed, and the values passed through.
@@ -92,7 +91,7 @@ try {
     assert.equal(bridge.updatedAt, '2026-09-02T05:13:34Z');
     assert.equal(bridge.release?.name, 'v1.2.0');
     assert.equal(
-      projects.projects.find((p) => p.id === 'obd-engine').release,
+      projects.projects.find((p) => p.id === 'ct45-link').release,
       undefined,
     );
     for (const id of ['flight-tracker', 'routeloads'])
@@ -103,7 +102,7 @@ try {
       );
   }
   console.log(
-    `Built Worker scheduled handler passed (${live ? 'live feeds' : 'canned upstreams'}): six project records written to local KV.`,
+    `Built Worker scheduled handler passed (${live ? 'live feeds' : 'canned upstreams'}): five project records written to local KV.`,
   );
 } finally {
   await mf.dispose();

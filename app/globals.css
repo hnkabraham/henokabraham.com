@@ -485,6 +485,14 @@ a:focus-visible,
   gap: 25px;
   align-items: start;
 }
+/* Beside the board, the ticket stays in view while a visitor works down the
+   rows; in one column it sits below them, and a tap opens the briefing. */
+@media (min-width: 801px) {
+  .departure-layout > .boarding-pass {
+    position: sticky;
+    top: 24px;
+  }
+}
 /* The two live sites, one card each. The screenshots are the same shape, so
    the pair reads as one object however different the two sites look. */
 .service-pair {
@@ -598,8 +606,10 @@ a:focus-visible,
 .flight-row:nth-child(2n) {
   background: #1c2f3a;
 }
-.flight-row:hover {
-  background: #294451;
+@media (hover: hover) {
+  .flight-row:hover {
+    background: #294451;
+  }
 }
 .flight-row.selected {
   background: #293e48;
@@ -1111,6 +1121,24 @@ a:focus-visible,
 }
 .station-clock time {
   font-variant-numeric: tabular-nums;
+}
+/* The placeholder and the time take the same room, and so do PT and PDT, so
+   the nav beside the clock doesn't shift when the first tick lands. */
+.station-clock time,
+.station-clock > span:last-child {
+  display: inline-block;
+}
+.station-clock time {
+  min-width: 8ch;
+}
+.station-clock > span:last-child {
+  min-width: 3.4ch;
+}
+/* With no script it would read --:--:-- for good. */
+@media (scripting: none) {
+  .station-clock {
+    visibility: hidden;
+  }
 }
 .terminal-header nav a {
   font-size: 0.875rem;
@@ -2361,8 +2389,13 @@ a:focus-visible,
     background 0.25s,
     transform 0.25s;
 }
-.flight-row:hover {
-  transform: translateX(3px);
+/* Only where something hovers: after a tap, a touch screen keeps :hover on
+   the row and leaves it nudged out of line with its neighbours. */
+@media (hover: hover) {
+  .flight-row:hover,
+  .source-row:hover {
+    transform: translateX(3px);
+  }
 }
 .flight-row.selected .flight-destination strong {
   animation: flap-depth 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -2372,9 +2405,6 @@ a:focus-visible,
   transition:
     background 0.3s,
     transform 0.3s;
-}
-.source-row:hover {
-  transform: translateX(5px);
 }
 [data-reveal] {
   transition:

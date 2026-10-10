@@ -261,7 +261,7 @@ try {
     'A refused check keeps the last known update',
   );
   assert.equal(
-    kept.find((p) => p.id === 'obd-engine').metadataAvailable,
+    kept.find((p) => p.id === 'ct45-link').metadataAvailable,
     false,
     'Nothing is invented for a repository never seen',
   );

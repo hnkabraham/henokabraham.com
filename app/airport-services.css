@@ -19,12 +19,6 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.source-live {
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: #4e6674;
-}
 .board-feed-status {
   margin: 0.9rem 0 0;
   font-size: 0.8rem;

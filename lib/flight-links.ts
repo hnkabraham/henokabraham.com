@@ -17,7 +17,12 @@ export function flightLink(
   values: { project?: string; chapter?: BayPhase },
 ) {
   const next = new URL(url);
-  if (values.project) next.searchParams.set('project', values.project);
+  if (values.project) {
+    next.searchParams.set('project', values.project);
+    // Choosing a project makes the link that project's: a chapter left over
+    // from scrolling the tour would send whoever opens it into the flight.
+    if (!values.chapter) next.searchParams.delete('chapter');
+  }
   if (values.chapter) next.searchParams.set('chapter', values.chapter);
   // Section anchors are useful for native navigation but redundant in a
   // shared chapter link. Keep unrelated query parameters and anchors intact.
