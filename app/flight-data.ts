@@ -1,3 +1,5 @@
+import { bezelFaces } from './watch-face-data';
+
 export type Flight = {
   id: string;
   code: string;
@@ -25,6 +27,8 @@ export type Flight = {
     height: number;
     alt: string;
     caption: string;
+    /** Not a phone screen, so drawn without the handset frame. */
+    unframed?: boolean;
   };
   preview?: { src: string; avif?: string; alt: string };
   features: string[];
@@ -32,9 +36,6 @@ export type Flight = {
   // projects get it in place of a link, a beta beside its repository.
   note?: string;
 };
-// Spelled out where the copy uses it; the Connect IQ page the Bezel Auth
-// briefing links to lists every face, so the count there is the source.
-const bezelFaces = 'twenty';
 // routeloads' own count of US route pairs, as its home page states it.
 const routePairs = '70,000+';
 export const flights: Flight[] = [
@@ -139,17 +140,18 @@ export const flights: Flight[] = [
     gate: 'B1',
     status: 'LIVE',
     open: true,
-    summary: `${bezelFaces[0].toUpperCase()}${bezelFaces.slice(1)} watch faces. One optional authenticator.`,
-    story: `A free collection of ${bezelFaces} watch faces for the Garmin epix (Gen\u00a02), on the Connect IQ Store. Each can also show a two-factor code from one account you add yourself.`,
+    summary: `${bezelFaces.inWords[0].toUpperCase()}${bezelFaces.inWords.slice(1)} watch faces. One optional authenticator.`,
+    story: `A free collection of ${bezelFaces.inWords} watch faces for the Garmin epix (Gen\u00a02), on the Connect IQ Store. Each can also show a two-factor code from one account you add yourself.`,
     stack: ['Monkey C', 'Connect IQ', 'TOTP'],
-    url: 'https://apps.garmin.com/developer/9547a1e5-162b-494c-8a14-024066f4f32f/apps',
-    linkLabel: `See all ${bezelFaces} on Connect IQ`,
+    url: bezelFaces.page,
+    linkLabel: `See all ${bezelFaces.inWords} on Connect IQ`,
     image: {
-      src: '/images/bezel-auth-faces.jpg',
+      src: '/images/bezel-auth-modes.jpg',
       width: 690,
-      height: 1035,
-      alt: 'Six more Bezel Auth faces: Vector, Wayfinder, Nightwatch, Tactical, Chrono, and Offset',
-      caption: 'SAMPLE DATA',
+      height: 1360,
+      alt: 'Summit awake, with sample data and a code, above Summit always-on, dimmed and showing BETTER EVERY DAY instead of the code',
+      caption: 'AWAKE / ALWAYS ON',
+      unframed: true,
     },
     features: [
       'Analog, digital, and sports layouts, all free',

@@ -192,7 +192,10 @@ for (const [hour, min, lines] of [
 ]) {
   const texts = drawn('words', at(hour, min));
   for (const line of lines)
-    assert.ok(shows(texts, line), `Words at ${hour}:${min} says ${line}`);
+    assert.ok(
+      shows(texts, line),
+      `Words at ${String(hour)}:${String(min)} says ${line}`,
+    );
 }
 
 // The data, stills, fonts and listings the section names.

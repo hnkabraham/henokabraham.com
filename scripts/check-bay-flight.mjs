@@ -172,7 +172,20 @@ console.log(
       `data:text/javascript;base64,${Buffer.from(text).toString('base64')}`
     );
   };
-  const { flights } = await importSource('../app/flight-data.ts');
+  // The board takes the Bezel Auth count from the showcase's data module,
+  // which imports nothing but types.
+  const boardLinks = {
+    './watch-face-data': `data:text/javascript;base64,${Buffer.from(
+      transpileModule(
+        await fs.readFile(
+          new URL('../app/watch-face-data.ts', import.meta.url),
+          'utf8',
+        ),
+        { compilerOptions: { module: ModuleKind.ESNext } },
+      ).outputText,
+    ).toString('base64')}`,
+  };
+  const { flights } = await importSource('../app/flight-data.ts', boardLinks);
   const { aviationLogbook } = await importSource(
     '../app/aviation-logbook-data.ts',
   );
@@ -193,6 +206,18 @@ console.log(
   );
   const ids = flights.map((item) => item.id);
   assert.equal(new Set(ids).size, flights.length);
+  // Every rail capture ships the widths and formats its srcset names.
+  for (const { image } of flights.filter((item) => item.image)) {
+    const base = image.src.replace(/\.jpg$/, '');
+    for (const file of [
+      `${base}.avif`,
+      `${base}-360.jpg`,
+      `${base}-360.avif`,
+      `${base}-525.jpg`,
+      `${base}-525.avif`,
+    ])
+      await fs.access(new URL(`../public${file}`, import.meta.url));
+  }
   const featured = flights.find((item) => item.id === 'bay-departure');
   assert.ok(featured && !featured.image);
   assert.match(featured.story, /787/i);
@@ -323,7 +348,7 @@ console.log(
   // The In service section: two cards, each a project the board also lists,
   // each with a screenshot in both formats, and each actually watched by the
   // scheduled probe, so a card cannot promise a live check nobody makes.
-  const { liveSites } = await importSource('../app/flight-data.ts');
+  const { liveSites } = await importSource('../app/flight-data.ts', boardLinks);
   const serverLive = await fs.readFile(
     new URL('../server/live.ts', import.meta.url),
     'utf8',

@@ -1,7 +1,7 @@
 import type { FaceId } from '@/lib/watch-faces';
 
-// The free Bezel Auth faces the Connect IQ developer page lists. The board's
-// Bezel Auth entry says the same count in words.
+// The free Bezel Auth faces the Connect IQ developer page lists; the board's
+// Bezel Auth entry (flight-data.ts) takes its count and link from here.
 export const bezelFaces = {
   count: 20,
   inWords: 'twenty',

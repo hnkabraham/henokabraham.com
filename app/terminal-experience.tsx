@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import Image from 'next/image';
 import {
   ArrowDown,
   ArrowRight,
@@ -40,6 +39,14 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+
+// The briefing rail draws its capture about 175 px wide; each capture comes
+// in three widths and two formats (scripts/prepare-rail-images.py).
+const RAIL_SIZES = '175px';
+const railSources = (src: string, format: 'avif' | 'jpg') => {
+  const base = src.replace(/\.jpg$/, '');
+  return `${base}-360.${format} 360w, ${base}-525.${format} 525w, ${base}.${format} 690w`;
+};
 
 // The breakpoint where the departures layout becomes one column (globals.css).
 const singleColumn = () => matchMedia('(max-width: 800px)').matches;
@@ -595,15 +602,27 @@ export default function TerminalExperience({
                     )}
                   </div>
                   {flight.image && (
-                    <figure className="briefing-image">
-                      <Image
-                        src={flight.image.src}
-                        unoptimized
-                        loading="lazy"
-                        alt={flight.image.alt}
-                        width={flight.image.width}
-                        height={flight.image.height}
-                      />
+                    <figure
+                      className={`briefing-image${flight.image.unframed ? ' unframed' : ''}`}
+                    >
+                      <picture>
+                        <source
+                          type="image/avif"
+                          srcSet={railSources(flight.image.src, 'avif')}
+                          sizes={RAIL_SIZES}
+                        />
+                        {/* oxlint-disable-next-line next/no-img-element */}
+                        <img
+                          src={flight.image.src}
+                          srcSet={railSources(flight.image.src, 'jpg')}
+                          sizes={RAIL_SIZES}
+                          loading="lazy"
+                          decoding="async"
+                          alt={flight.image.alt}
+                          width={flight.image.width}
+                          height={flight.image.height}
+                        />
+                      </picture>
                       <figcaption className="mono">
                         {flight.image.caption}
                       </figcaption>
