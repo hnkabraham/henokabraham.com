@@ -625,3 +625,15 @@ Source `d7346c8` adds two board entries and links this site's repository. Produc
 On the live site every new image returns 200, the board, briefings and open-source list show the new entries with the right links on desktop and phone, the page is exactly the viewport's width, and `/#contact` still lands at 81 px on desktop and 24 px on a phone, upright or sideways. One desktop run logged a failed request for the Downshift loop video; the file returns 200 and two reruns had no failed requests.
 
 The 14:45 UTC run after the deploy left no new snapshot. The 15:00 run listed CT45 but could not read it from GitHub, and with no earlier data to fall back on its card says "Repository updates are temporarily unavailable." It fills in on the first run GitHub answers; the `GITHUB_TOKEN` secret would make that every run.
+
+## Detail round deployed: live watch faces, real boarding passes, history and the small things
+
+Sources `1e9da05` through `6c1ef1e`. Production version `379ab061-5d73-4a51-a622-8c5a2f7b5c8d`, then `36e65b80-8e99-4800-8f03-8de5ffc1d179` with `htmlLimitedBots: /.*/`: the per-project metadata reads `?project=`, which made vinext stream the title and preview tags to browsers at the end of the body (bots already got them in the head). The bindings and the 15-minute schedule are unchanged.
+
+- On your time: six Bezel Auth faces (Summit, Atelier, Tactical, Chrono, Orbit, Words) ported from their Monkey C views to canvas, on the visitor's own clock, with an Awake / Always-on toggle; each links to its own Connect IQ listing.
+- Boarding passes carry FLIGHT, GATE and SEAT and a real QR code of the project's link (`lib/boarding-code.ts`, read back by Apple Vision in `check-boarding-code`); the board runs HA 001 to 009 by concourse; one status set with per-project notes.
+- Back closes an open briefing (it adds its own history entry); `?project=` links render that ticket, preview as that project and land on it; a phone tap opens the briefing; the board is a radio group and the flight log's rows toolbars, with arrow keys; one fixed h1.
+- New share card and 8:5 ticket previews; the tracker gains a briefing image; rail images in three widths and AVIF; the GT350's yellow marks painted out and its poster at 1900 px; images cached a day; the cloud sprite preloaded; a blurred sky under the photograph.
+- The scheduled check reads this site's repository, wear-ios-bridge and CT45 (six GitHub requests a run, down from twelve); it no longer probes this site.
+
+On the live site, across desktop, laptop, tablet, phone, small phone and landscape: no horizontal overflow (measured against the visual viewport, which caught a 91 px phone overflow during testing), no console errors from the site, one ticket height per layout, `/#contact` at 81 px on desktop and 24 px on phones, `?project=bezel-auth` landing on its ticket, Back closing a briefing in place, and the live page's QR codes read back exactly by Vision. The first run of the new check (22:01Z) had GitHub refuse this site's repository, so its ticket says the updates are temporarily unavailable until a later run gets through.
