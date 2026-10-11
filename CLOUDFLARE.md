@@ -653,3 +653,11 @@ Source `e1856b3` (with `79c8a57` and the formatting-only `25d1348`). Production 
 - The Garage car wears the base 2015–2018 GT350's ten-spoke wheel (FR3Z-1007-P) instead of the GT350R's carbon wheel, built from measurements by `scripts/garage_wheel.py`: flat spoke faces parallel to the rotor that curve down into a recessed hub, five lug nuts and a Ford-oval cap, in gloss black. The R's wheel face is dropped; its lip and barrel are repainted, and the wheel atlas is no longer brightened, so the tires and rotors read darker, as in photos. The model is 920,948 bytes (143,134 triangles), and the poster and credits page are updated.
 
 On the live site, `/models/garage-gt350r.glb`, its `/scene/7921e4fee6c4f4b6/` copy, both poster files and `/credits/garage` (after its redirect from `/credits/garage.html`) return 200 with the same SHA-256 as the committed files.
+
+## GT350 textures deployed right way up
+
+Source `eebb1bf`. Production version `e00e15c2-0f2d-4ed1-bcd7-1eefe9ed6ba5`; the bindings and the 15-minute schedule are unchanged.
+
+- The Garage car's textures are now read with V turned over from USD's bottom-left origin to glTF's top-left (`scripts/prepare-garage-car.py`). Every atlas had been sampled upside down: the splitter's SHELBY letters and the grille, fender and rear badges showed as scrambled squares, the tires as a checkerboard and the interior as patchy white. The trim and engine-bay repaints that covered for it are removed, since neither swatch's wrong cells are sampled any more. The model is 921,664 bytes (143,134 triangles), and the poster and credits page are updated.
+
+On the live site, `/models/garage-gt350r.glb`, its `/scene/26c61f4ce6c51f14/` copy, both poster files and `/credits/garage` return 200 with the same SHA-256 as the committed files.
