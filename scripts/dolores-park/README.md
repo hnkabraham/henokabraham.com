@@ -242,6 +242,10 @@ Both prescribed offline views were rendered before and after the scene work. Str
 
 The car now holds direct sunlight at the default pose, but its lower door and glass reflections still differ from the still's HDRI/post-processed result. Palms have clearer fronds yet retain procedural repetition; nearby tree cards and thin grass blades are visible at some angles. The lawn is healthier but still a repeated texture, and north-facing house fronts remain stylised without full indirect light or contact AO. Phone shadows are softer at 1024². Non-downtown phone backdrop directions are lower resolution, and the 180 m far-field split still has parallax error when orbiting. The backdrop is baked, so a different sun or wider camera travel requires another export.
 
+### Orbit range (added after pass 6)
+
+The orbit no longer goes all the way round. Swept at the default pose's 8 m with zoom off (the site's `scrollFriendly`), the park side was cluttered. From about 172° to 255° round from the default view, first a bench filled the foreground, then the keep-outs pulled the camera in to 5.4 m so the car's nose left a 4:3 frame, then the leaning trunk filled one side. OrbitControls' `minAzimuthAngle` and `maxAzimuthAngle` now stop the orbit either side of that arc. The bearings are taken from `DEFAULT_POSE` and reported in radians as `info.orbit.azimuth`. From 255° to about 270° the keep-outs still pull the camera in to about 6 m, with the whole car in frame. `constrainCamera()` and its keep-outs are unchanged and still verified by `verify-live.mjs`. A custom `pose=` inside the arc still renders, but the controls move it to a wall on the first drag.
+
 ## Pass 5: orbitable web profile (historical)
 
 The following records Pass 5's original output and measurements. Pass 6 above supersedes its default sun, backdrop sizes, material settings, budgets and poster instructions.

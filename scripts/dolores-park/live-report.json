@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-11T08:47:45.555Z",
+  "date": "2026-10-11T08:55:31.802Z",
   "variants": {
     "desktop": {
       "startupFrame": {
@@ -292,10 +292,10 @@
       "glbBytes": 4122596,
       "backdropBytes": 621058,
       "downloadBytes": 4743654,
-      "loadTimeMs": 892.5,
+      "loadTimeMs": 896.7000000029802,
       "shadowMap": 2048,
       "patchedMaterials": 7,
-      "frameTimeMs": 2.9000000059604645,
+      "frameTimeMs": 2.2000000029802322,
       "pixelRatio": 2,
       "viewport": [
         950,
@@ -305,6 +305,10 @@
         "min": 4,
         "max": 9,
         "groundClearance": 0.45,
+        "azimuth": [
+          -2.4882913408355822,
+          2.346270687188711
+        ],
         "obstacles": [
           {
             "name": "hero trunk",
@@ -732,7 +736,7 @@
       "glbBytes": 2779264,
       "backdropBytes": 206480,
       "downloadBytes": 2985744,
-      "loadTimeMs": 737.0999999940395,
+      "loadTimeMs": 736.2999999970198,
       "shadowMap": 1024,
       "patchedMaterials": 7,
       "frameTimeMs": 2,
@@ -745,6 +749,10 @@
         "min": 4,
         "max": 9,
         "groundClearance": 0.45,
+        "azimuth": [
+          -2.4882913408355822,
+          2.346270687188711
+        ],
         "obstacles": [
           {
             "name": "hero trunk",
