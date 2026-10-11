@@ -4,6 +4,7 @@
 export {
   AdditiveBlending,
   AgXToneMapping,
+  Box2,
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
@@ -34,6 +35,7 @@ export {
   SpriteMaterial,
   SRGBColorSpace,
   Texture,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from 'three';

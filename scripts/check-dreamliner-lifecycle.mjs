@@ -85,6 +85,7 @@ const imports = {
     'export const addLivery=()=>{};export const createLiveryTexture=()=>null;',
   ),
   '@/lib/flight-metrics': uri('export const recordFlightMetric=()=>{};'),
+  '@/lib/upload-ahead': await pure('../lib/upload-ahead.ts'),
 };
 imports['@/lib/wing-sweep'] = await pure('../lib/wing-sweep.ts', {
   three: import.meta.resolve('three'),

@@ -37,6 +37,7 @@ import { VORTEX_SOURCES, createVortices } from '@/lib/dreamliner-vortices';
 import { createFlightTrack, type TrackSource } from '@/lib/dreamliner-track';
 import { recordFlightMetric } from '@/lib/flight-metrics';
 import { withTimeout } from '@/lib/abort';
+import { uploadAhead } from '@/lib/upload-ahead';
 
 type Props = {
   progress: RefObject<number>;
@@ -526,6 +527,12 @@ export default function DreamlinerScene({
       r.compile(scene, camera);
       if (disposed) return;
       ready = true;
+      // The opening is CSS-only, so the aircraft is first drawn when the
+      // visitor starts to scroll. Its 4096² maps go up beforehand, in idle
+      // strips, rather than stalling that first frame for a third of a
+      // second.
+      const uploads = uploadAhead(T, r, textures);
+      cleanups.push(uploads.cancel);
       let lastShown = false;
       let wakeFrames = 0;
       const render = (now: number) => {
@@ -675,6 +682,7 @@ export default function DreamlinerScene({
           cutUniforms.on.value = 1;
         } else cutUniforms.on.value = 0;
         // The opening remains CSS-only; clear once when scrolling back to it.
+        if (shown && uploads.pending) uploads.finish();
         if (shown || lastShown) r.render(scene, camera);
         lastShown = shown;
         if (shown) {
