@@ -12,9 +12,14 @@ type Props = {
 // The park model is the largest file on the page (about 4.1 MB, 2.8 MB on a
 // phone), so a slow connection gets longer than the car alone needed. A
 // stalled request still ends in the poster rather than a spinner.
-const fetchAsset = async (path: string, signal: AbortSignal) => {
+const fetchAsset = async (
+  path: string,
+  signal: AbortSignal,
+  priority?: RequestPriority,
+) => {
   const response = await fetch(sceneAsset(path), {
     signal: withTimeout(signal, 60000),
+    priority,
   });
   if (!response.ok) throw new Error('Garage asset unavailable');
   return response.arrayBuffer();
@@ -45,6 +50,20 @@ export default function GarageParkScene({ reducedMotion, onStatus }: Props) {
     let disposed = false,
       started = false;
     let viewer: DoloresViewer | undefined;
+    const options = {
+      // The same test the tour uses for its phone aircraft: width alone
+      // would send a phone held sideways the desktop model.
+      phone: innerWidth < 800 || innerHeight < 500,
+      // The real sun and Moon over the park, kept current while it's open.
+      sun: 'live',
+    } as const;
+    // Prefetches still under way; the viewer waits on those rather than
+    // requesting the same file again. Once one lands it is the browser's
+    // cache that serves it (scene files are cached immutably).
+    const early = new Map<string, Promise<ArrayBuffer>>();
+    const load = (path: string) =>
+      early.get(path)?.catch(() => fetchAsset(path, controller.signal)) ??
+      fetchAsset(path, controller.signal);
     const fail = () => {
       if (disposed) return;
       disposed = true;
@@ -59,12 +78,8 @@ export default function GarageParkScene({ reducedMotion, onStatus }: Props) {
       const { createDoloresViewer } = await import('@/lib/dolores-park-viewer');
       if (disposed) return;
       const created = await createDoloresViewer(element, {
-        // The same test the tour uses for its phone aircraft: width alone
-        // would send a phone held sideways the desktop model.
-        phone: innerWidth < 800 || innerHeight < 500,
-        // The real sun and Moon over the park, kept current while it's open.
-        sun: 'live',
-        load: (path) => fetchAsset(path, controller.signal),
+        ...options,
+        load,
         dracoPath: sceneAsset('/draco/'),
         scrollFriendly: true,
         signal: controller.signal,
@@ -81,21 +96,55 @@ export default function GarageParkScene({ reducedMotion, onStatus }: Props) {
       // first frame, so the poster crossfades onto a finished picture.
       status.current('ready');
     };
-    // Nothing is fetched until the section is near the viewport: it sits
-    // below the fold, under the tour's own canvas and render budget. Once
-    // started, the viewer's own IntersectionObserver stops its rendering
-    // whenever it scrolls away.
+    // The section sits far below the fold, under the tour's own canvas and
+    // render budget. The viewer starts about a screen and a half ahead of
+    // it, so a visitor scrolling down finds it built; the build itself only
+    // holds the page for 100 ms or so at a time. Once started, the viewer's
+    // own IntersectionObserver stops its rendering whenever it scrolls away.
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
         observer.disconnect();
         void start().catch(fail);
       },
-      { rootMargin: '300px' },
+      { rootMargin: '1200px 0px' },
     );
     observer.observe(element);
+    // The download is most of the wait on an ordinary connection, so a
+    // desktop visit fetches the files ahead (about 5.7 MB), a few seconds
+    // after the page and the tour have loaded, at low priority. Phones
+    // (3.9 MB) wait for the section instead, as does a visitor saving data
+    // who has chosen the full view (by default they get the simple one).
+    const connection = (
+      navigator as Navigator & { connection?: { saveData?: boolean } }
+    ).connection;
+    let prefetchTimer = 0;
+    const prefetch = async () => {
+      const { doloresViewerFiles } = await import('@/lib/dolores-park-viewer');
+      if (started || disposed) return;
+      for (const path of doloresViewerFiles(options)) {
+        const request = fetchAsset(path, controller.signal, 'low');
+        early.set(path, request);
+        void request
+          .catch(() => {
+            // The viewer requests it again itself.
+          })
+          .finally(() => early.delete(path));
+      }
+    };
+    const schedulePrefetch = () => {
+      prefetchTimer = window.setTimeout(() => {
+        if (!started && !disposed) void prefetch().catch(() => {});
+      }, 3000);
+    };
+    if (!options.phone && !connection?.saveData) {
+      if (document.readyState === 'complete') schedulePrefetch();
+      else addEventListener('load', schedulePrefetch, { once: true });
+    }
     return () => {
       disposed = true;
+      removeEventListener('load', schedulePrefetch);
+      clearTimeout(prefetchTimer);
       observer.disconnect();
       controller.abort();
       viewer?.dispose();

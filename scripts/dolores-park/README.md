@@ -280,7 +280,7 @@ The largest phone download, with the `morning` bake, is 2,980,396 bytes against 
 
 Known limits: the far field is baked for four suns, so a low sun lights distant facades from the bake's bearing, not its own. There is no weather; San Francisco's fog and overcast aren't modelled. The car sits in the row's shadow whenever the sun is low in the south or west, which is most of a winter day. That is what the street is like, but it's darker than the old fixed evening.
 
-## Shader compile at load (added after the live sky)
+## Load time (added after the live sky)
 
 The first frame needs 56 shader programs (58 at night, with the lamps). The park's surfaces need them twice: once for the reflection probe, a render target, so linear and without tone mapping, and again for the screen. The car needs its own as well. three.js links a program synchronously the first time it draws, so the probe capture and the first frame held the main thread in one task of about 580 ms.
 
@@ -297,7 +297,17 @@ Measured on the M2 Max against the local server with a warm cache:
 
 WebKit's wait for the shaders is longer and varies from run to run, at 300–460 ms. Its gain is mostly that the page stays responsive: about half of that build is now waiting rather than blocking.
 
-The longest remaining task is the synchronous build before the wait: house batching, the sky capture with the far-field upload, and generating the shader sources. On the live site, the download (4.8 MB desktop, 3.0 MB phone, plus the 0.9 MB car) starts when the frame comes within 300 px of the viewport. On a slow connection, that download is most of the wait.
+The longest remaining task is the synchronous build before the wait: house batching, the sky capture with the far-field upload, and generating the shader sources.
+
+On an ordinary connection, though, the download was most of the wait (about 1.6 s for the park model at 30 Mbps), so the Garage component (`app/garage-park-scene.tsx`) now starts sooner:
+
+- **Desktop prefetch.** A desktop visit fetches the viewer's files at low priority, 3 s after the page's load event, by when the tour's own downloads have normally finished. `doloresViewerFiles()` returns the list: the park, the car and the six faces of the bake for the current sun, about 5.7 MB. If the viewer starts while a prefetch is still in flight, it waits on that request instead of making its own. Files that have already arrived come from the HTTP cache, since scene files are cached immutably.
+- **No prefetch on phones,** where the files are 3.9 MB. Visitors with Save-Data on get the site's simple view, with no scene at all.
+- **Earlier start.** The viewer now starts when the frame is 1,200 px below the viewport rather than 300 px.
+
+With a steady scroll from the top at 30 Mbps, the frame was ready 0.7 s before it came into view. The previous build was ready 2.0 s after.
+
+Jumping to the Garage from the header still waits on the tour, about 0.6 s on the jump, before the viewer starts.
 
 ## Pass 5: orbitable web profile (historical)
 

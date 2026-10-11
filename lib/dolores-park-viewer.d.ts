@@ -50,6 +50,12 @@ export interface DoloresViewer {
   readonly renderedFrames: number;
 }
 
+/** The public-root paths a viewer made now with these options would fetch,
+ * so that a page can request them ahead of it. */
+export function doloresViewerFiles(
+  options?: Pick<DoloresViewerOptions, 'phone' | 'sun' | 'time'>,
+): string[];
+
 export function createDoloresViewer(
   container: HTMLElement,
   options?: DoloresViewerOptions,
