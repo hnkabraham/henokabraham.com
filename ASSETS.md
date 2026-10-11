@@ -27,6 +27,51 @@
 - A small radial-gradient "contact shadow" disc (`floorTexture`, unlit, alpha-blended, `depthWrite: false`) still sits just under the car so it reads as resting on something rather than hovering with nothing beneath it at all.
 - `public/images/garage-gt350r.png`/`.avif`: the poster shown before the interactive viewer loads (and for reduced-motion visitors), rendered from the finished GLB at the viewer's own default camera angle and lighting, with the same transparent background, so it matches the live scene exactly rather than crossfading into a different look. Both files carry a real alpha channel (RGBA), not a baked-in flat color. It is 1,900 × 1,330: the frame reaches about 950 CSS px wide on desktop, so a 2× screen needs roughly that many pixels (the earlier 1,400 px poster was soft there). The AVIF is quality 65, the setting the previous file's size corresponded to.
 
+## Garage: Dolores Park view
+
+- `public/images/garage-dolores.avif`/`.jpg` (1,920 × 1,200) and `garage-dolores-960.avif`/`.jpg` (960 × 600) are the still behind the Garage section's "Dolores Park" switch. It's mounted on first selection, so visitors who stay in the studio never download it. The AVIFs are quality 58 and the JPEGs quality 84, encoded by Pillow from one render.
+- The render is `node scripts/dolores-park/render.mjs <out.png> preset=streetview cam=8,-161 camH=1.2 look=12.9,-154.63,1.05 fov=52 w=1920 h=1200`, after `python3 scripts/dolores-park/fetch.py assets`.
+- It shows the GT350 GLB above on 20th Street at the top of Mission Dolores Park, so the image is **CC BY-NC-SA 4.0** like the model. The scene, its parameters and what is data versus modelled are documented in `scripts/dolores-park/README.md`.
+- Its framing was matched by eye to a Street View frame at 3851 20th St. That frame is not in this repository, and no Street View, satellite-map or other proprietary imagery was loaded, traced or sampled.
+- **Committed data** (`archive/scenery/dolores/`, packed by `scripts/dolores-park/bundle.py` from the raw downloads that `fetch.py data` makes):
+  - `scene.json`: buildings, city massing, trees and roads in local metres around 37.7596 N, 122.4270 W.
+  - `terrain.f32`: a 750 × 700 float32 elevation grid at about 2 m.
+  - `naip.jpg`: the aerial draped on the terrain.
+  - `horizon.json`: the East Bay ridge, from `scripts/dolores-park/horizon.py`.
+  - Re-running `bundle.py` on the 2026-10-10 downloads reproduces `scene.json` and `terrain.f32` byte for byte, and `horizon.py` reproduces `horizon.json` the same way.
+- **Data sources, all retrieved 2026-10-10:**
+  - **Footprints and heights:** [DataSF Building Footprints](https://data.sf.gov/resource/ynuv-fyni.json), City and County of San Francisco, [ODC PDDL](http://opendatacommons.org/licenses/pddl/1.0/), queried by `within_box` in four boxes:
+    - near the park, everything;
+    - toward downtown, over 4 m;
+    - beyond that, over 22 m.
+  - **Street trees:** the [San Francisco Street Tree Inventory](https://data.sf.gov/City-Infrastructure/San-Francisco-Street-Tree-Inventory/tkzw-k3nq), PDDL.
+  - **Terrain:** the USGS 3DEP 1 m DEM, exported as F32 GeoTIFF (bbox -122.4345, 37.7520, -122.4195, 37.7660 at 1500 × 1400), public domain.
+  - **Aerial:** a [USGS / USDA NAIP](https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer) export (bbox -122.434386, 37.755544, -122.418478, 37.768162 at 4000 × 3173), public domain. Export sizes are proportional to the bbox, so the service doesn't pad the extent.
+  - **OpenStreetMap:** buildings, highways, the park and railways in south 37.7555 / west -122.4344 / north 37.7682 / east -122.4185, from Overpass. **© OpenStreetMap contributors**, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/), [attribution](https://www.openstreetmap.org/copyright).
+    - OSM supplies the road centrelines, and footprints only where no DataSF footprint covers the spot.
+    - `scene.json` is a derived database that stays under that licence.
+  - **East Bay ridge:** read from `archive/scenery/bay-elevation.webp`, so it carries that file's Mapzen/Terrarium credit (see "Real Bay Area terrain" below).
+- **Park canopies the street-tree list doesn't hold** come from the NAIP export, in 2 m cells. A cell counts when at least 55% of its samples are dark green (green above red by 10, mid luminance). It must also be:
+  - outside every footprint;
+  - at least 4 m from a street tree;
+  - clear of every OSM road by its half-width plus 1 m.
+
+  Qualifying cells are packed greedily into canopies 2.2–3.8 m in radius.
+- **Downloaded assets** (`archive/scenery/dolores/assets/`, gitignored, about 130 MB): `fetch.py assets` restores them and checks each file's SHA-256 against `scripts/dolores-park/assets.json`, which also records every URL, author and licence.
+  - Poly Haven, CC0:
+    - Asphalt 02 and Brown Mud Leaves 01 (Rob Tuytel);
+    - Concrete Floor Worn 001 and Palm Tree Bark (Dimitrios Savva, Rico Cilliers);
+    - Bark Platanus (Dimitrios Savva);
+    - Grass Ground (Charlotte Baglioni);
+    - Tree Small 02 (Rico Cilliers);
+    - Kloppenheim 06 (Pure Sky) (Greg Zaal, Jarod Guest).
+  - [Car](https://poly.pizza/m/unqqkULtRU) by Quaternius, CC0 per its Poly Pizza page, repainted for the distant parked cars.
+- **Modelled, not data:**
+  - the foreground tree, palms, benches, house fronts, grass, leaf litter and sky;
+  - the Salesforce Tower and Transamerica Pyramid shapes;
+  - the camera's fit, 2.96 m from the published panorama position;
+  - a 3 m artistic height added to the building that casts the house shadow across the near street.
+
 ## Preserved earlier scenery
 
 The sections below document assets retained from the SFO/Bay terrain implementation. They remain available for old source references but are not loaded by the airborne showcase.
