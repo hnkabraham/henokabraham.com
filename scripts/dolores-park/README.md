@@ -191,7 +191,7 @@ Delivery files:
 - Six `public/scenery/dolores-sky-{px,nx,py,ny,pz,nz}.webp` faces, 1536² desktop; `dolores-sky-phone-*`, 768² phone.
 - Separate `dolores-sky-summer-*` and `dolores-sky-summer-phone-*` faces for the alternative sun. A viewer downloads **one** set of six.
 - `lib/dolores-park-materials.js` and `.d.ts`: the shared material registry.
-- `live.html` / `live.js`: reference viewer; `car.js`: identical shared paint conversion, wheelbase slope, lift and contact-shadow construction; `lighting.js`: the two shared sun parameter sets.
+- `lib/dolores-park-viewer.js` and `.d.ts`: the viewer itself, `createDoloresViewer(container, options)`, shared by the site's Garage section and `live.html` / `live.js` (the reference page, which maps URL parameters to options and sets the `window.*` hooks below); `lib/dolores-park-car.js`: identical shared paint conversion, wheelbase slope, lift and contact-shadow construction; `lib/dolores-park-lighting.js`: the two shared sun parameter sets.
 - `export-report.json`: source and round-trip geometry census. `live-report.json`: measured delivery budgets, GPU identity, collision checks and idle/disposal results.
 
 Example captures (set `OUT` to an absolute directory **outside** the repository):
@@ -235,7 +235,7 @@ The split is **180 m horizontally from the car**, with crossing canopy bounds re
 
 The far park, Mission rooftops, downtown, hills and sky are baked into cubemap faces captured at `(13.3, roadZ + 1.5, 154.63)` with the near field and car hidden. The backdrop is only the background. At the maximum 9 m orbit, the nominal boundary parallax error is about 9/180 = .05 radians (2.9°); there is still a small far-field seam/registration tradeoff. Moving the car or widening the orbit requires re-exporting, not just changing the camera.
 
-Car/window reflections are captured once from the loaded near geometry plus the backdrop, with the car hidden, then filtered with PMREM. The lighting-only 128² desktop / 64² phone sky cube uses 25% saturation and 130% brightness to approximate the original pale HDRI fill; the visible backdrop is unchanged. This is an artistic LDR approximation, not the original HDR environment. Contact shadows stay live quads and are merged into one draw with per-vertex alpha. Paint conversion and the exact `1.36 m` half-wheelbase slope / `21.5 mm` lift come from shared `car.js`.
+Car/window reflections are captured once from the loaded near geometry plus the backdrop, with the car hidden, then filtered with PMREM. The lighting-only 128² desktop / 64² phone sky cube uses 25% saturation and 130% brightness to approximate the original pale HDRI fill; the visible backdrop is unchanged. This is an artistic LDR approximation, not the original HDR environment. Contact shadows stay live quads and are merged into one draw with per-vertex alpha. Paint conversion and the exact `1.36 m` half-wheelbase slope / `21.5 mm` lift come from shared `lib/dolores-park-car.js`.
 
 Live-profile reductions:
 
@@ -271,7 +271,7 @@ Azimuth keep-outs shorten the camera radius before the two trunk footprints, bot
 
 ### React port notes
 
-1. Use `createDoloresViewer` as the reference lifecycle and remove the demo's bottom-level auto-call / DOM hint updates. Replace `/public/models`, `/public/scenery`, `/public/draco` with the site's public-root URLs (`/models`, `/scenery`, `/draco`). The import map is only for the standalone server; lazy-import Three, GLTFLoader, DRACOLoader, OrbitControls, the registry and shared helpers through the site's bundler.
+1. The site imports `lib/dolores-park-viewer.js` directly: `load(path)` maps public-root paths (`/models/…`, `/scenery/…`) to versioned URLs, `dracoPath` points at the site's decoder, and `scrollFriendly` turns zoom off and sets `touch-action: pan-y`. The import map is only for the standalone server.
 2. Select desktop/phone once before loading. Load only its park GLB, six matching-sun background faces, and the unchanged car GLB. The viewer makes no requests to `archive/`, source data or offline textures. Retain the scene-root `userData.dolores` metadata for ground collision, road samples and placement. Keep material names during any later optimization.
 3. Apply `restoreDoloresMaterials(park.scene, {toSun})` before compiling. Preserve the small lighting/reflection cube, static shadow caching, per-material batch bounds and contact merge. First-frame counts depend on these runtime choices, not just the GLB.
 4. Start/crossfade only after the first render and probes complete. Use the delivered winter `poster-live.png` at the same default pose / 52° horizontal FOV / ACES exposure / aspect. The summer choice needs its summer poster. In the site shell, reduced-motion visitors can keep the poster and skip importing the viewer entirely.

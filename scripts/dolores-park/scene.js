@@ -9,10 +9,10 @@
 // horizontal fov (60 degrees), heading/pitch in degrees, cam=x,y in local m.
 // Legacy camera/look and vertical fov are retained when preset is omitted.
 import * as T from 'three';
-import { suns, lightingParams } from './lighting.js';
+import { suns, lightingParams } from '../../lib/dolores-park-lighting.js';
 import { applyDoloresMaterial } from '../../lib/dolores-park-materials.js';
 
-import { createParkCar } from './car.js';
+import { createParkCar } from '../../lib/dolores-park-car.js';
 import { distantTraffic } from './traffic.js';
 import { buildHouses, houseTreeXs, garageCutPositions } from './houses.js';
 import { buildPalms } from './palms.js';

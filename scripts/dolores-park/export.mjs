@@ -17,7 +17,7 @@ import {
 import { MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
 import sharp from 'sharp';
-import { suns, lightingParams } from './lighting.js';
+import { suns, lightingParams } from '../../lib/dolores-park-lighting.js';
 import { root, startServer, launchBrowser, localPage } from './server.mjs';
 
 const license =
