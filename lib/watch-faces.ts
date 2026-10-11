@@ -10,7 +10,12 @@ import * as tactical from './watch-face-tactical';
 import * as words from './watch-face-words';
 
 export type FaceId =
-  'summit' | 'atelier' | 'tactical' | 'chrono' | 'orbit' | 'words';
+  | 'summit'
+  | 'atelier'
+  | 'tactical'
+  | 'chrono'
+  | 'orbit'
+  | 'words';
 
 export type FaceArt = { mountain: CanvasImageSource | null };
 
