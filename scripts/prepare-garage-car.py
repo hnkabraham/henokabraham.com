@@ -17,10 +17,12 @@ the mirror caps and exhaust tips, which share UV space with parts that must
 stay a different color, are split out into their own materials rather than
 recolored in place, and the roof, whose UVs barely cross the swatch's
 stripe bands, gets new ones that cross them as the hood's do (see the
-module-level comments below for how each region was identified). The rear wing is removed and the detailed wheel atlas is
-brightened toward gunmetal; the remaining R-trim body and wheel geometry
-are an approximation of the non-R car. This derivative remains CC BY-NC-SA 4.0: non-commercial
-use, share-alike, with attribution -- see public/credits/garage.html.
+module-level comments below for how each region was identified). The rear
+wing is removed, and the wheels' GT350R faces give way to the base car's
+ten-spoke wheel, built in garage_wheel.py; the remaining R-trim body
+geometry is an approximation of the non-R car. This derivative remains
+CC BY-NC-SA 4.0: non-commercial use, share-alike, with attribution -- see
+public/credits/garage.html.
 
 Geometry: world-space points already come out in real meters (see
 garage_usda_parser.py's docstring -- the file's own xformOp:scale(100,100,100)
@@ -44,6 +46,7 @@ with Xcode installed) to turn the USDZ's binary scene.usdc into text.
 import argparse
 import io
 import json
+import re
 import shutil
 import struct
 import subprocess
@@ -63,6 +66,7 @@ from garage_usda_parser import (
     read_balanced_brace,
     find_attr_value,
 )
+import garage_wheel
 
 REPO = Path(__file__).resolve().parent.parent
 SOURCE_URL = 'https://sketchfab.com/3d-models/2016-ford-mustang-shelby-gt350r-1d03bb121b6e4371b0978dc584b788d8'
@@ -80,6 +84,9 @@ CARBON_DARK = (0x1A, 0x1A, 0x1C)
 # Satin/chrome-ish metal exhaust tips -- kept apart from CARBON_DARK on
 # purpose, real tips are metallic light gray, not black.
 EXHAUST_CHROME = (0xB0, 0xB4, 0xB8)
+# The base GT350's Ebony Black painted wheel, and its lug nuts.
+WHEEL_BLACK = (0x14, 0x15, 0x18)
+LUG_METAL = (0x4A, 0x4D, 0x52)
 
 PAINT_REFS = {
     'blue_field': (0, 85, 220),
@@ -168,33 +175,6 @@ def recolor_engine(path):
     return Image.fromarray(arr.astype(np.uint8), 'RGB')
 
 
-def recolor_wheels(path):
-    # This atlas is a straight-on photo-style capture of the wheel face, so
-    # (verified by sampling radial profiles from its own center at eight
-    # angles, not assumed) it's concentric rings in pixel space: hub, vented
-    # disk, a recessed channel, the rim's outer lip, then tire -- and that
-    # last transition is sharp and consistent by angle, always by r=200 of
-    # 256. The tire tread's own molded block pattern is already in the
-    # unmodified source (present with brightening disabled entirely); a
-    # levels curve strong enough to lift the rim to gunmetal blows that
-    # pattern out into a harsh checkerboard if it also touches the tire, so
-    # the tire radius is masked out of the recolor rather than toned down --
-    # anything scaled down to look fine on the tire is too weak on the rim.
-    im = Image.open(path).convert('RGB')
-    levels = np.interp(
-        np.arange(256), [0, 8, 60, 129, 255], [0, 8, 138, 208, 255]
-    ).round().astype(np.uint8)
-    recolored = im.point(levels.tolist() * 3)
-    w, h = im.size
-    yy, xx = np.mgrid[0:h, 0:w]
-    radius = np.hypot(xx - w / 2, yy - h / 2)
-    wheel_weight = np.clip((200 - radius) / (200 - 193) * 255, 0, 255).astype(
-        np.uint8
-    )
-    mask = Image.fromarray(wheel_weight, 'L')
-    return Image.composite(recolored, im, mask)
-
-
 # The Coloured prim also contains unrelated trim. This box matches only
 # its disconnected wing blade and two supports (1,428 triangles), including
 # the feet below y=1; the painted trunk deck belongs to PaintA and stays intact.
@@ -203,6 +183,74 @@ def _is_rear_wing(cx, cy, cz, u, v):
 
 
 DROP_RULES = {'shFord_ShelbyGT350R_2016Coloured_Material1': _is_rear_wing}
+
+
+# The wheels. The source's wheel material is 432 prims, the same 108 at each
+# corner (polySurface1-108 at the right front, 109-216 left front, 217-324
+# right rear, 325-432 left rear), and by their radius from the axle and
+# depth they are: the tire (46-67, all outside 245 mm), the brake disc and
+# its hat (36, 68-79, inside 205 mm and behind the hub), the rim's lip,
+# barrel and inner flange (80-82, and 97, a ring behind the lip), the valve
+# stem (41-45), and the GT350R's own face: its seven spokes and their joins
+# to the lip (83-96), the hub (98-108), and the lug nuts and centre cap
+# (1-35, 37-40). Henok's 2017 GT350 has the base car's cast wheel, so the
+# R's face is dropped and garage_wheel.py builds that wheel's face in its
+# place, at each corner's own axle and lip; the lip, barrel and flange keep
+# their shape and take the face's black paint, and the tire, brake and valve
+# keep the wheel atlas, as converted. (It was once brightened toward
+# gunmetal, which was for the R's carbon face; with that gone it only made
+# the brake discs and tires paler than the photos of the car show.)
+WHEEL_MATERIAL = 'shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1'
+_WHEEL_PRIMS_PER_CORNER = 108
+_WHEEL_R_FACE = {*range(1, 36), *range(37, 41), *range(83, 97), *range(98, 109)}
+_WHEEL_RIM = {80, 81, 82, 97}
+_WHEEL_TIRE = set(range(46, 68))
+_WHEEL_LIP = 80
+
+
+def _wheel_prim(name):
+    n = int(re.match(r'polySurface(\d+)_', name).group(1))
+    return (n - 1) % _WHEEL_PRIMS_PER_CORNER + 1
+
+
+def _wheel_corners(group):
+    """Each corner's axle centre (the middle of its tire's extent), side
+    and lip plane (the lip's outermost |x|), for garage_wheel.build."""
+    corners = {}
+    for m in group:
+        n = _wheel_prim(m['name'])
+        if n not in _WHEEL_TIRE and n != _WHEEL_LIP:
+            continue
+        pts = (np.hstack([m['points'], np.ones((len(m['points']), 1))]) @ m['world'])[:, :3]
+        key = (float(np.sign(pts[:, 0].mean())), float(np.sign(pts[:, 2].mean())))
+        corner = corners.setdefault(key, {'tire': [], 'lip': None})
+        if n == _WHEEL_LIP:
+            corner['lip'] = pts
+        else:
+            corner['tire'].append(pts)
+    out = []
+    for (side, _), corner in sorted(corners.items()):
+        tire = np.vstack(corner['tire'])
+        out.append(
+            {
+                'side': side,
+                'centre': (
+                    (tire[:, 1].min() + tire[:, 1].max()) / 2,
+                    (tire[:, 2].min() + tire[:, 2].max()) / 2,
+                ),
+                'lip_face': np.abs(corner['lip'][:, 0]).max(),
+            }
+        )
+    return out
+
+
+# The wheel's new parts, by garage_wheel.build's finish names. "Paint" in a
+# name gives it the body's clearcoat in the viewer (garage-scene.tsx).
+WHEEL_FINISHES = {
+    'paint': {'name': 'WheelPaint_face', 'baseColorFactor': WHEEL_BLACK, 'metallic': 0.1, 'roughness': 0.45},
+    'lug': {'name': 'LugNut_metal', 'baseColorFactor': LUG_METAL, 'metallic': 0.9, 'roughness': 0.25},
+    'chrome': {'name': 'CenterCap_oval', 'baseColorFactor': EXHAUST_CHROME, 'metallic': 0.9, 'roughness': 0.25},
+}
 
 
 # Geometric splits: some triangles of a merged material need a DIFFERENT
@@ -286,6 +334,15 @@ SPLIT_RULES = {
             'baseColorFactor': CARBON_DARK,
             'metallic': 0.3,
             'roughness': 0.35,
+        },
+    ],
+    WHEEL_MATERIAL: [
+        {
+            'prims': _WHEEL_RIM,
+            'name': 'WheelPaint_rim',
+            'baseColorFactor': WHEEL_BLACK,
+            'metallic': 0.1,
+            'roughness': 0.45,
         },
     ],
     'shFord_ShelbyGT350R_2016Coloured_Material1': [
@@ -437,14 +494,14 @@ def _run(text, tex_src, out_dir):
                 'transforms baked in. Body paint repainted gray with blue '
                 'stripes (Henok’s actual car) from the original flat-color '
                 'swatch. Rear wing and supports removed (1,428 triangles); '
-                'wheel atlas brightened toward gunmetal with a continuous '
-                'levels curve. Trim recolored, and the engine-bay atlas’s '
+                'the wheels’ GT350R faces replaced by the base 2015-2018 '
+                'GT350’s ten-spoke wheel, modeled from measurements. Trim '
+                'recolored, and the engine-bay atlas’s '
                 'yellow cells repainted dark; mirror caps and exhaust tips '
                 'split into separate finishes; the roof’s UVs re-mapped onto '
                 'the stripe bands the hood samples. Textures re-encoded to '
                 'WebP. Represents a 2017 Shelby GT350 (non-R), with remaining '
-                'GT350R body and wheel geometry retained as a cosmetic '
-                'approximation.'
+                'GT350R body geometry retained as a cosmetic approximation.'
             ),
         },
         'scenes': [{'nodes': []}],
@@ -527,6 +584,8 @@ def _run(text, tex_src, out_dir):
         info = materials.get(mat_name, {})
         positions, normals, uvs, indices = [], [], [], []
         offset = 0
+        # Each triangle's source prim, for the rules that go by prim.
+        tri_mesh = np.repeat(np.arange(len(group)), [len(m['indices']) // 3 for m in group])
         for m in group:
             world = m['world']
             R = world[:3, :3]
@@ -554,30 +613,42 @@ def _run(text, tex_src, out_dir):
         normals = np.vstack(normals)
         uvs = np.vstack(uvs)
         indices = np.concatenate(indices)
+        tri = indices.reshape(-1, 3)
+        drop = np.zeros(len(tri), dtype=bool)
         if predicate := DROP_RULES.get(mat_name):
-            tri = indices.reshape(-1, 3)
             centroids = positions[tri].mean(axis=1)
             drop = np.array([predicate(*c, 0, 0) for c in centroids])
             print(f'  dropped {drop.sum()} rear-wing tris from {mat_name}')
+        if mat_name == WHEEL_MATERIAL:
+            prim = np.array([_wheel_prim(m['name']) for m in group])[tri_mesh]
+            drop = np.isin(prim, list(_WHEEL_R_FACE))
+            print(f'  dropped {drop.sum()} GT350R wheel-face tris from {mat_name}')
+        if drop.any():
             used, indices = np.unique(tri[~drop].reshape(-1), return_inverse=True)
             positions, normals, uvs = positions[used], normals[used], uvs[used]
             indices = indices.astype(np.uint32)
+            tri_mesh = tri_mesh[~drop]
 
         # Applied in order: each rule only sees triangles the earlier rules
         # in this material's list didn't already claim.
         splits = []
         tri = indices.reshape(-1, 3)
         for split_rule in SPLIT_RULES.get(mat_name, []):
-            centroids = positions[tri].mean(axis=1)
-            tri_uv = uvs[tri].mean(axis=1)
-            match = np.array(
-                [
-                    split_rule['predicate'](c[0], c[1], c[2], u[0], u[1])
-                    for c, u in zip(centroids, tri_uv)
-                ]
-            )
+            if 'prims' in split_rule:
+                prim = np.array([_wheel_prim(m['name']) for m in group])[tri_mesh]
+                match = np.isin(prim, list(split_rule['prims']))
+            else:
+                centroids = positions[tri].mean(axis=1)
+                tri_uv = uvs[tri].mean(axis=1)
+                match = np.array(
+                    [
+                        split_rule['predicate'](c[0], c[1], c[2], u[0], u[1])
+                        for c, u in zip(centroids, tri_uv)
+                    ]
+                )
             split_tri = tri[match]
             tri = tri[~match]
+            tri_mesh = tri_mesh[~match]
             print(
                 f'  split {match.sum()} tris out of {mat_name} -> {split_rule["name"]}'
             )
@@ -616,7 +687,7 @@ def _run(text, tex_src, out_dir):
         nrm_accessor = attr(normals, 'VEC3')
         uv_accessor = attr(uvs, 'VEC2')
 
-        def emit_primitive(name, idx_array, pbr, normal_tex=None, alpha_blend=False):
+        def emit_primitive(name, idx_array, pbr, normal_tex=None, alpha_blend=False, attributes=None):
             nonlocal total_out_tris
             total_out_tris += len(idx_array) // 3
             material_entry = {'name': name, 'doubleSided': True, 'pbrMetallicRoughness': pbr}
@@ -630,7 +701,8 @@ def _run(text, tex_src, out_dir):
                     'name': name,
                     'primitives': [
                         {
-                            'attributes': {
+                            'attributes': attributes
+                            or {
                                 'POSITION': pos_accessor,
                                 'NORMAL': nrm_accessor,
                                 'TEXCOORD_0': uv_accessor,
@@ -652,7 +724,6 @@ def _run(text, tex_src, out_dir):
                 'shFord_ShelbyGT350R_2016PaintA_Material1': recolor_paint,
                 'shFord_ShelbyGT350R_2016Coloured_Material1': recolor_coloured,
                 'shFord_ShelbyGT350R_2016EngineA_Material1': recolor_engine,
-                'shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1': recolor_wheels,
             }.get(mat_name)
             gray_pack = None
             if info.get('roughnessTexture') and info.get('metallicTexture'):
@@ -683,6 +754,23 @@ def _run(text, tex_src, out_dir):
             }
             emit_primitive(split_rule['name'], split_indices, split_pbr)
             print(f'  {split_rule["name"]}: {len(split_indices)//3} tris (split from {mat_name})')
+
+        if mat_name == WHEEL_MATERIAL:
+            corners = _wheel_corners(group)
+            for finish, (face_pos, face_nrm, face_idx) in garage_wheel.build(corners).items():
+                rule = WHEEL_FINISHES[finish]
+                lin = srgb_to_linear(np.array(rule['baseColorFactor'], dtype=np.float64))
+                emit_primitive(
+                    rule['name'],
+                    face_idx,
+                    {
+                        'baseColorFactor': [*lin.tolist(), 1.0],
+                        'metallicFactor': rule['metallic'],
+                        'roughnessFactor': rule['roughness'],
+                    },
+                    attributes={'POSITION': attr(face_pos, 'VEC3'), 'NORMAL': attr(face_nrm, 'VEC3')},
+                )
+                print(f'  {rule["name"]}: {len(face_idx)//3} tris (built by garage_wheel.py, {len(corners)} corners)')
 
     while len(binary) % 4:
         binary.append(0)
