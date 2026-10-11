@@ -76,3 +76,8 @@ public/images/downshift-mockup-static.png
 # merged/recoloured public/models/garage-gt350r.glb is what ships. Supply
 # your own copy to reproduce scripts/prepare-garage-car.py.
 archive/models/2016-ford-mustang-shelby-gt350r.usdz
+
+# The Dolores Park scene's CC0 textures, sky, tree and car models (about
+# 130 MB, most of it the tree's 95 MB buffer): restored, checked against
+# their SHA-256, by `python3 scripts/dolores-park/fetch.py assets`.
+archive/scenery/dolores/assets/
