@@ -670,3 +670,13 @@ Source `e934706` (with `91de241` and `0800729`). Production version `6aa431b3-f8
 - This deploy also ships `0800729`: the car's grille and trunk badges in the base GT350's polished alloy instead of the GT350R's red.
 
 On the live site, the four `garage-dolores` images, `/models/garage-gt350r.glb`, its `/scene/93b9d6071745320f/` copy, both poster files and `/credits/garage` return 200 with the same SHA-256 as the committed files. At 1440 px and 390 px, the park image isn't requested before the switch is pressed. Once pressed, it is the topmost element over the viewer, and the drag hint and caption follow the view. The page logs no console errors.
+
+## Garage live at Dolores Park deployed
+
+Source `1f76507` (with `d6f5f0c` and `a24c9b9`). Production version `f09a687e-c2b9-44fb-be89-e00868582b30`; the bindings and the 15-minute schedule are unchanged.
+
+- The Garage section is now the live Dolores Park viewer (`lib/dolores-park-viewer.js`): the GT350 parked on 20th Street at the top of Mission Dolores Park, orbitable by drag, under the new `evening` sun (272° at 34°), which keeps the car out of the row's shadow. Zoom is off and vertical swipes scroll the page. The orbit stops either side of an 83° arc on the park side where a bench, a camera pull-in and a trunk spoiled the frame.
+- The scene isn't fetched until the section nears the viewport. Desktop downloads `dolores-park.glb` plus the six `dolores-sky-evening-*` faces (4,743,654 bytes); phones (`innerWidth < 800 || innerHeight < 500`) get `dolores-park-phone.glb` and the `-phone` faces (2,985,744). A poster rendered from the viewer's own default view (`public/images/garage-park*.{avif,jpg}`; 1920, 960 and a 1440 × 1080 one for the 4:3 frame) shows while it loads and crossfades away; reduced-motion visitors only get the poster.
+- The studio view, the Studio / Dolores Park switch, the offline still and their posters are removed. The section carries the OpenStreetMap attribution, and the credits page lists only the assets the live scene uses.
+
+On the live site, both park GLBs, `/models/garage-gt350r.glb` and the twelve evening faces under `/scene/b92c632e01464171/`, the six `garage-park` posters and `/credits/garage` return 200 with the same SHA-256 as the committed files. At 1440 px (DPR 2) the viewer is ready about 1.1 s after the section scrolls into view, nothing from the park is requested before that, the drag orbits and the wheel scrolls the page. At 390 px (DPR 3) it fetches the phone set and the phone poster, and a sideways swipe orbits. With reduced motion only the poster loads. The page logs no console errors in any of the three.
