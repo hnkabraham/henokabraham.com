@@ -205,7 +205,7 @@ def _wheel_corners(group):
 
 
 # The wheel's new parts, by garage_wheel.build's finish names. "Paint" in a
-# name gives it the body's clearcoat in the viewer (garage-scene.tsx).
+# name gives it the body's clearcoat in the viewer (lib/dolores-park-car.js).
 WHEEL_FINISHES = {
     'paint': {'name': 'WheelPaint_face', 'baseColorFactor': WHEEL_BLACK, 'metallic': 0.1, 'roughness': 0.45},
     'lug': {'name': 'LugNut_metal', 'baseColorFactor': LUG_METAL, 'metallic': 0.9, 'roughness': 0.25},

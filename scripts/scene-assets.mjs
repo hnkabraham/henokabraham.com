@@ -3,14 +3,31 @@ import { readFile, mkdir, cp, appendFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// The sun the Garage's Dolores Park viewer ships with (app/garage-park-scene.tsx)
+// picks which of the baked backdrop sets it fetches: winter has no infix in
+// the file names, any other sun has `-<name>`. check-garage.mjs keeps the
+// two in step.
+/** @type {string} */
+export const GARAGE_SUN = 'evening';
+const skyInfix = GARAGE_SUN === 'winter' ? '' : `-${GARAGE_SUN}`;
+const SKY_FACES = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
+
 // Everything the airborne tour and the Garage viewer fetch at runtime. The
 // earlier terrain experiment's tiles and scenery live under archive/,
-// outside public/, so a build neither copies nor lists them; only these six
-// files are versioned.
+// outside public/, so a build neither copies nor lists them; only these
+// files are versioned. The Garage's other baked suns stay in public/ for the
+// reference viewer (scripts/dolores-park/live.html) but aren't versioned.
 export const SCENE_FILES = [
   'models/dreamliner-787-9.glb',
   'models/dreamliner-787-9-phone.glb',
   'models/garage-gt350r.glb',
+  'models/dolores-park.glb',
+  'models/dolores-park-phone.glb',
+  ...['', '-phone'].flatMap((profile) =>
+    SKY_FACES.map(
+      (face) => `scenery/dolores-sky${skyInfix}${profile}-${face}.webp`,
+    ),
+  ),
   'scenery/daylight.hdr',
   'draco/draco_wasm_wrapper.js',
   'draco/draco_decoder.wasm',

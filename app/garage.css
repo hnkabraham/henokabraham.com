@@ -9,16 +9,10 @@
   aspect-ratio: 16 / 10;
   border-radius: 8px;
   overflow: hidden;
-  /* A dark studio floor rather than the site's usual light ground: the
-     WebGL canvas clears to transparent, so this shows straight through
-     behind the car once it loads, matching the poster underneath it. */
-  background: radial-gradient(
-    ellipse at 50% 60%,
-    #363b46 0%,
-    #2b2f38 65%,
-    #22252c 100%
-  );
-  border: 1px solid #1c1f25;
+  /* The scene's sky and road, roughly, so the frame doesn't flash dark or
+     white before the poster decodes; the canvas itself is opaque. */
+  background: linear-gradient(#a9cdf0 0%, #d7e6ee 55%, #5b5f63 100%);
+  border: 1px solid #c9d6dc;
   cursor: grab;
 }
 .garage-viewer-frame:active {
@@ -51,29 +45,6 @@
 .garage-viewer-frame:not([data-status='ready']) .garage-canvas {
   pointer-events: none;
 }
-/* The Dolores Park still sits above the poster and the canvas in every
-   status, and takes the pointer so a drag over it never turns the hidden
-   studio car. */
-.garage-park {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-.garage-park[hidden] {
-  display: none;
-}
-.garage-park img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.garage-viewer-frame[data-view='park'] {
-  cursor: default;
-}
-.garage-viewer-frame[data-view='park'] .garage-canvas {
-  pointer-events: none;
-}
 .garage-details {
   padding-top: 6px;
 }
@@ -89,40 +60,6 @@
   color: #606c73;
   margin: 0 0 16px;
 }
-.garage-view {
-  display: inline-flex;
-  margin: 6px 0 14px;
-  padding: 3px;
-  border: 1px solid #c9d6dc;
-  border-radius: 6px;
-  background: #f4f8fa;
-}
-.garage-view button {
-  border: 0;
-  border-radius: 4px;
-  padding: 8px 12px;
-  background: transparent;
-  color: #4c6570;
-  font: inherit;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    background 0.2s,
-    color 0.2s;
-}
-.garage-view button:hover {
-  color: #1b3747;
-}
-.garage-view button[aria-pressed='true'] {
-  background: #1b3747;
-  color: #f4f8fa;
-}
-.garage-view button:focus-visible {
-  outline: 2px solid #1b3747;
-  outline-offset: 2px;
-}
 .garage-credits {
   display: table;
   font-size: 0.8125rem;
@@ -133,6 +70,19 @@
 .garage-credits:hover {
   color: #1b3747;
   border-color: #1b374799;
+}
+/* The scene's streets and footprints come from OpenStreetMap (ODbL), which
+   asks for attribution where the work is shown, not only on a credits page. */
+.garage-attribution {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: #6b7a81;
+}
+.garage-attribution a {
+  color: inherit;
+}
+.garage-attribution a:hover {
+  color: #1b3747;
 }
 @media (max-width: 1100px) {
   .garage-layout {
