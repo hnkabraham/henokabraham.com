@@ -14,8 +14,9 @@ from about 29 mm at the root to 21 mm at the lip, and the lug nuts sit at
 the middle of alternate openings. The photo was only measured; nothing from
 it is in the model. Depths come from the source's own wheel, so the new
 face fits the tire, barrel, lip and brake it already has: the hub face sits
-about 60 mm behind the lip's outer face, and the spokes rise to the lip's
-inner wall, 13 mm behind it.
+about 60 mm behind the lip's outer face. The spokes' faces are flat, in
+the plane of the lip's inner wall 13 mm behind it, and curve down into the
+hub only over their last few centimetres.
 
 `build` returns one mesh per finish for all four corners, each placed from
 that corner's own measured axle centre and lip plane; the left side is a
@@ -42,16 +43,20 @@ LUG_CIRCLE = 0.1143 / 2
 LUG_RADIUS = 0.0105
 LUG_HEIGHT = 0.019
 # Front-face depths: the hub dishes from its bore up to a raised rim that
-# meets the spoke roots, and the spokes rise to the lip, steepest at the
-# hub as the photos' concave face is.
+# meets the spoke roots. The spokes are flat and parallel to the rotor out
+# to the lip, and curve down into the hub inside SPOKE_BEND, steepest at
+# the hub.
 HUB_PROFILE = ([BORE_RADIUS, 0.075, HUB_RADIUS], [-0.062, -0.059, -0.050])
-SPOKE_FRONT = (-0.050, -0.013)  # at the hub and at the tip
+SPOKE_FRONT = (-0.050, -0.013)  # at the hub, and across the flat
+SPOKE_BEND = 0.145
 HUB_BACK = -0.085
 
 
 def _spoke_front(r):
-    s = np.clip((r - HUB_RADIUS) / (SPOKE_TIP - HUB_RADIUS), 0, 1)
-    a = SPOKE_FRONT[0] + (SPOKE_FRONT[1] - SPOKE_FRONT[0]) * (1 - (1 - s) ** 1.7)
+    # A parabola that leaves the hub's rim steeply and meets the flat
+    # without a crease.
+    t = np.clip((r - HUB_RADIUS) / (SPOKE_BEND - HUB_RADIUS), 0, 1)
+    a = SPOKE_FRONT[1] - (SPOKE_FRONT[1] - SPOKE_FRONT[0]) * (1 - t) ** 2
     # Inside the hub the root dips below the hub's face, so the two
     # surfaces cross along the hub's edge rather than overlapping.
     return a - np.clip(HUB_RADIUS - r, 0, None) * 0.7
@@ -125,7 +130,8 @@ def _spoke(mesh, centre):
         [
             [HUB_RADIUS - 0.006, HUB_RADIUS - 0.002],
             HUB_RADIUS + ROOT_FILLET * (1 - np.cos(np.linspace(0, np.pi / 2, 6))),
-            np.linspace(HUB_RADIUS + ROOT_FILLET, SPOKE_TIP - TIP_FILLET, 9)[1:],
+            np.linspace(HUB_RADIUS + ROOT_FILLET, SPOKE_BEND, 6)[1:],
+            np.linspace(SPOKE_BEND, SPOKE_TIP - TIP_FILLET, 5)[1:],
             SPOKE_TIP - TIP_FILLET * np.cos(np.linspace(0, np.pi / 2, 4))[1:],
         ]
     )
