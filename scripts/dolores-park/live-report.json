@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-11T20:14:49.789Z",
+  "date": "2026-10-11T21:37:56.291Z",
   "variants": {
     "desktop-day": {
       "startupFrame": {
@@ -331,10 +331,10 @@
       "glbBytes": 4122596,
       "backdropBytes": 663500,
       "downloadBytes": 4786096,
-      "loadTimeMs": 702.0999999940395,
+      "loadTimeMs": 436.40000000596046,
       "shadowMap": 2048,
       "patchedMaterials": 7,
-      "frameTimeMs": 3.1000000089406967,
+      "frameTimeMs": 2.600000023841858,
       "pixelRatio": 2,
       "viewport": [
         950,
@@ -784,10 +784,10 @@
       "glbBytes": 4122596,
       "backdropBytes": 461902,
       "downloadBytes": 4584498,
-      "loadTimeMs": 787.9000000059605,
+      "loadTimeMs": 414,
       "shadowMap": 2048,
       "patchedMaterials": 7,
-      "frameTimeMs": 3.8999999910593033,
+      "frameTimeMs": 3.4000000059604645,
       "pixelRatio": 2,
       "viewport": [
         950,
@@ -1237,10 +1237,10 @@
       "glbBytes": 2779264,
       "backdropBytes": 197740,
       "downloadBytes": 2977004,
-      "loadTimeMs": 727.7000000029802,
+      "loadTimeMs": 357,
       "shadowMap": 1024,
       "patchedMaterials": 7,
-      "frameTimeMs": 2.9000000059604645,
+      "frameTimeMs": 2.2000000178813934,
       "pixelRatio": 2,
       "viewport": [
         390,
@@ -1690,10 +1690,10 @@
       "glbBytes": 2779264,
       "backdropBytes": 144022,
       "downloadBytes": 2923286,
-      "loadTimeMs": 653.5,
+      "loadTimeMs": 372,
       "shadowMap": 1024,
       "patchedMaterials": 7,
-      "frameTimeMs": 3.1000000089406967,
+      "frameTimeMs": 2.0999999940395355,
       "pixelRatio": 2,
       "viewport": [
         390,

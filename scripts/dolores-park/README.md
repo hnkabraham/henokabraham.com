@@ -309,6 +309,25 @@ With a steady scroll from the top at 30 Mbps, the frame was ready 0.7 s before i
 
 Jumping to the Garage from the header still waits on the tour, about 0.6 s on the jump, before the viewer starts.
 
+## Look pass (added after the load-time work)
+
+A review with Codex Astra (gpt-6-astra) found four runtime changes that improve the frame at no measurable cost. All their values are in `LOOK` at the top of `lib/dolores-park-viewer.js`.
+
+- **The car's reflections.** The reflection probe had been capturing the sky in the lighting-only mode: desaturated to 0.1 by day, brightened and clipped at 1. That gave the paint a flat, matte look. The probe now has its own `mode` 2, in linear light, at saturation 0.35 by day and 0.7 at night, with gain 1.5 by day and 1.25 at night. Highlights roll off smoothly towards a luminance of 4 instead of clipping. The lighting-only cube and the visible sky are unchanged.
+- **Body paint.** Roughness 0.33, clearcoat 0.75 and clearcoat roughness 0.15, against 0.45, 0.35 and 0.25 before. Metalness stays at 0.1. `WheelPaint_*`, which the paint test also matches, keeps the old values.
+- **Window glass.** Roughness is now 0.27 instead of 0.42, and specular intensity 0.8 instead of 0.2. The blue baked into the glass's vertex colours is cut to 8% saturation at 85% brightness, so the panes read as dark glass rather than navy paint.
+- **Lantern glow.** The glow is now a tight core (power 90, gain 1.8) with a faint halo (power 6, gain 0.1). It no longer washes a white haze over the nearest facade. It's still one draw.
+
+Program counts are unchanged at 56 by day and 58 at night. The night glow's probe variant is now among the shaders compiled ahead of the first frame. `verify-live.mjs` reports the same downloads, triangles, draw calls and texture memory as before. Median frames are 2.6 and 3.4 ms on desktop by day and by night, and 2.2 and 2.1 ms on the phone profile.
+
+Tried and left out:
+
+- **Screen-space AO (three's GTAOPass).** It took a frame from 2.6–3.5 ms to 7.0–7.5 ms at 1900 × 1188 for a faint effect. It drew the leaf cards as rectangles, and through `OutputPass` it tone-mapped the sky, which is authored without tone mapping.
+- **Neutral and AgX tone mapping.** Neutral is crisper by day. At dusk and night it turns the foliage green and the road blue-purple, and every key frame's exposure would need retuning. AgX washes the frame out.
+- **Street-tree crown normals and a lower leaf cutoff.** These made the crowns milky and grey-green.
+
+Still open, in the review's order: a desktop-only baked ambient-occlusion pass for the houses at export, to give the shaded north-facing fronts their depth; rebaking the night far field with windows lit in coherent groups, not scattered pixels; and procedural variation for the near lawn.
+
 ## Pass 5: orbitable web profile (historical)
 
 The following records Pass 5's original output and measurements. Pass 6 above supersedes its default sun, backdrop sizes, material settings, budgets and poster instructions.
