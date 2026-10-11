@@ -6,18 +6,14 @@ for the site's Garage section.
 The source USDZ (2016 Ford Mustang Shelby GT350R by Ddiaz Design, Sketchfab,
 CC BY-NC-SA 4.0) is not committed to this repository -- supply your own copy
 to reproduce (see .gitignore). Its 550 separate mesh prims are merged into
-one primitive per material; the body paint's flat-color swatch is repainted
-from its default scheme to gray-with-blue-stripes; two small trim regions in
-a second flat-color swatch (the front splitter/rocker skirts/rear wing, and
-a stray washer-nozzle wire that rendered as a bright sliver) which rendered
-plain white/gold in the source model are repainted carbon-dark; the
-engine-bay atlas's yellow label squares, which the cowl panel and the parts
-showing through the hood's shut lines sample, are repainted its dark field;
-the mirror caps and exhaust tips, which share UV space with parts that must
-stay a different color, are split out into their own materials rather than
-recolored in place, and the roof, whose UVs barely cross the swatch's
-stripe bands, gets new ones that cross them as the hood's do (see the
-module-level comments below for how each region was identified). The rear
+one primitive per material, with V turned over from USD's bottom-left
+texture origin to glTF's top-left; the body paint's flat-color swatch is
+repainted from its default scheme to gray-with-blue-stripes; the mirror caps
+and exhaust tips, which share UV space with parts that must stay a different
+color, are split out into their own materials rather than recolored in
+place, and the roof, whose UVs barely cross the swatch's stripe bands, gets
+new ones that cross them as the hood's do (see the module-level comments
+below for how each region was identified). The rear
 wing is removed, and the wheels' GT350R faces give way to the base car's
 ten-spoke wheel, built in garage_wheel.py; the remaining R-trim body
 geometry is an approximation of the non-R car. This derivative remains
@@ -78,8 +74,8 @@ LICENSE = 'CC-BY-NC-SA-4.0'
 # avoid sky reflections and direct-sun specular blowout on the glossy paint.
 BODY_GRAY = (0x5F, 0x65, 0x6B)
 STRIPE_BLUE = (0x09, 0x2E, 0x70)
-# Matte carbon-composite aero trim (splitter/rockers/wing) and mirror caps --
-# both read as a neutral near-black in the photos.
+# The mirror caps and the stripes' pinstripe -- a neutral near-black in the
+# photos.
 CARBON_DARK = (0x1A, 0x1A, 0x1C)
 # Satin/chrome-ish metal exhaust tips -- kept apart from CARBON_DARK on
 # purpose, real tips are metallic light gray, not black.
@@ -101,38 +97,6 @@ PAINT_TARGETS = {
     # swatch's thin red edge line dark instead of folding it into the stripe.
     'red_edge': CARBON_DARK,
 }
-# The "Coloured" atlas is a small flat-color-cell swatch too (verified by
-# sampling every pixel it's actually UV-sampled at: only 3 colors are ever
-# used). Its big light-gray cell (183,183,183) is what the front splitter,
-# rocker/side skirts and rear wing sample -- rendering plain white/light
-# instead of the real car's black carbon-look aero pieces. A second, much
-# smaller gold/brown cell (112,88,40) turned out to be a thin washer-nozzle
-# wire on the hood that read as a stray bright sliver in the render; same
-# fix. A third, dark-navy cell (11,17,31) is already correctly dark (window
-# seals) and is left alone.
-COLOURED_REFS = {
-    'light_gray': (183, 183, 183),
-    'gold_brown': (112, 88, 40),
-}
-COLOURED_TARGETS = {'light_gray': CARBON_DARK, 'gold_brown': CARBON_DARK}
-COLOURED_MATCH_DIST = 30  # only remap pixels close to a known ref; leave the rest (e.g. the dark-navy seal cell) untouched
-
-# The engine-bay mesh (one 13,625-triangle prim) also forms the cowl panel at
-# the base of the windshield and whatever shows through the hood's shut lines,
-# and those read as yellow: a line along the hood's leading edge, a sliver by
-# the headlight, a patch on the front wheel-arch lip and a spot at the
-# windshield's corner. Found by drawing every primitive in a flat id color
-# from the viewer's camera (the yellow pixels were all this material), then
-# its triangles by index over 720 orbit views across the viewer's whole
-# range: 1,340 of them are ever visible, and 98.8% of their pixels sample the
-# atlas's yellow label squares -- read with V from the top, as glTF does;
-# from the bottom, USD's own origin, the same triangles land wholly in the
-# atlas's dark field. Its yellow cells are repainted that dark field rather
-# than flipping one material's V, since every other atlas here has been
-# matched by eye as converted. Yellow = red and green close together and
-# well above blue; that leaves the atlas's red text, orange tab and beige
-# oval alone, and catches most of the JPEG fringe around each square.
-ENGINE_DARK_FIELD = (38, 38, 38)  # the atlas's own background, sampled
 
 
 def recolor_paint(path):
@@ -146,33 +110,6 @@ def recolor_paint(path):
     nearest = np.argmin(dists, axis=1)
     out = targets[nearest].reshape(arr.shape).astype(np.uint8)
     return Image.fromarray(out, 'RGB')
-
-
-def recolor_coloured(path):
-    """Unlike recolor_paint (every pixel reassigned to its nearest of a few
-    references), this only remaps pixels that are CLOSE to a known ref cell
-    and leaves everything else (other legitimate trim colors in this atlas)
-    exactly as authored."""
-    im = Image.open(path).convert('RGB')
-    arr = np.array(im).astype(np.float64)
-    out = arr.copy()
-    flat = arr.reshape(-1, 3)
-    out_flat = out.reshape(-1, 3)
-    for name, ref in COLOURED_REFS.items():
-        dist = np.linalg.norm(flat - np.array(ref, dtype=np.float64), axis=1)
-        mask = dist < COLOURED_MATCH_DIST
-        out_flat[mask] = COLOURED_TARGETS[name]
-    return Image.fromarray(out.astype(np.uint8), 'RGB')
-
-
-def recolor_engine(path):
-    im = Image.open(path).convert('RGB')
-    arr = np.array(im).astype(np.float64)
-    r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
-    chroma = (r + g) / 2 - b
-    yellow = (chroma > 40) & (np.abs(r - g) < chroma * 0.5 + 20)
-    arr[yellow] = ENGINE_DARK_FIELD
-    return Image.fromarray(arr.astype(np.uint8), 'RGB')
 
 
 # The Coloured prim also contains unrelated trim. This box matches only
@@ -291,18 +228,19 @@ def _is_exhaust_tip(cx, cy, cz, u, v):
 # artist's own UV layout for this one panel barely crosses the swatch's
 # bands. The swatch is horizontal bands (gray, dark pinstripe, stripe, gray
 # gap, stripe, pinstripe, gray), and the hood and trunk run v across them at
-# about 1.28 per metre of world X, while the roof's v moves 0.04 per metre,
-# so the whole roof samples the stripe cell. Recoloring the texture can't fix
-# a per-panel UV choice, so the roof's v is rewritten from world X at the
-# hood's and trunk's own rate instead: the same texture, finish, gap and
-# pinstripe, in the same place. The rate was read off the swatch and the hood
-# and trunk, sampled at their UVs and bucketed by world X: the gap's edges
-# (rows 122 and 134 of 256) fall at x = +/-18 mm and the stripe's outer edge
-# (row 187) at +/-180 mm on both, either side of v = 0.5, the swatch's centre.
-# Past |x| = 0.3 m v is held, in the gray rows; no roof triangle that reaches
-# the stripes spans past |x| = 0.264 m, so each of those stays exactly
-# linear. An earlier version split the roof into flat-color stripe and gray
-# materials, which drew the stripes too narrow and without the pinstripe.
+# about 1.28 per metre of world X (falling as x rises), while the roof's v
+# moves 0.04 per metre, so the whole roof samples the stripe cell. Recoloring
+# the texture can't fix a per-panel UV choice, so the roof's v is rewritten
+# from world X at the hood's and trunk's own rate instead: the same texture,
+# finish, gap and pinstripe, in the same place. The rate was read off the
+# swatch and the hood and trunk, sampled at their UVs and bucketed by world
+# X: the gap's edges (rows 122 and 134 of 256) fall at x = +/-18 mm and the
+# stripe's outer edge (row 187) at +/-180 mm on both, either side of v = 0.5,
+# the swatch's centre. Past |x| = 0.3 m v is held, in the gray rows; no roof
+# triangle that reaches the stripes spans past |x| = 0.264 m, so each of
+# those stays exactly linear. An earlier version split the roof into
+# flat-color stripe and gray materials, which drew the stripes too narrow and
+# without the pinstripe.
 _ROOF_Y_MIN = 1.15
 _ROOF_Z_RANGE = (-1.15, 0.35)
 _ROOF_X_MAX = 0.75
@@ -491,13 +429,13 @@ def _run(text, tex_src, out_dir):
             'license': LICENSE,
             'modifications': (
                 'Merged 550 mesh prims into one primitive per material, world '
-                'transforms baked in. Body paint repainted gray with blue '
+                'transforms baked in, texture V turned over from USD’s origin '
+                'to glTF’s. Body paint repainted gray with blue '
                 'stripes (Henok’s actual car) from the original flat-color '
                 'swatch. Rear wing and supports removed (1,428 triangles); '
                 'the wheels’ GT350R faces replaced by the base 2015-2018 '
-                'GT350’s ten-spoke wheel, modeled from measurements. Trim '
-                'recolored, and the engine-bay atlas’s '
-                'yellow cells repainted dark; mirror caps and exhaust tips '
+                'GT350’s ten-spoke wheel, modeled from measurements. Mirror '
+                'caps and exhaust tips '
                 'split into separate finishes; the roof’s UVs re-mapped onto '
                 'the stripe bands the hood samples. Textures re-encoded to '
                 'WebP. Represents a 2017 Shelby GT350 (non-R), with remaining '
@@ -547,7 +485,7 @@ def _run(text, tex_src, out_dir):
         a second grayscale texture path to pack into the blue channel
         (metallic) while image_relpath becomes green (roughness) -- glTF
         metallicRoughness convention. recolor_fn, if given, is applied to the
-        source image before WebP encoding (recolor_paint or recolor_coloured)."""
+        source image before WebP encoding (recolor_paint)."""
         key = (image_relpath, recolor_fn, gray_pack)
         if key in texture_cache:
             return texture_cache[key]
@@ -601,7 +539,11 @@ def _run(text, tex_src, out_dir):
             else:
                 normals.append(np.zeros_like(world_pts))
             if m['uvs'] is not None:
-                uvs.append(m['uvs'])
+                # USD's st origin is the image's bottom-left corner, glTF's
+                # its top-left, so V turns over on the way across.
+                uv = m['uvs'].copy()
+                uv[:, 1] = 1 - uv[:, 1]
+                uvs.append(uv)
             else:
                 uvs.append(np.zeros((len(world_pts), 2)))
             idx = m['indices'].copy()
@@ -667,7 +609,7 @@ def _run(text, tex_src, out_dir):
                 tri[roof_mask].reshape(-1), return_inverse=True
             )
             roof_uvs = uvs[roof_vertices].copy()
-            roof_uvs[:, 1] = 0.5 + _ROOF_V_PER_METRE * np.clip(
+            roof_uvs[:, 1] = 0.5 - _ROOF_V_PER_METRE * np.clip(
                 positions[roof_vertices, 0],
                 -_ROOF_V_HELD_BEYOND,
                 _ROOF_V_HELD_BEYOND,
@@ -722,8 +664,6 @@ def _run(text, tex_src, out_dir):
         if info.get('baseColorTexture'):
             recolor_fn = {
                 'shFord_ShelbyGT350R_2016PaintA_Material1': recolor_paint,
-                'shFord_ShelbyGT350R_2016Coloured_Material1': recolor_coloured,
-                'shFord_ShelbyGT350R_2016EngineA_Material1': recolor_engine,
             }.get(mat_name)
             gray_pack = None
             if info.get('roughnessTexture') and info.get('metallicTexture'):
