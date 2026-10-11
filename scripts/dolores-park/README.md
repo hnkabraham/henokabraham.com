@@ -6,7 +6,7 @@ It's a reconstruction: real terrain, footprints, tree positions and city massing
 
 ## Files
 
-- `scene.html`: the scene, camera presets, lighting, materials, reflection probes and post-processing. Its URL parameters are documented below.
+- `scene.html` / `scene.js`: the shared scene builder, camera presets, lighting, reflection probes and offline post-processing. Its URL parameters are documented below.
 - `houses.js`: the 18 original painted Victorians, sidewalk trees, lamps and shared garage/curb-cut layout. Returns a standalone three.js group and its resource report.
 - `detail.js`: the foreground tree, verge grass and leaf litter, plus a rusty-tree experiment that's off by default.
 - `palms.js`: Canary Island date palms and Mexican fan palms.
@@ -164,9 +164,128 @@ The row was developed over 29 render-and-look iterations, including close facade
 - **Downtown:** it's simplified blocks.
 - **Mission rooftops:** they lack a photograph's variety in the middle distance.
 - **Victorians:** the kit still repeats doors, windows and ornament. Weathering is restrained; side walls and roof surfaces are simpler than the fronts. Interiors are shallow curtain/blind hints, not rooms. The street-tree leaf cards become visible very close up.
-- **The scene's size:** it's far too heavy to run live on a phone. It has about 24 M scene triangles, an 8192² shadow map, two reflection captures and full-resolution post-processing.
-- **A live version would need:**
-  - the background baked into layers for a fixed camera, with only the car interactive;
-  - level-of-detail meshes for the vegetation;
-  - compressed textures;
-  - baked shadows and reflections.
+- **The offline scene's size:** about 24 M scene triangles, an 8192² shadow map, two reflection captures and full-resolution post-processing. Use the web profile below for an orbitable scene.
+
+
+## Pass 5: orbitable web profile
+
+The web scene is built by the same `scene.js`, `detail.js`, `palms.js` and `houses.js` as the still. `profile=live` selects its geometry budgets. No site React code, deployed poster, car asset, package manifest, or deployment was changed.
+
+### Build, view, capture and verify
+
+```sh
+python3 scripts/dolores-park/fetch.py assets
+node scripts/dolores-park/export.mjs
+node scripts/dolores-park/server.mjs
+# Open the localhost URL printed by server.mjs.
+node scripts/dolores-park/verify-live.mjs
+npx oxlint scripts/dolores-park lib/dolores-park-materials.js
+npx oxfmt scripts/dolores-park/*.js scripts/dolores-park/*.mjs lib/dolores-park-materials.js
+```
+
+`export.mjs` uses local-only headless Metal Chromium and the existing gltf-transform, Draco, meshoptimizer and Sharp packages. It builds each profile, performs a raw GLTFExporter → GLTFLoader round trip, welds/compacts/simplifies geometry, preserves distinct material names, and writes Draco geometry plus `EXT_texture_webp`. No KTX2/transcoder is used. Export temporarily consumes substantially more CPU memory than the delivered model. Binary transfer to Node is chunked; sending the full raw GLB as a numeric Playwright array exceeds Chromium's serialization limit.
+
+Delivery files:
+
+- `public/models/dolores-park.glb` and `dolores-park-phone.glb`. These are lighting-independent; both suns reuse them.
+- Six `public/scenery/dolores-sky-{px,nx,py,ny,pz,nz}.webp` faces, 1536² desktop; `dolores-sky-phone-*`, 768² phone.
+- Separate `dolores-sky-summer-*` and `dolores-sky-summer-phone-*` faces for the alternative sun. A viewer downloads **one** set of six.
+- `lib/dolores-park-materials.js` and `.d.ts`: the shared material registry.
+- `live.html` / `live.js`: reference viewer; `car.js`: identical shared paint conversion, wheelbase slope, lift and contact-shadow construction; `lighting.js`: the two shared sun parameter sets.
+- `export-report.json`: source and round-trip geometry census. `live-report.json`: measured delivery budgets, GPU identity, collision checks and idle/disposal results.
+
+Example captures (set `OUT` to an absolute directory **outside** the repository):
+
+```sh
+node scripts/dolores-park/render.mjs "$OUT/default.png" page=live w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/phone.png" page=live phone=1 w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/summer.png" page=live sun=summer w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/behind.png" page=live pose=20,-151,1.5,13.3,-154.63,0.6 w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/verge.png" page=live pose=13.3,-149.2,1.4,13.3,-154.63,0.6 fov=64 w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/high.png" page=live pose=8.4,-159.1,5.2,13.3,-154.63,0.6 w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/benchmark.png" page=live benchmark=1 dpr=2 w=1600 h=1000
+```
+
+`render.mjs page=live` adds `shot=1`. Direct URLs support `?phone=1`, `?sun=summer` (also `?preset=victorians`), `?pose=x,y,h,lookx,looky,lookh`, `?fov=52`, `?shot=1`, and `?benchmark=1`. Camera height is above the local surface; look height is above the car's road elevation. Safety constraints still apply to supplied poses. `preset=victorians` in the **viewer** changes only the sun, keeping the default camera; the builder retains its historical preset camera.
+
+`window.png` is a PNG data URL and `window.done` signals completion. `window.liveInfo` includes counts, texture allocations, payload bytes, load time, sun and placement. `frameTimeMs` is populated by `?benchmark=1` or `await window.doloresViewer.benchmark()`; ordinary visits do not run a hidden benchmark. The viewer stops rendering after controls settle. The benchmark restores the original pose.
+
+### Measured budgets
+
+Final verification on this Mac's **Apple M2 Max**, Chromium / ANGLE Metal, 1600 × 1000 CSS pixels at DPR 2 (3200 × 2000 drawing buffer). Decimal MB, not MiB. Frame timing uses 24 warmup frames and the median of 120 scripted orbit frames, including synchronous one-pixel readback to wait for GPU completion. Metal did not expose the disjoint GPU timer extension; timing only `renderer.render()` understated the cost and is not the reported metric.
+
+| Resource, winter default pose | Desktop | Limit | Phone | Limit |
+|---|---:|---:|---:|---:|
+| Park GLB + selected backdrop, excluding car | 4.118 MB | 6 MB | 2.966 MB | 3 MB |
+| Triangles in a settled visible frame, including car | 802,238 | 900,000 | 392,771 | 400,000 |
+| Draw calls in a settled visible frame | 60 | 120 | 57 | 60 |
+| Estimated resident GPU texture memory | 143.70 MB | 160 MB | 60.15 MB | 64 MB |
+| Shadow map | 2048² | 2048² | 1024² | 1024² |
+| Median completed frame time | 3.5 ms | 8 ms | 3.4 ms | — |
+| Maximum draw calls in the 120-frame orbit | 62 | 120 | 59 | 60 |
+| Local load through first frame, final run | 867 ms | — | 753 ms | — |
+
+These are **settled-frame** budgets: the static sun shadow map and reflection probes are generated once during loading, then cached during the orbit. The initial shadow-plus-colour submission was 2,062,340 triangles / 111 calls desktop and 1,229,812 / 105 phone; six-face reflection capture is additional one-time work. Those startup passes exceed the steady-frame triangle limits and phone call limit. Do not refresh them every frame in the React port. Other orbit poses can draw more houses; the requested triangle limits were measured at the default pose (phone reaches 489,848 triangles during the scripted orbit). Local loading is not a simulated mobile network measurement. Completed desktop frame medians varied from 3.5 to 5.8 ms across validation runs.
+
+Texture memory is a conservative allocation estimate, not a GPU-driver VRAM counter. It includes decoded RGBA8 maps and mip chains, the separate car, six background faces, both retained RGBA16F PMREMs, and shadow colour/depth storage. It excludes canvas colour/depth/MSAA attachments and CPU image buffers. Temporary cube and PMREM working targets are disposed after load. WebP reduces download bytes, not GPU texture size.
+
+### What remains 3D; what is baked
+
+The split is **180 m horizontally from the car**, with crossing canopy bounds retained in geometry. Individual triangles and instance transforms are classified in world space; the origin of a merged city mesh is never used as its location. The nearby block terrain/lawn, road, gutter, pavement, benches, hero trunks, palms, generic trees, lamps and all 18 houses remain geometry. Static surfaces are merged by material; house surfaces are exported as 20 m material cells so their loose bounds do not force the entire row to draw while looking into the park. The viewer combines visible facade cells into one index buffer per material, updating only when visibility changes; transparent runoff cells keep back-to-front ordering. This retains fine culling while keeping the phone under 60 calls throughout the measured orbit. Tight box culling supplements Three's sphere culling.
+
+The far park, Mission rooftops, downtown, hills and sky are baked into cubemap faces captured at `(13.3, roadZ + 1.5, 154.63)` with the near field and car hidden. The backdrop is only the background. At the maximum 9 m orbit, the nominal boundary parallax error is about 9/180 = .05 radians (2.9°); there is still a small far-field seam/registration tradeoff. Moving the car or widening the orbit requires re-exporting, not just changing the camera.
+
+Car/window reflections are captured once from the loaded near geometry plus the backdrop, with the car hidden, then filtered with PMREM. The lighting-only 128² desktop / 64² phone sky cube uses 25% saturation and 130% brightness to approximate the original pale HDRI fill; the visible backdrop is unchanged. This is an artistic LDR approximation, not the original HDR environment. Contact shadows stay live quads and are merged into one draw with per-vertex alpha. Paint conversion and the exact `1.36 m` half-wheelbase slope / `21.5 mm` lift come from shared `car.js`.
+
+Live-profile reductions:
+
+- All six 1.94 M-triangle Tree Small 02 copies are replaced by the existing original procedural canopy/trunk system. No new asset download or decimated third-party mesh is required.
+- Hero branches retain their original curves but use 5/10 radial segments and 40% desktop / 24% phone longitudinal tessellation. Leaf count is 30% / 10%, with 6 / 3 longitudinal leaf segments instead of 9; slightly larger leaves retain crown coverage.
+- Desktop canopy cards use 105–168 per crown, versus 145–238 offline. Phone uses one 28-card crown shape with per-tree colour, rotation and aspect variation, and four-sided trunks. Boundary membership varies slightly with each profile's crown bounds.
+- Grass: 9,000 / 3,500 blades instead of 55,000. Phoenix palms: 64 / 40 live fronds instead of 108, 8 / 5 curve segments instead of 20, ten dead fronds instead of 22. Fan palms use 24 fronds instead of 38.
+- Draco: 16-bit positions, 10-bit normals, 12-bit UVs. Meshoptimizer simplification uses ratios .8 / .4 and errors .0004 / .0015 with borders locked; topology can prevent reaching the requested ratio. Architectural ornament remains intact rather than forcing destructive simplification.
+- Most park maps are 512 px maximum. Desktop asphalt and bark diffuse maps retain 1024 px. Original small house textures stay small. No distant traffic, legacy shadow-footprint proxies, GTAO, bloom or grain.
+
+### Shader portability and the missing canopies
+
+All six original `onBeforeCompile` snippets were moved verbatim into the registry: terrain detail, asphalt/wear, bark desaturation, hero-leaf translucency, palm translucency and dead palm colour. The gutter has its own named registry entry using the asphalt patch. Material names and `customProgramCacheKey` identify programs. The terrain's otherwise-black emissive map channel transports its custom detail sampler through glTF. The houses already use ordinary PBR maps/vertex colours and need no patch or shader fallback.
+
+The previous experiment's comparison was asymmetric: its "before" kept the original **entire** instance batches whenever any near instances existed, while "after" contained only instances within 70 m. Far crowns therefore disappeared only in the second frame. This was primarily subset selection, not alpha or a missing canopy shader. The generic canopy material has no shader patch. The new exporter compares the exact same subset; all four desktop batches and the single intentional phone batch retain their instance and instance-colour counts through GLTFExporter/GLTFLoader. See `export-report.json`.
+
+Offline regressions were captured before/after moving the registry and car code. Hero RGB mean absolute differences were about .18–.21 / 255, streetview .24–.38 / 255, within the existing nondeterminism noted above. The visual development included 28 rendered and inspected iterations, including both suns, the phone variant, and camera/LOD/batching changes. Explicit context-loss/restoration testing recreated one working canvas without errors; idle rendering, input, disposal and collision checks also passed.
+
+### One sun and orbit constraints
+
+| Parameter | Winter (default) | Summer (`sun=summer`) |
+|---|---:|---:|
+| Azimuth / elevation | 225° / 28° | 290° / 10° |
+| Colour / intensity | `#fff0d8` / 6 | `#ffe2b7` / 5 |
+| Exposure | 1.2 | 1.05 |
+| Environment / hemisphere | .45 / .32 | .65 / .55 |
+
+The sun never changes with the camera. Both candidates use the **same** live geometry, including the hero tree and benches; unlike the offline victorians preset, summer does not clear vegetation to light the car. New houses cast their real shadows. Winter shades most of the car; summer lights the facades better but retains foliage shadows. The softer skyline, simplified scanned-tree replacements, brighter/coarser fronds, lower-resolution shadows, LDR reflections, and missing screen-space AO remain visible differences from the still. This is an interactive reconstruction, not a pixel-identical recreation of the 24 M-triangle offline frame.
+
+OrbitControls: no pan, damping .09, 4–9 m distance, polar angle .35–1.634 radians. The exact prescribed hero starts at `(8, -161, roadHeight(8) + 1.2)`, looking at `(12.9, -154.63, roadZ + 1.05)`. That initial look point is also the controls pivot to avoid a first-drag jump; alternative poses in the examples target car centre at +.6 m. Ground clearance is at least .45 m above a .25 m sampled tile of the builder's full `surfaceAt`, including the sloping park verge, rather than a flat road plane.
+
+Azimuth keep-outs shorten the camera radius before the two trunk footprints, both benches, lamps and sidewalk trees. Trunks use .95 / 1.2 m footprints, benches 1.4 m, lamps/sidewalk stems .5 m, plus .25 m approach margin. Additional spheres sampled along the original large tree limbs protect the leaning trunk and overhead branches. Exported obstacle positions follow the same road centreline as the builder. A sweep of 900 angles/elevations per profile verified .45 m minimum ground clearance, ≤9 m distance, and no entry into either footprint or woody-sphere keep-outs.
+
+### React port notes
+
+1. Use `createDoloresViewer` as the reference lifecycle and remove the demo's bottom-level auto-call / DOM hint updates. Replace `/public/models`, `/public/scenery`, `/public/draco` with the site's public-root URLs (`/models`, `/scenery`, `/draco`). The import map is only for the standalone server; lazy-import Three, GLTFLoader, DRACOLoader, OrbitControls, the registry and shared helpers through the site's bundler.
+2. Select desktop/phone once before loading. Load only its park GLB, six matching-sun background faces, and the unchanged car GLB. The viewer makes no requests to `archive/`, source data or offline textures. Retain the scene-root `userData.dolores` metadata for ground collision, road samples and placement. Keep material names during any later optimization.
+3. Apply `restoreDoloresMaterials(park.scene, {toSun})` before compiling. Preserve the small lighting/reflection cube, static shadow caching, per-material batch bounds and contact merge. First-frame counts depend on these runtime choices, not just the GLB.
+4. Start/crossfade only after the first render and probes complete. Use the delivered winter `poster-live.png` at the same default pose / 52° horizontal FOV / ACES exposure / aspect. The summer choice needs its summer poster. In the site shell, reduced-motion visitors can keep the poster and skip importing the viewer entirely.
+5. Retain the existing `IntersectionObserver` and `document.hidden` gate. The reference schedules RAF only on input, damping, resize or load, and verifies zero frames while idle. `shot=1` ends with no scheduled loop. Do not auto-run the 120-frame diagnostic benchmark for visitors.
+6. `dispose()` cancels RAF, disconnects both observers, removes visibility/context listeners, disposes controls/Draco, unique geometry/material/texture resources, decoded ImageBitmaps, PMREM targets, shadow target and renderer. Context loss pauses rendering; context restoration recreates the viewer and probes. For a React async effect, also guard late loader completion after unmount so it cannot append a new canvas.
+7. Keep visible OSM attribution: **© OpenStreetMap contributors**, linked to `https://www.openstreetmap.org/copyright`. The GLBs have `asset.copyright` and top-level `extras.license` / `extras.source` for the original CC0 procedural work, CC0 Poly Haven textures, PDDL DataSF sources, public-domain USGS/USDA sources and ODbL-derived geometry. The separate car is never folded into the park GLB or relicensed. No new third-party production asset or code was downloaded.
+
+The optional assessor-driven `houseEra=1` variant was not implemented; the existing artistic house mix remains the only house layout.
+
+### Delivered visual review
+
+The external `scratchpad/dolores5/renders/` directory contains the 28 development captures, JSON sidecars and final review sheets. Final captures are `18-final-default.png`, `19-orbit-behind.png`, `20-orbit-verge.png`, `21-orbit-high.png`, `22-final-phone.png`, `23-final-summer-default.png`, and `24/25-final-houses-{summer,winter}.png`. The final default was copied byte-for-byte to `scratchpad/dolores5/poster-live.png` at 1920 × 1200.
+
+- `comparison-default.png`: full offline scene versus live, identical hero camera and winter sun, both using real house shadows.
+- `comparison-deployed.png`: the legacy-shadow offline hero versus the live viewer, showing why the live car is shaded.
+- `comparison-suns.png`: winter and summer at both the default and house-facing cameras.
+- `orbit-contact-sheet.png`: default, three required orbit poses, phone and summer.

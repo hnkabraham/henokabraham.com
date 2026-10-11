@@ -1,0 +1,98 @@
+{
+  "generated": "2026-10-11T06:35:18.922Z",
+  "splitDistance": 180,
+  "variants": {
+    "desktop": {
+      "glbBytes": 3657640,
+      "roundTrip": {
+        "before": {
+          "triangles": 951115,
+          "meshes": 57,
+          "instances": 17560,
+          "canopies": [
+            {
+              "name": "Park canopy 0",
+              "count": 246,
+              "colors": 246
+            },
+            {
+              "name": "Park canopy 1",
+              "count": 206,
+              "colors": 206
+            },
+            {
+              "name": "Park canopy 2",
+              "count": 214,
+              "colors": 214
+            },
+            {
+              "name": "Park canopy 3",
+              "count": 231,
+              "colors": 231
+            }
+          ]
+        },
+        "after": {
+          "triangles": 951115,
+          "meshes": 57,
+          "instances": 17560,
+          "canopies": [
+            {
+              "name": "Park canopy 0",
+              "count": 246,
+              "colors": 246
+            },
+            {
+              "name": "Park canopy 1",
+              "count": 206,
+              "colors": 206
+            },
+            {
+              "name": "Park canopy 2",
+              "count": 214,
+              "colors": 214
+            },
+            {
+              "name": "Park canopy 3",
+              "count": 231,
+              "colors": 231
+            }
+          ]
+        }
+      },
+      "backdropBytes": 460794,
+      "summerBackdropBytes": 462040
+    },
+    "phone": {
+      "glbBytes": 2861008,
+      "roundTrip": {
+        "before": {
+          "triangles": 565537,
+          "meshes": 54,
+          "instances": 8124,
+          "canopies": [
+            {
+              "name": "Park canopy 0",
+              "count": 891,
+              "colors": 891
+            }
+          ]
+        },
+        "after": {
+          "triangles": 565537,
+          "meshes": 54,
+          "instances": 8124,
+          "canopies": [
+            {
+              "name": "Park canopy 0",
+              "count": 891,
+              "colors": 891
+            }
+          ]
+        }
+      },
+      "backdropBytes": 104702,
+      "summerBackdropBytes": 104890
+    }
+  }
+}

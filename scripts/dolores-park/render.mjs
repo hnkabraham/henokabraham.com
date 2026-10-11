@@ -86,14 +86,16 @@ try {
   });
   page.on('pageerror', (e) => errors.push(e.message));
   const started = Date.now();
+  const pageName = params.get('page') === 'live' ? 'live.html' : 'scene.html';
+  if (pageName === 'live.html') params.set('shot', '1');
   await page.goto(
-    `http://127.0.0.1:${port}/scripts/dolores-park/scene.html?${params}`,
+    `http://127.0.0.1:${port}/scripts/dolores-park/${pageName}?${params}`,
   );
   await page.waitForFunction(() => window.done, null, { timeout: 300000 });
   const result = await page.evaluate(() => ({
     png: window.png,
     error: window.error,
-    info: window.sceneInfo,
+    info: window.liveInfo || window.sceneInfo,
   }));
   if (result.error || errors.length)
     throw new Error([result.error, ...errors].filter(Boolean).join('\n'));

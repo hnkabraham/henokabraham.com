@@ -1,8 +1,11 @@
+import { applyDoloresMaterial } from '../../lib/dolores-park-materials.js';
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Original procedural geometry; no image tracing. Local tree coordinates are X/up/Z.
 export function heroTree({ scene, load, V, edgeHeight, num, rng, toSun }) {
+  const live = new URLSearchParams(location.search).get('profile') === 'live';
+  const phone = num('phone', 0);
   rng = (() => {
     let seed = 971 + num('seed', 7);
     return () => {
@@ -24,25 +27,37 @@ export function heroTree({ scene, load, V, edgeHeight, num, rng, toSun }) {
     color: 0xffffff,
     roughness: 0.95,
   });
-  bark.onBeforeCompile = (s) => {
-    s.fragmentShader = s.fragmentShader.replace(
-      '#include <map_fragment>',
-      `#include <map_fragment>
-    float lum=dot(diffuseColor.rgb,vec3(.3,.59,.11));diffuseColor.rgb=vec3(.068,.076,.061)+vec3(lum)*1.48;`,
-    );
-  };
+  applyDoloresMaterial(bark, 'bark');
   const tree = new T.Group();
   const tx = num('heroTreeX', 10.6),
     ty = num('heroTreeY', -148.5);
   tree.position.copy(V(tx, ty, edgeHeight(tx)));
   tree.scale.setScalar(num('heroTreeScale', 1));
+  let collisionOrigin = tree.position;
+  const cameraSpheres = [];
   const woody = [];
   const tips = [];
   function limb(points, r0, r1, segments = 28) {
     const curve = new T.CatmullRomCurve3(
       points.map((p) => (p.isVector3 ? p : new T.Vector3(...p))),
     );
-    const rs = 24;
+    if (live)
+      segments = Math.max(3, Math.round(segments * (phone ? 0.24 : 0.4)));
+    if (live && r0 > 0.18) {
+      const count = Math.ceil(curve.getLength() / 0.3);
+      for (let i = 0; i <= count; i++) {
+        const t = i / count,
+          p = curve
+            .getPointAt(t)
+            .multiplyScalar(num('heroTreeScale', 1))
+            .add(collisionOrigin);
+        cameraSpheres.push([
+          ...p.toArray(),
+          T.MathUtils.lerp(r0, r1, t) * num('heroTreeScale', 1) + 0.4,
+        ]);
+      }
+    }
+    const rs = live ? (r0 > 0.2 ? 10 : 5) : 24;
     const g = new T.TubeGeometry(curve, segments, 1, rs, false),
       p = g.attributes.position,
       uv = g.attributes.uv;
@@ -217,8 +232,9 @@ export function heroTree({ scene, load, V, edgeHeight, num, rng, toSun }) {
   const leaf = new T.BufferGeometry();
   const lp = [],
     li = [];
-  for (let j = 0; j <= 9; j++) {
-    const t = j / 9,
+  const leafSegments = live ? (phone ? 3 : 6) : 9;
+  for (let j = 0; j <= leafSegments; j++) {
+    const t = j / leafSegments,
       w = 0.046 * Math.pow(Math.sin(Math.PI * t), 0.68),
       y = 0.02 * Math.sin(Math.PI * t);
     lp.push(-w, y * 0.25, t * 0.225, 0, y, t * 0.225, w, y * 0.25, t * 0.225);
@@ -250,20 +266,7 @@ export function heroTree({ scene, load, V, edgeHeight, num, rng, toSun }) {
     clearcoatRoughness: 0.35,
     side: T.DoubleSide,
   });
-  leafMat.onBeforeCompile = (s) => {
-    s.uniforms.leafSun = { value: toSun };
-    s.fragmentShader = s.fragmentShader.replace(
-      '#include <common>',
-      '#include <common>\nuniform vec3 leafSun;',
-    );
-    s.fragmentShader = s.fragmentShader.replace(
-      '#include <lights_fragment_end>',
-      `#include <lights_fragment_end>
-      vec3 sunView=normalize((viewMatrix*vec4(leafSun,0.0)).xyz);
-      float back=pow(max(dot(-normal,sunView),0.0),1.7);
-      reflectedLight.indirectDiffuse+=diffuseColor.rgb*vec3(1.1,1.2,.35)*back*1.1;`,
-    );
-  };
+  applyDoloresMaterial(leafMat, 'hero-leaves', { toSun });
   const leafyTips = tips.filter((t, i) => Math.sin(i * 5.67) > -0.15);
   const count = Math.floor(leafyTips.length * 78 * num('heroLeaves', 1));
   const leaves = new T.InstancedMesh(leaf, leafMat, count),
@@ -279,7 +282,12 @@ export function heroTree({ scene, load, V, edgeHeight, num, rng, toSun }) {
         new T.Vector3(Math.cos(a) * rr, (rng() - 0.5) * 0.36, Math.sin(a) * rr),
       );
     dummy.rotation.set(rng() * 2.7, rng() * 6.28, rng() * 6.28);
-    dummy.scale.set(1.25 + rng() * 0.6, 1, 1.0 + rng() * 0.75);
+    const leafScale = live ? 1.35 : 1;
+    dummy.scale.set(
+      (1.25 + rng() * 0.6) * leafScale,
+      1,
+      (1.0 + rng() * 0.75) * leafScale,
+    );
     dummy.updateMatrix();
     leaves.setMatrixAt(i, dummy.matrix);
     col.setHSL(0.22 + rng() * 0.055, 0.52 + rng() * 0.28, 0.02 + rng() * 0.04);
@@ -314,6 +322,7 @@ export function heroTree({ scene, load, V, edgeHeight, num, rng, toSun }) {
   // A second, left-leaning trunk at the edge of the frame.
   const second = new T.Group();
   second.position.copy(V(tx - 2.8, ty - 0.9, edgeHeight(tx - 2.8)));
+  collisionOrigin = second.position;
   const before = woody.length;
   limb(
     [
@@ -331,6 +340,7 @@ export function heroTree({ scene, load, V, edgeHeight, num, rng, toSun }) {
   sm.castShadow = sm.receiveShadow = true;
   second.add(sm);
   scene.add(second);
+  if (live) scene.userData.cameraSpheres = cameraSpheres;
   return { tree, leaf, leafMat };
 }
 

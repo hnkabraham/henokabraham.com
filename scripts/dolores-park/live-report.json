@@ -1,0 +1,849 @@
+{
+  "date": "2026-10-11T07:12:38.831Z",
+  "variants": {
+    "desktop": {
+      "startupFrame": {
+        "triangles": 2062340,
+        "drawCalls": 111
+      },
+      "phone": false,
+      "sun": {
+        "azimuth": 225,
+        "elevation": 28,
+        "color": "#fff0d8",
+        "intensity": 6,
+        "exposure": 1.2,
+        "environment": 0.45,
+        "hemisphere": 0.32
+      },
+      "triangles": 802238,
+      "drawCalls": 60,
+      "textures": {
+        "count": 46,
+        "bytes": 143704070,
+        "details": [
+          {
+            "name": "",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 512,
+            "bytes": 349526
+          },
+          {
+            "name": "",
+            "width": 256,
+            "height": 512,
+            "bytes": 699051
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 406,
+            "bytes": 1108651
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 64,
+            "bytes": 174763
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 16,
+            "bytes": 43691
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "PMREM.cubeUv",
+            "width": 384,
+            "height": 512,
+            "bytes": 1572864
+          },
+          {
+            "name": "",
+            "width": 64,
+            "height": 128,
+            "bytes": 43691
+          },
+          {
+            "name": "0/shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1_baseColor_scale0.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016CalliperBadgeA_Material1_baseColor.png",
+            "width": 128,
+            "height": 32,
+            "bytes": 21846
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016CalliperGloss_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016LightA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016ManufacturerPlateA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 256,
+            "bytes": 699051
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016PaintA_Material1_baseColor.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Coloured_Material1_baseColor.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Carbon2M_Material1_baseColor.jpg",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Carbon2M_Material1_normal.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016BadgeA_Material1_baseColor.png",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016BadgeA_Material1_normal.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016EngineA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016EngineA_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille1A_Material1_baseColor.png",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille1A_Material1_normal.jpg",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille2A_Material1_baseColor.jpg",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille3A_Material1_baseColor.jpg",
+            "width": 1,
+            "height": 1,
+            "bytes": 6
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille3A_Material1_normal.jpg",
+            "width": 64,
+            "height": 64,
+            "bytes": 21846
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016InteriorA_Material1_baseColor.png",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016InteriorA_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "",
+            "width": 1536,
+            "height": 1536,
+            "bytes": 75497472
+          },
+          {
+            "name": "PMREM.cubeUv",
+            "width": 384,
+            "height": 512,
+            "bytes": 1572864
+          }
+        ],
+        "includesShadow": true
+      },
+      "glbBytes": 3657640,
+      "backdropBytes": 460794,
+      "downloadBytes": 4118434,
+      "loadTimeMs": 867,
+      "shadowMap": 2048,
+      "patchedMaterials": 7,
+      "frameTimeMs": 3.5,
+      "pixelRatio": 2,
+      "viewport": [
+        1600,
+        1000
+      ],
+      "orbit": {
+        "min": 4,
+        "max": 9,
+        "groundClearance": 0.45,
+        "obstacles": [
+          {
+            "name": "hero trunk",
+            "x": 10.6,
+            "y": -148.5,
+            "r": 0.95,
+            "top": 15
+          },
+          {
+            "name": "leaning trunk",
+            "x": 7.8,
+            "y": -149.4,
+            "r": 1.2,
+            "top": 15
+          },
+          {
+            "name": "bench 1",
+            "x": 15.8,
+            "y": -148.99930325149302,
+            "r": 1.4,
+            "top": 1.55
+          },
+          {
+            "name": "bench 2",
+            "x": 19,
+            "y": -148.75564034505638,
+            "r": 1.4,
+            "top": 1.55
+          },
+          {
+            "name": "lamp",
+            "x": -17,
+            "y": -167.81684804246848,
+            "r": 0.5,
+            "top": 5.1
+          },
+          {
+            "name": "lamp",
+            "x": 43,
+            "y": -163.2479552715655,
+            "r": 0.5,
+            "top": 5.1
+          },
+          {
+            "name": "street tree",
+            "x": 18,
+            "y": -165.15178500331785,
+            "r": 0.5,
+            "top": 5.5
+          },
+          {
+            "name": "street tree",
+            "x": 37,
+            "y": -163.70503649635037,
+            "r": 0.5,
+            "top": 5.5
+          },
+          {
+            "name": "street tree",
+            "x": 61,
+            "y": -161.87495207667732,
+            "r": 0.5,
+            "top": 5.5
+          }
+        ]
+      },
+      "car": {
+        "x": 13.3,
+        "y": -154.63,
+        "position": [
+          13.3,
+          41.07780720146712,
+          154.63
+        ],
+        "rotation": [
+          -0.05484813908366083,
+          -1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "camera": [
+        8.000000000000004,
+        42.5656,
+        161
+      ],
+      "gpuFrameTimeMs": null,
+      "benchmarkFrames": 120,
+      "orbitMaxDrawCalls": 62,
+      "orbitMaxTriangles": 793884,
+      "benchmarkMethod": "CPU submit + synchronous 1-pixel readback (completed GPU), 24 warmup frames, 120 orbit frames",
+      "gpu": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, Unspecified Version)",
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+      },
+      "collisions": {
+        "samples": 900,
+        "minClearance": 0.45000000000000284,
+        "maxDistance": 9.000000000000014,
+        "minObstacle": 0.03583058850471765,
+        "failures": []
+      },
+      "idleRenderingPassed": true,
+      "contextRecoveryPassed": true,
+      "disposalPassed": true
+    },
+    "phone": {
+      "startupFrame": {
+        "triangles": 1229812,
+        "drawCalls": 105
+      },
+      "phone": true,
+      "sun": {
+        "azimuth": 225,
+        "elevation": 28,
+        "color": "#fff0d8",
+        "intensity": 6,
+        "exposure": 1.2,
+        "environment": 0.45,
+        "hemisphere": 0.32
+      },
+      "triangles": 392771,
+      "drawCalls": 57,
+      "textures": {
+        "count": 46,
+        "bytes": 60145670,
+        "details": [
+          {
+            "name": "",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 512,
+            "bytes": 349526
+          },
+          {
+            "name": "",
+            "width": 256,
+            "height": 512,
+            "bytes": 699051
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 406,
+            "bytes": 1108651
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 64,
+            "bytes": 174763
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 16,
+            "bytes": 43691
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "PMREM.cubeUv",
+            "width": 336,
+            "height": 256,
+            "bytes": 688128
+          },
+          {
+            "name": "",
+            "width": 64,
+            "height": 128,
+            "bytes": 43691
+          },
+          {
+            "name": "0/shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1_baseColor_scale0.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016CalliperBadgeA_Material1_baseColor.png",
+            "width": 128,
+            "height": 32,
+            "bytes": 21846
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016CalliperGloss_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016LightA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016ManufacturerPlateA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 256,
+            "bytes": 699051
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016PaintA_Material1_baseColor.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Coloured_Material1_baseColor.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Carbon2M_Material1_baseColor.jpg",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Carbon2M_Material1_normal.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016BadgeA_Material1_baseColor.png",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016BadgeA_Material1_normal.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016EngineA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016EngineA_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille1A_Material1_baseColor.png",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille1A_Material1_normal.jpg",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille2A_Material1_baseColor.jpg",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille3A_Material1_baseColor.jpg",
+            "width": 1,
+            "height": 1,
+            "bytes": 6
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille3A_Material1_normal.jpg",
+            "width": 64,
+            "height": 64,
+            "bytes": 21846
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016InteriorA_Material1_baseColor.png",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016InteriorA_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "",
+            "width": 768,
+            "height": 768,
+            "bytes": 18874368
+          },
+          {
+            "name": "PMREM.cubeUv",
+            "width": 336,
+            "height": 256,
+            "bytes": 688128
+          }
+        ],
+        "includesShadow": true
+      },
+      "glbBytes": 2861008,
+      "backdropBytes": 104702,
+      "downloadBytes": 2965710,
+      "loadTimeMs": 753.0999999940395,
+      "shadowMap": 1024,
+      "patchedMaterials": 7,
+      "frameTimeMs": 3.4000000059604645,
+      "pixelRatio": 2,
+      "viewport": [
+        1600,
+        1000
+      ],
+      "orbit": {
+        "min": 4,
+        "max": 9,
+        "groundClearance": 0.45,
+        "obstacles": [
+          {
+            "name": "hero trunk",
+            "x": 10.6,
+            "y": -148.5,
+            "r": 0.95,
+            "top": 15
+          },
+          {
+            "name": "leaning trunk",
+            "x": 7.8,
+            "y": -149.4,
+            "r": 1.2,
+            "top": 15
+          },
+          {
+            "name": "bench 1",
+            "x": 15.8,
+            "y": -148.99930325149302,
+            "r": 1.4,
+            "top": 1.55
+          },
+          {
+            "name": "bench 2",
+            "x": 19,
+            "y": -148.75564034505638,
+            "r": 1.4,
+            "top": 1.55
+          },
+          {
+            "name": "lamp",
+            "x": -17,
+            "y": -167.81684804246848,
+            "r": 0.5,
+            "top": 5.1
+          },
+          {
+            "name": "lamp",
+            "x": 43,
+            "y": -163.2479552715655,
+            "r": 0.5,
+            "top": 5.1
+          },
+          {
+            "name": "street tree",
+            "x": 18,
+            "y": -165.15178500331785,
+            "r": 0.5,
+            "top": 5.5
+          },
+          {
+            "name": "street tree",
+            "x": 37,
+            "y": -163.70503649635037,
+            "r": 0.5,
+            "top": 5.5
+          },
+          {
+            "name": "street tree",
+            "x": 61,
+            "y": -161.87495207667732,
+            "r": 0.5,
+            "top": 5.5
+          }
+        ]
+      },
+      "car": {
+        "x": 13.3,
+        "y": -154.63,
+        "position": [
+          13.3,
+          41.07780720146712,
+          154.63
+        ],
+        "rotation": [
+          -0.05484813908366083,
+          -1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "camera": [
+        8.000000000000004,
+        42.5656,
+        161
+      ],
+      "gpuFrameTimeMs": null,
+      "benchmarkFrames": 120,
+      "orbitMaxDrawCalls": 59,
+      "orbitMaxTriangles": 489848,
+      "benchmarkMethod": "CPU submit + synchronous 1-pixel readback (completed GPU), 24 warmup frames, 120 orbit frames",
+      "gpu": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, Unspecified Version)",
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+      },
+      "collisions": {
+        "samples": 900,
+        "minClearance": 0.45000000000000284,
+        "maxDistance": 9.000000000000014,
+        "minObstacle": 0.03583058850471765,
+        "failures": []
+      },
+      "idleRenderingPassed": true,
+      "contextRecoveryPassed": true,
+      "disposalPassed": true
+    }
+  }
+}

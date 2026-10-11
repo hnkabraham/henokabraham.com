@@ -1,3 +1,4 @@
+import { applyDoloresMaterial } from '../../lib/dolores-park-materials.js';
 import * as T from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -13,6 +14,11 @@ export function buildPalms({
   rng,
   toSun,
 }) {
+  const live = new URLSearchParams(location.search).get('profile') === 'live';
+  const phone = num('phone', 0);
+  const steps = live ? (phone ? 5 : 8) : 20;
+  const fronds = live ? (phone ? 40 : 64) : 108;
+  const deadFronds = live ? 10 : 22;
   const texture = canvasTexture(512, 2048, (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
     ctx.strokeStyle = '#829450';
@@ -48,19 +54,7 @@ export function buildPalms({
     roughness: 0.64,
     vertexColors: true,
   });
-  mat.onBeforeCompile = (s) => {
-    s.uniforms.palmSun = { value: toSun };
-    s.fragmentShader = s.fragmentShader.replace(
-      '#include <common>',
-      '#include <common>\nuniform vec3 palmSun;',
-    );
-    s.fragmentShader = s.fragmentShader.replace(
-      '#include <lights_fragment_end>',
-      `#include <lights_fragment_end>
-     float back=max(dot(-normal,normalize((viewMatrix*vec4(palmSun,0.)).xyz)),0.);
-     reflectedLight.indirectDiffuse+=diffuseColor.rgb*vec3(1.3,1.35,.5)*back*.65;`,
-    );
-  };
+  applyDoloresMaterial(mat, 'palm-fronds', { toSun });
   const trunkMap = load(
     '/archive/scenery/dolores/assets/palm_tree_bark_diff_1k.jpg',
   );
@@ -78,13 +72,7 @@ export function buildPalms({
     side: T.DoubleSide,
     roughness: 1,
   });
-  deadMat.onBeforeCompile = (s) => {
-    s.fragmentShader = s.fragmentShader.replace(
-      '#include <map_fragment>',
-      `#include <map_fragment>
- float dryLum=dot(diffuseColor.rgb,vec3(.3,.59,.11));diffuseColor.rgb=vec3(.30,.16,.06)*dryLum*2.;`,
-    );
-  };
+  applyDoloresMaterial(deadMat, 'palm-dead');
   function frond(i, N, dead = false) {
     const az = i * 2.39996,
       t = i / N,
@@ -96,8 +84,8 @@ export function buildPalms({
       col = [],
       c = new T.Color();
     c.setHSL(0.19 + hash(i, 12) * 0.06, 0.35, 0.7 + hash(i, 3) * 0.23);
-    for (let j = 0; j <= 20; j++) {
-      const f = j / 20,
+    for (let j = 0; j <= steps; j++) {
+      const f = j / steps,
         a = Math.cos(el),
         out = len * (a * f + 0.1 * Math.sin(f * Math.PI)),
         up = len * (Math.sin(el) * f - (dead ? 0.9 : 0.56) * f * f);
@@ -141,10 +129,10 @@ export function buildPalms({
   }
   const phoenix = treeData.filter((t) => t.k === 'palm');
   const crown = mergeGeometries(
-    Array.from({ length: 108 }, (_, i) => frond(i, 108)),
+    Array.from({ length: fronds }, (_, i) => frond(i, fronds)),
   );
   const dead = mergeGeometries(
-    Array.from({ length: 22 }, (_, i) => frond(i, 22, true)),
+    Array.from({ length: deadFronds }, (_, i) => frond(i, deadFronds, true)),
   );
   const stem = new T.LatheGeometry(
     [
@@ -199,9 +187,12 @@ export function buildPalms({
   });
   const fanParts = [],
     skirtParts = [];
-  for (let i = 0; i < 38; i++) {
+  for (let i = 0; i < (live ? 24 : 38); i++) {
     const az = i * 2.39996,
-      el = ((75 - (i / 38) * 108 + (hash(i, 19) - 0.5) * 14) * Math.PI) / 180,
+      el =
+        ((75 - (i / (live ? 24 : 38)) * 108 + (hash(i, 19) - 0.5) * 14) *
+          Math.PI) /
+        180,
       dir = new T.Vector3(
         Math.cos(az) * Math.cos(el),
         Math.sin(el),
