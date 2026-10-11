@@ -661,3 +661,12 @@ Source `eebb1bf`. Production version `e00e15c2-0f2d-4ed1-bcd7-1eefe9ed6ba5`; the
 - The Garage car's textures are now read with V turned over from USD's bottom-left origin to glTF's top-left (`scripts/prepare-garage-car.py`). Every atlas had been sampled upside down: the splitter's SHELBY letters and the grille, fender and rear badges showed as scrambled squares, the tires as a checkerboard and the interior as patchy white. The trim and engine-bay repaints that covered for it are removed, since neither swatch's wrong cells are sampled any more. The model is 921,664 bytes (143,134 triangles), and the poster and credits page are updated.
 
 On the live site, `/models/garage-gt350r.glb`, its `/scene/26c61f4ce6c51f14/` copy, both poster files and `/credits/garage` return 200 with the same SHA-256 as the committed files.
+
+## Garage Dolores Park view deployed
+
+Source `e934706` (with `91de241` and `0800729`). Production version `6aa431b3-f863-45b4-96a0-65857bdf449c`; the bindings and the 15-minute schedule are unchanged.
+
+- The Garage section has a Studio / Dolores Park switch. Dolores Park shows a still of the GT350 parked on 20th Street at the top of Mission Dolores Park, rendered by `scripts/dolores-park/` (`public/images/garage-dolores*.{avif,jpg}`, 1920 and 960 px), over the live studio car. The still is only requested on first selection. The credits page lists the scene's data and asset sources.
+- This deploy also ships `0800729`: the car's grille and trunk badges in the base GT350's polished alloy instead of the GT350R's red.
+
+On the live site, the four `garage-dolores` images, `/models/garage-gt350r.glb`, its `/scene/93b9d6071745320f/` copy, both poster files and `/credits/garage` return 200 with the same SHA-256 as the committed files. At 1440 px and 390 px, the park image isn't requested before the switch is pressed. Once pressed, it is the topmost element over the viewer, and the drag hint and caption follow the view. The page logs no console errors.
