@@ -83,6 +83,9 @@ EXHAUST_CHROME = (0xB0, 0xB4, 0xB8)
 # The base GT350's Ebony Black painted wheel, and its lug nuts.
 WHEEL_BLACK = (0x14, 0x15, 0x18)
 LUG_METAL = (0x4A, 0x4D, 0x52)
+# The base GT350's Shelby snake badges, polished alloy where the GT350R's
+# are red.
+BADGE_ALLOY = (0xB8, 0xBC, 0xC0)
 
 PAINT_REFS = {
     'blue_field': (0, 85, 220),
@@ -97,6 +100,26 @@ PAINT_TARGETS = {
     # swatch's thin red edge line dark instead of folding it into the stripe.
     'red_edge': CARBON_DARK,
 }
+
+
+# The grille and trunk badges both sample one cell of the badge atlas, the
+# R's red snake (u 0.61-0.98, v 0.02-0.66 from the top; found from their
+# triangles' UVs, and no other part's UVs reach into it). Inside that cell
+# the red field turns alloy, in proportion to how far red stands above the
+# pixel's other channels, so the snake's dark outlines and white scales and
+# the antialiased edges between them keep their shading.
+_BADGE_CELL = ((0.61, 0.98), (0.02, 0.66))
+
+
+def recolor_badge(path):
+    arr = np.array(Image.open(path).convert('RGB')).astype(np.float64)
+    (u0, u1), (v0, v1) = _BADGE_CELL
+    h, w = arr.shape[:2]
+    cell = arr[round(v0 * h) : round(v1 * h), round(u0 * w) : round(u1 * w)]
+    rest = cell[..., 1:].max(axis=-1, keepdims=True)
+    red = np.clip((cell[..., :1] - rest) / 190, 0, 1)
+    cell[:] = (1 - red) * rest + red * np.array(BADGE_ALLOY, dtype=np.float64)
+    return Image.fromarray(arr.round().astype(np.uint8), 'RGB')
 
 
 def recolor_paint(path):
@@ -434,7 +457,8 @@ def _run(text, tex_src, out_dir):
                 'stripes (Henok’s actual car) from the original flat-color '
                 'swatch. Rear wing and supports removed (1,428 triangles); '
                 'the wheels’ GT350R faces replaced by the base 2015-2018 '
-                'GT350’s ten-spoke wheel, modeled from measurements. Mirror '
+                'GT350’s ten-spoke wheel, modeled from measurements. The red '
+                'snake badges recolored the base car’s polished alloy. Mirror '
                 'caps and exhaust tips '
                 'split into separate finishes; the roof’s UVs re-mapped onto '
                 'the stripe bands the hood samples. Textures re-encoded to '
@@ -485,7 +509,7 @@ def _run(text, tex_src, out_dir):
         a second grayscale texture path to pack into the blue channel
         (metallic) while image_relpath becomes green (roughness) -- glTF
         metallicRoughness convention. recolor_fn, if given, is applied to the
-        source image before WebP encoding (recolor_paint)."""
+        source image before WebP encoding (recolor_paint or recolor_badge)."""
         key = (image_relpath, recolor_fn, gray_pack)
         if key in texture_cache:
             return texture_cache[key]
@@ -664,6 +688,7 @@ def _run(text, tex_src, out_dir):
         if info.get('baseColorTexture'):
             recolor_fn = {
                 'shFord_ShelbyGT350R_2016PaintA_Material1': recolor_paint,
+                'shFord_ShelbyGT350R_2016BadgeA_Material1': recolor_badge,
             }.get(mat_name)
             gray_pack = None
             if info.get('roughnessTexture') and info.get('metallicTexture'):
