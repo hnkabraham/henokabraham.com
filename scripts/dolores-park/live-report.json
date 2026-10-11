@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-11T07:19:31.495Z",
+  "date": "2026-10-11T07:24:18.543Z",
   "variants": {
     "desktop": {
       "startupFrame": {
@@ -304,10 +304,10 @@
       "glbBytes": 3657640,
       "backdropBytes": 460794,
       "downloadBytes": 4118434,
-      "loadTimeMs": 880.1000000089407,
+      "loadTimeMs": 883.7999999970198,
       "shadowMap": 2048,
       "patchedMaterials": 7,
-      "frameTimeMs": 3.9000000059604645,
+      "frameTimeMs": 3.8999999910593033,
       "pixelRatio": 2,
       "viewport": [
         1600,
@@ -726,10 +726,10 @@
       "glbBytes": 2861008,
       "backdropBytes": 104702,
       "downloadBytes": 2965710,
-      "loadTimeMs": 752,
+      "loadTimeMs": 747.3000000119209,
       "shadowMap": 1024,
       "patchedMaterials": 7,
-      "frameTimeMs": 3.2999999970197678,
+      "frameTimeMs": 3.5999999940395355,
       "pixelRatio": 2,
       "viewport": [
         1600,
