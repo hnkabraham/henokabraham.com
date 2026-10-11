@@ -363,7 +363,11 @@ export function groundGrowth({ scene, V, roadY, edgeHeight, rng, num }) {
     o.position.copy(V(x, y, edgeHeight(x) + 0.008));
     o.rotation.set((rng() - 0.5) * 0.9, rng() * 6.28, 0);
     const sc = patchiness > 0 ? 0.1 + rng() * 0.25 : 0.02;
-    o.scale.set(0.6 + rng() * 0.4, sc, 0.7 + rng() * 0.4);
+    o.scale.set(
+      0.6 + rng() * 0.4,
+      sc * num('grassHeight', 1),
+      0.7 + rng() * 0.4,
+    );
     o.updateMatrix();
     mesh.setMatrixAt(i, o.matrix);
     c.setHSL(0.17 + rng() * 0.1, 0.36 + rng() * 0.25, 0.15 + rng() * 0.14);

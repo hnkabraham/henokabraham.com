@@ -17,11 +17,12 @@
   // the park and downtown. The GT350 is parked on 20th Street at the top of
   // the park. World: X east, Y up (metres above NAVD88), Z south (-north).
   // Offline only; reference frames are never loaded or used as textures.
-  // Params documented in scripts/dolores-park/README.md. preset=streetview|west uses a
+  // Params documented in scripts/dolores-park/README.md. preset=streetview|west|victorians uses a
   // horizontal fov (60 degrees), heading/pitch in degrees, cam=x,y in local m.
   // Legacy camera/look and vertical fov are retained when preset is omitted.
   import * as T from 'three';
   import { distantTraffic } from './traffic.js';
+  import { buildHouses, houseTreeXs, garageCutPositions } from './houses.js';
   import { buildPalms } from './palms.js';
   import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
   import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -39,8 +40,19 @@
   const num = (k, d) => (q.has(k) ? Number(q.get(k)) : d);
   const vec = (k, d) => (q.get(k) || d).split(',').map(Number);
   const preset = q.get('preset');
-  const survey = preset === 'streetview' || preset === 'west';
-  const W = num('w', 1600), H = num('h', survey ? 1360 : 1000);
+  const victorians = preset === 'victorians';
+  const survey = preset === 'streetview' || preset === 'west' || victorians;
+  // Artistic summer evening: light from WNW reaches the north-facing fronts.
+  if (victorians) for (const [key, value] of Object.entries({
+    cam: '7.6,-148.5', camH: 1.4, look: '19.6,-162,2.7', fov: 59,
+    sunAz: 290, sunEl: 10, sun: 5, exposure: 1.05, env: .65, hemi: .55,
+    sunColor: '#ffe2b7', traffic: 0, heroTree: 0, benches: 0,
+    grassBlades: 26000, grassHeight: .35,
+  })) if (!q.has(key)) q.set(key, String(value));
+  if(preset==='west')for(const [key,value] of Object.entries({
+    sunAz:290,sunEl:10,sun:5,exposure:1.05,env:.65,hemi:.55,sunColor:'#ffe2b7',
+  }))if(!q.has(key))q.set(key,String(value));
+  const W = num('w', victorians ? 1920 : 1600), H = num('h', victorians ? 1200 : survey ? 1360 : 1000);
   const grey = q.get('grey') === '1';
   const BASE = '/archive/scenery/dolores/';
   const rad = (d) => (d * Math.PI) / 180;
@@ -82,7 +94,7 @@
     r.shadowMap.type = T.PCFShadowMap;
     document.body.appendChild(r.domElement);
     const scene = new T.Scene();
-    const windowMaterials=[]; let sidingMap; let carHolder; const carMaterials=new Set();
+    const windowMaterials=[]; let carHolder; const carMaterials=new Set();
 
     const meta = await (await fetch(BASE + 'scene.json')).json();
     // Reference-informed roofline override for the shallow survey mass behind the camera.
@@ -119,34 +131,28 @@
       return T.MathUtils.lerp(heightAt(a, roadY(a)), heightAt(a + 1, roadY(a + 1)), f) + roadLift;
     };
     const edgeHeight = x => roadHeight(x) + 0.10;
-    const curbDrop=x=>.075*Math.max(...[11.5,23.4,38.5,53,68,81].map(c=>1-T.MathUtils.smoothstep(Math.abs(x-c),1.05,2.05)));
+    const isCloseHouse=b=>{
+      const cx=b.p.reduce((s,p)=>s+p[0],0)/b.p.length,north=Math.max(...b.p.map(p=>p[1]));
+      return cx>-100&&cx<100&&Math.abs(north-(roadY(cx)-9))<4&&b.h>5;
+    };
+    const driveways=garageCutPositions(meta.buildings.filter(isCloseHouse),roadY);
+    const curbDrop=x=>.075*Math.max(...driveways.map(c=>1-T.MathUtils.smoothstep(Math.abs(x-c),1.05,2.05)));
     const car = { x: num('carX', 13.3), y: num('carY', -154.63) };
     const roadZ = roadHeight(car.x);
-    const surfaceAt = (x, y) => x >= -125 && x <= 90 && Math.abs(y - roadY(x)) <= 5.5
-      ? roadHeight(x) : heightAt(x, y);
+    const surfaceAt = (x, y) => {
+      if(x < -125 || x > 90)return heightAt(x,y);
+      const off=y-roadY(x),pathEnd=num('pathOff',8.6)+num('pathWidth',1.8);
+      if(Math.abs(off)<=5.5)return roadHeight(x);
+      if(off>5.5&&off<=pathEnd)return edgeHeight(x);
+      if(off>pathEnd&&off<=pathEnd+3)return T.MathUtils.lerp(edgeHeight(x),heightAt(x,roadY(x)+pathEnd+3),(off-pathEnd)/3);
+      if(off>=-8.6&&off< -5.5)return edgeHeight(x)-curbDrop(x)*Math.max(0,1-(-off-5.5)/2.7);
+      return heightAt(x,y);
+    };
     const rng = (seed => () => { seed = (1664525 * seed + 1013904223) >>> 0; return seed / 4294967296; })(num('seed', 7));
     function box(parent, x, y, z, w, h, d, mat) {
       const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
       m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
     }
-    function branch(parent, points, r0, r1, mat, segments = 16) {
-      const curve = new T.CatmullRomCurve3(points.map(p => new T.Vector3(...p)));
-      const geo = new T.TubeGeometry(curve, segments, 1, 9, false);
-      const pos = geo.attributes.position;
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments, center = curve.getPointAt(t);
-        const radius = T.MathUtils.lerp(r0, r1, t) * (1 + 0.06 * Math.sin(t * 29));
-        for (let j = 0; j <= 9; j++) {
-          const k = i * 10 + j;
-          const v = new T.Vector3().fromBufferAttribute(pos, k).sub(center).multiplyScalar(radius).add(center);
-          pos.setXYZ(k, v.x, v.y, v.z);
-        }
-      }
-      geo.computeVertexNormals();
-      const mesh = new T.Mesh(geo, mat); mesh.castShadow = mesh.receiveShadow = true; parent.add(mesh);
-      return mesh;
-    }
-
     // ---- Sky: a CC0 golden-hour HDRI, turned so its sun sits at sunAz.
     const sunAz = num('sunAz', 225), sunEl = num('sunEl', 28);
     const hdr = new HDRLoader().parse(await (await fetch('/archive/scenery/dolores/assets/' + (q.get('sky') || 'kloppenheim_06_puresky_4k') + '.hdr')).arrayBuffer());
@@ -184,8 +190,8 @@
       if(!num('ao',1))return desired;
       const input=new T.Matrix3().set(.59719,.35458,.04823,.076,.90834,.01566,.0284,.13383,.83777);
       const output=new T.Matrix3().set(1.60475,-.53108,-.07367,-.10208,1.10813,-.00605,-.00327,-.07276,1.07602);
-      let v=new T.Vector3(desired.r,desired.g,desired.b).applyMatrix3(output.invert());
-      const inv=y=>{let a=.983729*y-1,b=.432951*y-.0245786,c=.238081*y+.000090537;return(-b-Math.sqrt(b*b-4*a*c))/(2*a);};
+      const v=new T.Vector3(desired.r,desired.g,desired.b).applyMatrix3(output.invert());
+      const inv=y=>{const a=.983729*y-1,b=.432951*y-.0245786,c=.238081*y+.000090537;return(-b-Math.sqrt(b*b-4*a*c))/(2*a);};
       v.set(inv(v.x),inv(v.y),inv(v.z)).applyMatrix3(input.invert()).multiplyScalar(.6/r.toneMappingExposure);
       return new T.Color(v.x,v.y,v.z);
     }
@@ -303,7 +309,10 @@
       const strip = (yOff0, yOff1, lift, mat, x0 = -125, x1 = 90, step = 1) => {
         const pos = [], uv = [], idx = [];
         let n = 0;
-        for (let x = x0; x <= x1; x += step) {
+        const samples=[];
+        for(let x=x0;x<x1-.0001;x+=step)samples.push(x);
+        samples.push(x1);
+        for (const x of samples) {
           const c = roadY(x);
           for (const off of [yOff0, yOff1]) {
             const y = c + off;
@@ -345,19 +354,22 @@
           diffuseColor.rgb=vec3(.085+a*.72)*(1.+roadPatch*.11-oil*.21);`);
       };
       strip(-5.5, 5.5, roadLift, asphalt);
-      const dirt = canvasTexture(256, 256, (g, w, h) => {
-        g.fillStyle = '#92836b'; g.fillRect(0, 0, w, h);
-        for (let i = 0; i < 7000; i++) {
-          g.fillStyle = ['#aa9579', '#716b45', '#788349', '#89945a', '#c3ac8a'][i % 5];
-          g.fillRect(rng() * w, rng() * h, 1 + rng() * 4, 1 + rng() * 3);
-        }
-      });
+      // Preserve vegetation's established random sequence (the old unused
+      // dirt texture consumed 7,000 marks × four values).
+      for(let i=0;i<28000;i++)rng();
       const pathOff = num('pathOff', 8.6), pathWidth = num('pathWidth', 1.8);
       strip(5.5, 5.7, roadLift + 0.10, curbM);
       const earthMat=new T.MeshStandardMaterial({map:load(BASE+'assets/brown_mud_leaves_01_diff_1k.jpg'),normalMap:load(BASE+'assets/brown_mud_leaves_01_nor_gl_1k.jpg',false),color:new T.Color(1.25,1.1,.86),roughness:1});
       strip(5.7, pathOff, roadLift + 0.10, earthMat);
       strip(pathOff, pathOff + pathWidth, roadLift + 0.10, concrete);
-      strip(-8.6, -5.5, roadLift + 0.10, concrete);
+      strip(-8.6, -7.3, roadLift + 0.10, concrete);
+      strip(-5.8, -5.5, roadLift + 0.10, concrete);
+      let pavementStart=-125;
+      for(const x of houseTreeXs){
+        strip(-7.3,-5.8,roadLift+.10,concrete,pavementStart,x-.65);
+        pavementStart=x+.65;
+      }
+      strip(-7.3,-5.8,roadLift+.10,concrete,pavementStart,90);
       // Short transition back to the falling DEM, preventing an exposed path edge.
       const pp = [], ii = [];
       for (let x = -125; x <= 90; x++) {
@@ -373,6 +385,7 @@
       const jointMat=new T.MeshStandardMaterial({color:0x696b60,roughness:1});
       for(let x=-120;x<90;x+=1.8) {
         for(const off of [-7.0,pathOff+pathWidth/2]) {
+          if(off<0&&houseTreeXs.some(tx=>Math.abs(tx-x)<.75))continue;
           const joint=box(scene,x,edgeHeight(x)+.005,-(roadY(x)+off),.009,.007,off<0?2.9:pathWidth,jointMat);
           joint.castShadow=false;
         }
@@ -380,11 +393,11 @@
       // Two slatted benches, seen from behind, facing NE. Positions are visual approximations.
       const woodGrain=canvasTexture(512,64,(g,w,h)=>{
         g.fillStyle='#7e3328';g.fillRect(0,0,w,h);
-        for(let k=0;k<700;k++){g.strokeStyle=k%3?'rgba(42,22,13,.12)':'rgba(243,190,117,.15)';g.lineWidth=.4+rng();let y=rng()*h;g.beginPath();g.moveTo(0,y);g.bezierCurveTo(w*.3,y-2,w*.7,y+3,w,y);g.stroke();}
+        for(let k=0;k<700;k++){g.strokeStyle=k%3?'rgba(42,22,13,.12)':'rgba(243,190,117,.15)';g.lineWidth=.4+rng();const y=rng()*h;g.beginPath();g.moveTo(0,y);g.bezierCurveTo(w*.3,y-2,w*.7,y+3,w,y);g.stroke();}
       });
       const timber = new T.MeshStandardMaterial({ map:woodGrain,color:0xbba59b,roughness:.88 });
       const iron = new T.MeshStandardMaterial({ color: 0x333936, roughness: 0.8 });
-      for (const x of [num('benchX', 15.8), num('benchX', 15.8) + num('benchGap', 3.2)]) {
+      for (const x of (num('benches',1) ? [num('benchX', 15.8), num('benchX', 15.8) + num('benchGap', 3.2)] : [])) {
         const bench = new T.Group();
         bench.position.copy(V(x, roadY(x) + pathOff + pathWidth * 0.65, edgeHeight(x)));
         bench.rotation.y = -rad(num('benchHeading', 4));
@@ -413,7 +426,7 @@
         g.computeVertexNormals();
         scene.add(new T.Mesh(g, new T.MeshStandardMaterial({ color: 0x858478, roughness: 1, side: T.DoubleSide })));
       }
-      const gutter=asphalt.clone();gutter.color.set(0x888780);gutter.onBeforeCompile=asphalt.onBeforeCompile;
+      const gutter=asphalt.clone();gutter.color.set(0x888780);gutter.onBeforeCompile=(shader,renderer)=>asphalt.onBeforeCompile(shader,renderer);
       strip(5.18,5.49,roadLift+.003,gutter);strip(-5.49,-5.20,roadLift+.003,gutter);
       const leafGeo=new T.PlaneGeometry(.065,.11),litter=new T.InstancedMesh(leafGeo,new T.MeshStandardMaterial({color:0x796845,roughness:1,side:T.DoubleSide}),720),o=new T.Object3D();
       for(let i=0;i<720;i++){
@@ -433,15 +446,6 @@
     groundGrowth({scene,V,roadY,edgeHeight,heightAt,rng,num});
 
     // ---- Buildings.
-    const isCloseHouse=b=>{
-      const cx=b.p.reduce((s,p)=>s+p[0],0)/b.p.length,north=Math.max(...b.p.map(p=>p[1]));
-      return cx>-100&&cx<100&&Math.abs(north-(roadY(cx)-9))<4&&b.h>5;
-    };
-    const houseColor=(b)=>{
-      const x=b.p.reduce((s,p)=>s+p[0],0)/b.p.length;
-      return x>5&&x<20?'#e8d9a4':x<37&&x>20?'#b5c5aa':x<50&&x>37?'#bec7c1':x>50&&x<64?'#d8d4bd':'#c6c9ba';
-    };
-
     const palette = ['#e9e1cf', '#d9cbb0', '#c8d3c4', '#b9c6cf', '#e6d7c3', '#cfd6d9', '#f0ece4', '#c9b79c', '#a9b8b0', '#d7c4b8', '#9fb0bf', '#e1d3a8', '#c4a99a', '#b8bfa4'];
     const facade = canvasTexture(128, 128, (g, w, h) => {
       g.fillStyle = '#ffffff';
@@ -525,18 +529,9 @@
       // OSM restroom lacks a height; 3.2 m is an illustrative replacement for the old generic 10 m default.
       const renderBuildings=meta.buildings.map(b=> b.s==='osm' && b.p.some(p=>p[0]>43&&p[0]<57&&p[1]>-114&&p[1]<-109) ? {...b,h:3.2} : b);
       const near = extrude(renderBuildings.filter(b=>!isCloseHouse(b)), { bayW: 3.0, floorH: 3.3 });
-      const sided=canvasTexture(512,512,(g,w,h)=>{
-        g.fillStyle='#e7e7e4';g.fillRect(0,0,w,h);
-        for(let y=0;y<h;y+=64){
-          g.fillStyle='#92988f';g.fillRect(0,y,w,4);g.fillStyle='#fafaf5';g.fillRect(0,y+3,w,3);
-          for(let i=0;i<550;i++){g.fillStyle='rgba(72,67,52,0.075)';g.fillRect(rng()*w,y+rng()*60,2+rng()*19,1);}
-        }
-      });
-      sidingMap=sided;
-      const hg=extrude(renderBuildings.filter(isCloseHouse),{bayW:1.3,floorH:1.3,color:houseColor});
-      const hw=new T.Mesh(hg.walls,new T.MeshStandardMaterial({map:sided,bumpMap:sided,bumpScale:.012,vertexColors:true,roughness:.85}));
-      hw.castShadow=hw.receiveShadow=true;scene.add(hw);
-      const hr=new T.Mesh(hg.roofs,new T.MeshStandardMaterial({color:0x65625b,roughness:1}));hr.castShadow=hr.receiveShadow=true;scene.add(hr);
+      // Preserve the established vegetation RNG sequence after removing the old
+      // siding texture (8 courses × 550 marks × 3 random values).
+      for(let i=0;i<13200;i++)rng();
       const wm = new T.MeshStandardMaterial({ map: grey ? null : facade, vertexColors: true, roughness: 0.85 });
       const walls = new T.Mesh(near.walls, wm);
       walls.castShadow = walls.receiveShadow = true;
@@ -580,93 +575,20 @@
       for(const [parts,color] of [[edges,0xd0c8b3],[caps,0xe8e1d0],[equip,0xa9a398]])if(parts.length){const mesh=new T.Mesh(mergeGeometries(parts),new T.MeshStandardMaterial({color,roughness:.9}));mesh.castShadow=mesh.receiveShadow=true;scene.add(mesh);}
     }
 
-    // ---- Close Edwardian fronts: existing bay outlines, lapped siding and relief joinery.
-    if(num('houseDetail',1)) {
-      const trim=new T.MeshStandardMaterial({color:0xf5f2e2,roughness:.68});
-      const trimShade=new T.MeshStandardMaterial({color:0xb1b4a5,roughness:.8});
-      const glass=new T.MeshPhysicalMaterial({color:0x243944,metalness:.55,roughness:.12,clearcoat:1});
-      windowMaterials.push(glass);
-      const recess=new T.MeshStandardMaterial({color:0x182b2d,roughness:.8});
-      const steps=new T.MeshStandardMaterial({color:0x898e86,roughness:1});
-      const rail=new T.MeshStandardMaterial({color:0x35403b,roughness:.7});
-      const basePaint=new T.MeshStandardMaterial({color:0x58636c,roughness:.9});
-      function framedWindow(parent,x,y,ww,hh,z=-.08){
-        box(parent,x,y,z+.035,ww+.27,hh+.27,.055,trimShade);
-        box(parent,x,y,z-.08,ww,hh,.04,glass);
-        for(const dx of [-ww/2-.065,ww/2+.065])box(parent,x+dx,y,z-.18,.105,hh+.28,.24,trim);
-        for(const dy of [-hh/2-.075,hh/2+.075])box(parent,x,y+dy,z-.18,ww+.3,.13,.24,trim);
-        box(parent,x,y+.12,z-.13,ww,.055,.065,trim);
-        for(const side of [-1,1])box(parent,x+side*(ww/2-.04),y,z-.12,.042,hh,.04,trimShade);
-        for(const side of [-1,1])box(parent,x,y+side*(hh/2-.03),z-.12,ww,.04,.04,trimShade);
-        box(parent,x,y-hh/2-.12,z-.23,ww+.38,.085,.33,trim);
-      }
-      for(const b of meta.buildings.filter(isCloseHouse)) {
-        const cx=b.p.reduce((a,p)=>a+p[0],0)/b.p.length,north=Math.max(...b.p.map(p=>p[1]));
-        const paint=new T.MeshStandardMaterial({map:sidingMap,color:houseColor(b),roughness:.85});
-        paint.onBeforeCompile=s=>{
-          s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 sidingWorld;').replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nsidingWorld=(modelMatrix*vec4(transformed,1.)).xyz;');
-          s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 sidingWorld;').replace('#include <map_fragment>','diffuseColor*=texture2D(map,vec2(sidingWorld.x+sidingWorld.z,sidingWorld.y)/1.3);');
-        };
-        const garage=new T.MeshStandardMaterial({color:cx<20?0x606d78:0x748781,roughness:.82});
-        const frontEdges=[];
-        for(let i=0;i<b.p.length;i++) {
-          const [ax,ay]=b.p[i],[bx,by]=b.p[(i+1)%b.p.length];
-          const len=Math.hypot(bx-ax,by-ay);
-          if(bx>=ax||len<.75||(ay+by)/2<north-1.8)continue;
-          const face=new T.Group();face.position.copy(V((ax+bx)/2,(ay+by)/2,b.b));face.rotation.y=Math.atan2(ay-by,ax-bx);
-          const floorH=3.0,levels=Math.max(2,Math.round(b.h/floorH));
-          box(face,0,1.14,-.02,len,2.28,.075,basePaint);
-          for(let f=1;f<levels;f++){
-            const yy=1.18+f*floorH;
-            const count=Math.max(1,Math.floor(len/2.6));
-            for(let k=0;k<count;k++)framedWindow(face,-len/2+len*(k+.5)/count,yy,Math.min(1.22,len/count-.38),1.98);
-            box(face,0,yy-1.34,-.14,len+.05,.16,.24,trim);
-            box(face,0,yy-1.20,-.1,len+.1,.07,.18,trim);
-          }
-          box(face,0,b.h-.2,-.23,len+.15,.19,.46,trim);
-          box(face,0,b.h-.43,-.15,len+.10,.17,.26,trim);
-          for(let k=.25;k<len;k+=.48)box(face,-len/2+k,b.h-.62,-.18,.11,.22,.23,trimShade);
-          if(len>4){
-            box(face,-len*.15,1.03,-.09,2.95,2.14,.1,trim);
-            box(face,-len*.15,1.03,-.16,2.7,1.98,.08,garage);
-            for(let rr=0;rr<4;rr++)for(let cc=0;cc<3;cc++)box(face,-len*.15-.86+cc*.86,.34+rr*.45,-.22,.79,.37,.025,garage);
-            box(face,len*.36,2.6,-.12,1.35,2.7,.06,recess);
-            box(face,len*.36,2.5,-.18,.98,2.45,.08,garage);
-            for(let j=0;j<9;j++)box(face,len*.36,.08+j*.105,-2.05+j*.20,1.35,.16+j*.21,.24,steps);
-            for(const dx of [-.71,.71]){
-              branch(face,[[len*.36+dx,.9,-2.1],[len*.36+dx,2.7,-.3]],.019,.019,rail,2);
-              for(let j=0;j<6;j++)box(face,len*.36+dx,.62+j*.16,-2+j*.30,.021,.87,.021,rail);
-            }
-          }else if(len>1.2){
-            framedWindow(face,0,1.2,Math.min(1.15,len-.38),1.45);
-          }
-          if(len>7&&cx>5&&cx<20){
-            for(const xx of [-2.6,.6]){
-              const bay=new T.Group();bay.position.x=xx;
-              const bh=b.h-2.55;
-              box(bay,0,2.55+bh/2,-.43,1.65,bh,.85,paint);
-              for(const side of [-1,1]){const angled=box(bay,side*1.03,2.55+bh/2,-.23,.76,bh,.16,paint);angled.rotation.y=side*.65;}
-              for(let floor=1;floor<Math.round(b.h/3);floor++){
-                framedWindow(bay,0,1.18+floor*3,1.25,1.98,-.91);
-                for(const side of [-1,1]){const pane=new T.Group();pane.position.set(side*1.03,0,-.31);pane.rotation.y=side*.65;framedWindow(pane,0,1.18+floor*3,.5,1.98,-.10);bay.add(pane);}
-                box(bay,0,floor*3-.17,-.5,2.25,.17,1.1,trim);
-              }
-              box(bay,0,b.h-.17,-.5,2.4,.26,1.15,trim);face.add(bay);
-            }
-          }
-          scene.add(face);frontEdges.push({len,face});
-        }
-        // Long blank party walls have only a few small service windows, as in frame 6.
-        for(let i=0;i<b.p.length;i++){
-          const [ax,ay]=b.p[i],[bx,by]=b.p[(i+1)%b.p.length],len=Math.hypot(bx-ax,by-ay);
-          if(len<8||Math.abs(ay-by)<len*.9)continue;
-          const wall=new T.Group();wall.position.copy(V((ax+bx)/2,(ay+by)/2,b.b));wall.rotation.y=Math.atan2(ay-by,ax-bx);
-          framedWindow(wall,0,4.6,.75,.78);framedWindow(wall,0,7.6,.75,.78);
-          // Weathered drain pipe and a restrained utility cable.
-          box(wall,-len*.36,b.h*.45,-.12,.065,b.h*.9,.065,trimShade);
-          box(wall,0,3.2,-.09,len,.022,.022,rail);
-          scene.add(wall);
-        }
+    // ---- Modelled painted Victorians on the existing south-side lots.
+    const houses = buildHouses({scene,buildings:meta.buildings.filter(isCloseHouse),
+      roadY,roadHeight,windowMaterials,canvasTexture,detail:!!num('houseDetail',1)});
+    window.doloresHouses=houses.row;
+    // Preserve the established Garage lighting when facing into the park.
+    // Changed roof heights must not put the existing hero car into shade.
+    // These source-footprint proxies only cast shadows, never colour/depth.
+    if(num('legacyHouseShadows',preset==='streetview'?1:0)) {
+      houses.row.traverse(o=>{if(o.isMesh)o.castShadow=false;});
+      const original=extrude(meta.buildings.filter(isCloseHouse),{bayW:1,floorH:1});
+      const invisible=new T.MeshBasicMaterial({colorWrite:false,depthWrite:false});
+      for(const geometry of [original.walls,original.roofs]) {
+        const proxy=new T.Mesh(geometry,invisible);
+        proxy.name='Legacy Garage house shadow proxy';proxy.castShadow=true;scene.add(proxy);
       }
     }
 
@@ -728,7 +650,7 @@
       // A separate atmospheric blend keeps a faint 15–25 km silhouette visible
       // without thinning the stronger fog on the 4 km downtown skyline.
       const ridgeColor = haze.clone().lerp(new T.Color('#647f9c'), num('hillContrast', 0.65));
-      const colors=[];ridge.points.forEach(([x,y,z],i)=>{const c=ridgeColor.clone().multiplyScalar(.98+.025*Math.sin(i*.8)+.02*Math.sin(i*3.1));colors.push(c.r,c.g,c.b,c.r*1.05,c.g*1.04,c.b*1.03);});
+      const colors=[];ridge.points.forEach((_,i)=>{const c=ridgeColor.clone().multiplyScalar(.98+.025*Math.sin(i*.8)+.02*Math.sin(i*3.1));colors.push(c.r,c.g,c.b,c.r*1.05,c.g*1.04,c.b*1.03);});
       g.setAttribute('color',new T.Float32BufferAttribute(colors,3));
       scene.add(new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors:true, side: T.DoubleSide, fog: false })));
     }
@@ -738,6 +660,9 @@
     // Manual anchors below are composition estimates, not new survey records.
     const clearRadius = num('clearRadius', 33);
     const treeData = meta.trees.filter(t => {
+      // The summer hero clears off-camera park canopies whose long evening
+      // shadows otherwise stripe the car. Existing presets keep every tree.
+      if(num('parkClear',victorians?1:0)&&t.x>-75&&t.x<24&&t.y>roadY(t.x)+5.3&&t.y<roadY(t.x)+45)return false;
       if(t.k==='canopy'&&t.x>-20&&t.x<90&&t.y<roadY(t.x)-5.5&&t.y>roadY(t.x)-30)return false;
       const dx = t.x - 7.6, dy = t.y + 159.5;
       return !(t.y > roadY(t.x) + 5.3 && Math.hypot(dx, dy) < clearRadius && dx > -14);
@@ -824,7 +749,7 @@
     }
 
     // ---- Sculpted tree with parent/child branching and individually folded leaves.
-    heroTree({scene,load,V,edgeHeight,num,rng,toSun});
+    if(num('heroTree',1))heroTree({scene,load,V,edgeHeight,num,rng,toSun});
     if(num('conifer',0))rustyTree({scene,V,heightAt,rng,num});
 
     buildPalms({scene,treeData,V,load,num,hash,canvasTexture,rng,toSun});
@@ -895,7 +820,7 @@
     for(let i=0;i<4;i++){const x=car.x+(i<2?-2.4:2.4),y=car.y+(i%2?1:-1);anchors.push(['Car '+i,x,y,roadHeight(x)]);}
     const projected=anchors.map(([name,x,y,z])=>{const p=V(x,y,z).project(camera);return {name,x:(p.x+1)/2,y:(1-p.y)/2,bearing:Math.atan2(x-cx,y-cy)*180/Math.PI};});
     const cameraDirection=camera.getWorldDirection(new T.Vector3());
-    const modelBounds={left:1,right:0,top:1,bottom:0},wheelContact=[];
+    const modelBounds={left:1,right:0,top:1,bottom:0};
     carHolder.updateMatrixWorld(true);
     const contactMin=[Infinity,Infinity,Infinity,Infinity];
     carHolder.userData.carRoot.traverse(o=>{if(!o.isMesh)return;const a=o.geometry.attributes.position;for(let i=0;i<a.count;i++){
@@ -904,7 +829,8 @@
       const dx=v.x-car.x,dy=-v.z-car.y;
       if(Math.abs(Math.abs(dx)-1.36)<.28&&Math.abs(dy)>.68&&Math.abs(dy)<1.1){const k=(dx>0?2:0)+(dy>0?1:0);contactMin[k]=Math.min(contactMin[k],v.y-roadHeight(v.x));}
     }});
-    window.sceneInfo = { modelBounds,wheelContactGaps:contactMin, effective:{heading:T.MathUtils.radToDeg(Math.atan2(cameraDirection.x,-cameraDirection.z)),pitch:T.MathUtils.radToDeg(Math.asin(cameraDirection.y)),horizontalFov:fov,heightAboveRoad:num('camH',survey?(preset==='streetview'?2.85:2.5):1.6),nearRoofLift:num('nearRoofLift',3.0),sun:num('sun',6),env:num('env',.45),carEnv:num('carEnv',1.4)}, projected, roadSamples:[-20,0,20,50,80].map(x=>({x,y:roadY(x),z:roadHeight(x)})), geometryStats,preset, car: { ...car, z: roadZ }, camera: { x: cx, y: cy, z: camZ, verticalFov: vfov }, trees: treeData.length };
+    window.sceneInfo = { houses:houses.stats, modelBounds,wheelContactGaps:contactMin, effective:{heading:T.MathUtils.radToDeg(Math.atan2(cameraDirection.x,-cameraDirection.z)),pitch:T.MathUtils.radToDeg(Math.asin(cameraDirection.y)),horizontalFov:fov,heightAboveRoad:num('camH',survey?(preset==='streetview'?2.85:2.5):1.6),nearRoofLift:num('nearRoofLift',3.0),sun:num('sun',6),env:num('env',.45),carEnv:num('carEnv',1.4)}, projected, roadSamples:[-20,0,20,50,80].map(x=>({x,y:roadY(x),z:roadHeight(x)})), geometryStats,preset, car: { ...car, z: roadZ }, camera: { x: cx, y: cy, z: camZ, verticalFov: vfov }, trees: treeData.length };
+    window.sceneInfo.houses.sharedReflectionBytes=num('windowReflections',1)?4194304:0;
     r.compile(scene, camera);
     // GLTF and texture decodes have normally completed by here. Wait for any
     // remaining image requests, then fail loudly on missing offline assets.
