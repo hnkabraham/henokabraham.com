@@ -116,6 +116,7 @@ export function buildHouses({
   canvasTexture,
   detail = true,
 }) {
+  const live = new URLSearchParams(location.search).get('profile') === 'live';
   const row = new T.Group();
   row.name = '20th Street painted Victorians';
   const grain = canvasTexture(256, 256, (ctx, w, h) => {
@@ -165,6 +166,15 @@ export function buildHouses({
     roughness: 0.19,
     clearcoat: 0.4,
   });
+  if (live) {
+    // Ordinary dielectric glazing. The old zero-roughness clearcoat caused
+    // the clipped rectangular sun reflection on the pink bay window.
+    glass.metalness = 0.08;
+    glass.roughness = 0.42;
+    glass.clearcoat = 0.08;
+    glass.clearcoatRoughness = 0.5;
+    glass.specularIntensity = 0.2;
+  }
   glass.name = 'Window glass (environment optional)';
   windowMaterials.push(glass);
   const grime = new T.MeshStandardMaterial({
@@ -240,14 +250,27 @@ export function buildHouses({
   }
   function add(geo, mat, shade, frame, local = new T.Matrix4()) {
     const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    if (live && mat.vertexColors) {
+      // Bake directional cavity shading into vertex colours; no runtime AO
+      // pass or extra mesh. Undersides and trim returns retain their depth
+      // even when the north-facing fronts are lit mostly by the sky.
+      g.userData.cavity = Array.from(
+        { length: g.attributes.normal.count },
+        (_, i) => {
+          const ny = g.attributes.normal.getY(i);
+          return ny < -0.5 ? 0.66 : Math.abs(ny) < 0.5 ? 0.94 : 1;
+        },
+      );
+    }
     g.applyMatrix4(frame.clone().multiply(local));
     const c = shade?.isColor ? shade : new T.Color(shade || '#ffffff');
     if (mat.vertexColors) {
       const values = new Float32Array(g.attributes.position.count * 3);
       for (let i = 0; i < values.length; i += 3) {
-        values[i] = c.r;
-        values[i + 1] = c.g;
-        values[i + 2] = c.b;
+        const ao = g.userData.cavity?.[i / 3] ?? 1;
+        values[i] = c.r * ao;
+        values[i + 1] = c.g * ao;
+        values[i + 2] = c.b * ao;
       }
       g.setAttribute('color', new T.BufferAttribute(values, 3));
     }
@@ -844,7 +867,10 @@ export function buildHouses({
   const report = [];
   lots.forEach((lot, index) => {
     const type = index % 4;
-    const p = palettes[index % palettes.length];
+    const palette = palettes[index % palettes.length];
+    const p = live
+      ? { ...palette, body: color(palette.body, 0.92 + hash(index, 91) * 0.13) }
+      : palette;
     const frame = matrix(
       lot.x,
       roadHeight(lot.x) + 0.12,

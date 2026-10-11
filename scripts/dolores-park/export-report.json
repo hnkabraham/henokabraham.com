@@ -1,19 +1,19 @@
 {
-  "generated": "2026-10-11T06:35:18.922Z",
+  "generated": "2026-10-11T08:39:22.555Z",
   "splitDistance": 180,
   "variants": {
     "desktop": {
-      "glbBytes": 3657640,
+      "glbBytes": 4122596,
       "roundTrip": {
         "before": {
-          "triangles": 951115,
+          "triangles": 950275,
           "meshes": 57,
-          "instances": 17560,
+          "instances": 17556,
           "canopies": [
             {
               "name": "Park canopy 0",
-              "count": 246,
-              "colors": 246
+              "count": 242,
+              "colors": 242
             },
             {
               "name": "Park canopy 1",
@@ -33,14 +33,14 @@
           ]
         },
         "after": {
-          "triangles": 951115,
+          "triangles": 950275,
           "meshes": 57,
-          "instances": 17560,
+          "instances": 17556,
           "canopies": [
             {
               "name": "Park canopy 0",
-              "count": 246,
-              "colors": 246
+              "count": 242,
+              "colors": 242
             },
             {
               "name": "Park canopy 1",
@@ -60,11 +60,12 @@
           ]
         }
       },
-      "backdropBytes": 460794,
-      "summerBackdropBytes": 462040
+      "eveningBackdropBytes": 621058,
+      "backdropBytes": 624492,
+      "summerBackdropBytes": 627400
     },
     "phone": {
-      "glbBytes": 2861008,
+      "glbBytes": 2779264,
       "roundTrip": {
         "before": {
           "triangles": 565537,
@@ -91,8 +92,9 @@
           ]
         }
       },
-      "backdropBytes": 104702,
-      "summerBackdropBytes": 104890
+      "eveningBackdropBytes": 206480,
+      "backdropBytes": 206486,
+      "summerBackdropBytes": 208068
     }
   }
 }

@@ -33,6 +33,7 @@ export function splitScene(scene, carHolder, car, radius = 180) {
       original.alphaTest,
       original.side,
       original.isMeshBasicMaterial,
+      original.isMeshPhysicalMaterial,
       original.metalness > 0.2 ? original.metalness : 0,
     ].join('|');
     if (!materials.has(key)) {
@@ -355,7 +356,6 @@ export async function prepareLiveScene({
     const c = new T.PerspectiveCamera(90, 1, 0.15, 40000);
     c.position.set(car.x, roadZ + 1.5, -car.y);
     const saved = r.getSize(new T.Vector2());
-    r.setSize(size, size, false);
     // CubeTextureLoader's +X is mirrored by WebGLBackground; render with the
     // standard image-cubemap camera orientation (not render-target cubemap).
     for (const [name, dir, up] of [
@@ -366,6 +366,8 @@ export async function prepareLiveScene({
       ['pz', [0, 0, 1], [0, -1, 0]],
       ['nz', [0, 0, -1], [0, -1, 0]],
     ]) {
+      const faceSize = typeof size === 'number' ? size : size[name];
+      r.setSize(faceSize, faceSize, false);
       c.up.set(up[0], up[1], up[2]);
       c.lookAt(c.position.clone().add(new T.Vector3(dir[0], dir[1], dir[2])));
       r.render(scene, c);

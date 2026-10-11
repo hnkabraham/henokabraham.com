@@ -342,12 +342,14 @@ async function main() {
         toneMapped: false,
         uniforms: {
           zenith: { value: skyLinear('#78b5f2') },
-          horizon: { value: skyLinear(q.get('haze') || '#f1f7fc') },
+          horizon: {
+            value: skyLinear(q.get('haze') || (live ? '#caddea' : '#f1f7fc')),
+          },
         },
         vertexShader:
           'varying vec3 dir; void main(){ dir=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
         fragmentShader: `uniform vec3 zenith; uniform vec3 horizon; varying vec3 dir;
-          void main(){ float h=max(normalize(dir).y,0.0); gl_FragColor=vec4(mix(horizon,zenith,min(1.0,smoothstep(0.0,0.13,h)*.83+h*.25)),1.0);
+          void main(){ float h=max(normalize(dir).y,0.0); gl_FragColor=vec4(mix(horizon,zenith,min(1.0,smoothstep(0.0,${live ? '0.38' : '0.13'},h)*.83+h*.25)),1.0);
 
           #include <colorspace_fragment>
           }`,
@@ -544,12 +546,23 @@ async function main() {
     const pathOff = num('pathOff', 8.6),
       pathWidth = num('pathWidth', 1.8);
     strip(5.5, 5.7, roadLift + 0.1, curbM);
-    const earthMat = new T.MeshStandardMaterial({
-      map: load(BASE + 'assets/brown_mud_leaves_01_diff_1k.jpg'),
-      normalMap: load(BASE + 'assets/brown_mud_leaves_01_nor_gl_1k.jpg', false),
-      color: new T.Color(1.25, 1.1, 0.86),
-      roughness: 1,
-    });
+    const earthMat = new T.MeshStandardMaterial(
+      live
+        ? {
+            map: load(BASE + 'assets/grass_ground_diff_1k.jpg'),
+            color: new T.Color(0.28, 0.62, 0.23),
+            roughness: 1,
+          }
+        : {
+            map: load(BASE + 'assets/brown_mud_leaves_01_diff_1k.jpg'),
+            normalMap: load(
+              BASE + 'assets/brown_mud_leaves_01_nor_gl_1k.jpg',
+              false,
+            ),
+            color: new T.Color(1.25, 1.1, 0.86),
+            roughness: 1,
+          },
+    );
     strip(5.7, pathOff, roadLift + 0.1, earthMat);
     strip(pathOff, pathOff + pathWidth, roadLift + 0.1, concrete);
     strip(-8.6, -7.3, roadLift + 0.1, concrete);

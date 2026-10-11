@@ -1,6 +1,6 @@
 # Dolores Park scene
 
-An offline three.js scene of 20th Street at the top of Mission Dolores Park, San Francisco, with the Garage's GT350 (`public/models/garage-gt350r.glb`) parked at the park-side curb. It renders stills in headless Chromium. The Garage section's "Dolores Park" view, `public/images/garage-dolores*.{avif,jpg}`, is one of them.
+A three.js scene of 20th Street at the top of Mission Dolores Park, San Francisco, with the Garage's GT350 (`public/models/garage-gt350r.glb`) parked at the park-side curb. It renders offline stills in headless Chromium and exports the live Garage viewer. The site's Garage section runs the live viewer (`lib/dolores-park-viewer.js`) with the `evening` sun; the hero view above, formerly the site's still, remains the look reference. **Pass 6 below documents the current live delivery; Pass 5 is retained as historical implementation notes.**
 
 It's a reconstruction: real terrain, footprints, tree positions and city massing, plus modelled foliage, facades and street detail. It reads as CG, not as a photograph. The framing was matched by eye to a Google Street View frame at 3851 20th St. That frame isn't in this repository, and the scene never loads, samples or traces any Street View or other proprietary imagery.
 
@@ -33,7 +33,7 @@ Write renders to a directory outside the repository; `out/` above is a placehold
 
 This needs Playwright installed globally. A frame takes about 4 s on an M-series Mac with Metal.
 
-The Garage image is the hero view at 1920 × 1200. It is encoded with Pillow as AVIF at quality 58 and JPEG at quality 84, at 1920 and 960 px wide (`garage-dolores.*`, `garage-dolores-960.*`).
+The Garage posters (`public/images/garage-park*.{avif,jpg}`) are live-viewer renders of the default pose with the `evening` sun: `page=live w=1920 h=1200 dpr=1` for desktop, and `page=live phone=1 w=1440 h=1080 dpr=1`, downscaled to 1080 × 810, for frames 800 px wide and under. They are encoded with Pillow as AVIF at quality 58 and JPEG at quality 84; the desktop poster also ships 960 px wide.
 
 Renders aren't bit-identical from run to run, even with `grain=0`. Two renders of the same view differ by about 0.2–0.3 of 255 on average, with a few edge pixels further apart.
 
@@ -167,7 +167,84 @@ The row was developed over 29 render-and-look iterations, including close facade
 - **The offline scene's size:** about 24 M scene triangles, an 8192² shadow map, two reflection captures and full-resolution post-processing. Use the web profile below for an orbitable scene.
 
 
-## Pass 5: orbitable web profile
+## Pass 6: sunlit Garage viewer
+
+The reference page now defaults to **`sun=evening`**, with the original default pose and 52° horizontal FOV. The shared library deliberately retains its existing `winter` option default to preserve API semantics: **the site's integration should pass `{sun: 'evening', scrollFriendly: true}`**. `sun=winter`, `sun=summer`, and the reference page's `preset=victorians` alias for summer still work. The handle and existing options are unchanged; `evening` is added to the TypeScript sun union. No `app/` integration, car asset or paint-conversion values were changed.
+
+### Chosen light and finish
+
+| Parameter | Evening | Winter, unchanged | Summer, unchanged |
+|---|---:|---:|---:|
+| Azimuth / elevation | 272° / 34° | 225° / 28° | 290° / 10° |
+| Colour / intensity | `#fff0dc` / 5.5 | `#fff0d8` / 6 | `#ffe2b7` / 5 |
+| Exposure | 1.15 | 1.2 | 1.05 |
+| Environment / hemisphere | .65 / .45 | .45 / .32 | .65 / .55 |
+
+This is a near-west late-afternoon/early-evening summer-family sun, chosen from trials spanning 260–295° azimuth and 15–35° elevation. Raising it above the former low summer sun clears the house roofs and most tree streaks from the default car. West-facing bay returns catch direct light; the north-facing flat fronts receive mostly sky fill. It is an artistic, physically plausible San Francisco seasonal choice, not a dated solar simulation. The sun stays fixed throughout an orbit, and all real house shadows remain enabled.
+
+The car uses a higher local probe, at road level +1.35 m, with 256² desktop / 128² phone capture faces. Its environment intensity is 1.45. The lighting-only sky cube uses 10% saturation and 145% brightness, with 1.8 background intensity during probe capture; neutral hemisphere colours reduce the former blue-grey cast. The visible backdrop is separate. This produces brighter neutral paint and more distinct body/glass reflections without changing the shared paint conversion. The probe is still a filtered LDR approximation rather than the offline HDRI.
+
+### Geometry, surfaces and defects
+
+- **Palms:** live Phoenix fronds have more droop, a wider range of elevations, narrower blades, lateral folds and irregular azimuths. Fan fronds use separated fingers with dropped tips, retaining the same triangle allocation per frond. Live greens are darker and less yellow; a separate `palm-fronds-live` registry patch reduces exaggerated transmission. Alpha maps retain 256 × 1024 desktop / 160 × 640 phone detail. Offline frond geometry, colours and transmission remain unchanged.
+- **Lawn:** the near verge uses the existing CC0 grass diffuse map and a patchy green base instead of brown leaf-litter soil. Four-fifths of the existing 9,000 / 3,500 blades are concentrated in the visible x=1…28 m strip around the car. Narrower, lower blades and darker greens avoid paper-like triangles. The curb and pavement geometry are unchanged. Grass farther around the park keeps the existing terrain treatment.
+- **Windows:** the pink-house white panel was a strong specular/clearcoat glint from the live metallic, low-roughness glass. A diagnostic with specular response disabled removed it. Live windows now use predominantly dielectric glass, higher roughness and a weak, rough clearcoat. The exporter also preserves physical-material identity during material grouping. The former summer trouble view and views around the row were inspected; soft reflections remain, but the glaring white panel is gone. Offline glass is unchanged.
+- **Houses:** slight per-house value variation and baked vertex darkening on undersides and returns strengthen cornices, bays and reveals. This is inexpensive directional cavity shading, not ray-traced ambient occlusion. It survives GLB export without a new map or shader and does not add triangles or calls.
+- **Horizon:** the live sky's pale-blue horizon and broader gradient replace the abrupt near-white band. Downtown remains simplified geometric massing.
+- **House shadow block:** this was real winter occlusion, not a leftover proxy or backdrop rectangle. A ray from the shaded verge toward the winter sun hit the exported `Painted wood / subtle grain` house geometry; disabling direct sunlight removed the boundary. Evening moves that large shadow away from the near verge in the reviewed behind-car view. Winter intentionally retains it.
+- **Licences:** exported source strings now point to [DataSF](https://data.sf.gov/). No new third-party assets were downloaded. `fetch.py assets` verifies the existing manifest.
+
+### Backdrops and packing
+
+Winter retains `dolores-sky-*.webp`; any other sun uses `dolores-sky-<sun>-*.webp`, with `-phone` before the face name for phone. All winter, summer and new evening sets are present. A viewer downloads only its chosen set.
+
+Desktop faces are 1792² WebP at quality 86, without runtime mipmaps. Phone assigns 1536² faces at quality 85 to east/north (`nx`, `nz` in the image-cubemap convention), and 512² at quality 63 to the other four directions. One original background shader samples six independent 2D faces, allowing different resolutions without promoting every face to the largest allocation. It preserves the same handedness and baked colour as the desktop background and costs one draw. This doubles phone downtown resolution while keeping its transfer and texture allocation within budget. The low-resolution lighting cube is independent of those visible faces.
+
+The exporter now carries texture names from Three's texture definitions into glTF Transform image resources before filtering. Every image receives a nonempty name, and the exclusion pattern rejects empty URIs so they cannot accidentally bypass name-based sizing. Desktop bark/asphalt diffuse maps retain 1024²; phone bark/asphalt normals use 256². Small house maps stay small. The ground collision tile's existing 0.1 mm samples are losslessly packed as gzip/base64 int32 values in GLB extras, saving roughly 115 KB. The viewer decodes them with native `DecompressionStream` before creating its WebGL context and supports the previous unpacked metadata too. This introduces no package or extra fetch.
+
+### Current measurements
+
+`live-report.json` is the machine-readable result from `verify-live.mjs`, using **evening**, `scrollFriendly=1`, and the site's frame sizes: desktop 950 × 593.75 CSS px at DPR 2, phone 390 × 292.5 CSS px at DPR 2. Hardware is Apple M2 Max / Chromium ANGLE Metal. Phone here means the phone profile on this Mac, not a physical-phone performance measurement. MB are decimal.
+
+| Resource | Desktop | Limit | Phone | Limit |
+|---|---:|---:|---:|---:|
+| Park GLB + evening backdrop, excluding car | 4.744 MB | 6 MB | 2.986 MB | 3 MB |
+| Settled default triangles, including car | 801,282 | 900,000 | 392,653 | 400,000 |
+| Default draw calls | 60 | 120 | 57 | 60 |
+| Orbit peak draw calls | 62 | 120 | 59 | 60 |
+| Estimated texture memory | 156.64 MB | 160 MB | 60.53 MB | 64 MB |
+| Shadow map | 2048² | 2048² | 1024² | 1024² |
+| Median completed frame | 2.3 ms | 8 ms | 1.5 ms | — |
+| Local load through first frame | 889 ms | — | 737 ms | — |
+
+Frame time includes CPU submission and synchronous one-pixel readback, after 24 warmup frames over 120 orbit frames. These figures are not directly comparable with Pass 5's larger 3200 × 2000 drawing buffer. Static shadows and probes are still one-time load work: initial shadow-plus-colour submissions are 2,060,428 triangles / 111 calls desktop and 1,229,576 / 105 phone, with six-face probe capture additional. The triangle limit applies to the settled default pose; the phone's scripted orbit peaks at 490,355 triangles. Draw-call limits pass at the default and orbit peak.
+
+Texture estimates include car maps, decoded backdrop faces, mip chains where used, retained PMREMs, and shadow storage; they exclude canvas colour/depth/MSAA attachments and CPU buffers. The viewer remains idle after controls settle. All 900 collision samples per profile, input, disposal, and explicit context-loss/recovery checks pass.
+
+### Reproduce and review
+
+Run `node scripts/dolores-park/export.mjs` after scene changes, then `node scripts/dolores-park/verify-live.mjs`. `npx oxlint --ignore-pattern '.claude/**' scripts/dolores-park lib` is clean; changed JavaScript is formatted with `oxfmt`. The asset manifest was verified with `python3 scripts/dolores-park/fetch.py assets`.
+
+Set `OUT` to an external render directory. Poster commands use DPR 1 explicitly; the phone poster is 4:3, not a narrow crop of the desktop image:
+
+```sh
+node scripts/dolores-park/render.mjs "$OUT/poster-desktop.png" page=live sun=evening dpr=1 w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/poster-phone.png" page=live sun=evening phone=1 dpr=1 w=1440 h=1080
+node scripts/dolores-park/render.mjs "$OUT/behind.png" page=live pose=20,-151,1.5,12.9,-154.63,1.05 dpr=1 w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/high.png" page=live pose=8.4,-159.1,5.2,12.9,-154.63,1.05 dpr=1 w=1920 h=1200
+```
+
+The external `dolores6/` delivery contains `poster-desktop.png` (1920 × 1200), `poster-phone.png` (1440 × 1080), `renders/comparison-still.png`, and `renders/orbit-sheet.png`. Posters are byte-for-byte copies of viewer captures. The six-view sheet includes default, behind, verge, high three-quarter, house-facing and the uncropped 4:3 phone frame, with orbit distances 7.74–8.05 m. More than 40 renders were generated and inspected, including sun trials, side-by-side still comparisons, material diagnostics and window views around the car.
+
+Both prescribed offline views were rendered before and after the scene work. Streetview at 1600 × 1360 has mean absolute RGB difference **0.257 / 255**; the deployed hero camera at 1920 × 1200 has **0.198 / 255**. The 99th percentile is 4 / 255 for each. Visual inspection found no change beyond the known rendering noise. The winter/summer sun values and all offline-only material/geometry branches retain their original behaviour.
+
+### Remaining weaknesses
+
+The car now holds direct sunlight at the default pose, but its lower door and glass reflections still differ from the still's HDRI/post-processed result. Palms have clearer fronds yet retain procedural repetition; nearby tree cards and thin grass blades are visible at some angles. The lawn is healthier but still a repeated texture, and north-facing house fronts remain stylised without full indirect light or contact AO. Phone shadows are softer at 1024². Non-downtown phone backdrop directions are lower resolution, and the 180 m far-field split still has parallax error when orbiting. The backdrop is baked, so a different sun or wider camera travel requires another export.
+
+## Pass 5: orbitable web profile (historical)
+
+The following records Pass 5's original output and measurements. Pass 6 above supersedes its default sun, backdrop sizes, material settings, budgets and poster instructions.
 
 The web scene is built by the same `scene.js`, `detail.js`, `palms.js` and `houses.js` as the still. `profile=live` selects its geometry budgets. No site React code, deployed poster, car asset, package manifest, or deployment was changed.
 

@@ -9,7 +9,7 @@ export const DEFAULT_POSE: DoloresPose;
 
 export interface DoloresViewerOptions {
   phone?: boolean;
-  sun?: 'winter' | 'summer';
+  sun?: 'winter' | 'summer' | 'evening';
   /** Fetches a public-root path such as '/models/dolores-park.glb'. */
   load?: (path: string) => Promise<ArrayBuffer>;
   dracoPath?: string;

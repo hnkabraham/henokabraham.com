@@ -1,7 +1,8 @@
 // The standalone reference page for the live viewer (lib/dolores-park-viewer.js,
 // the same module the site's Garage section runs). URL parameters:
-// phone=1, sun=summer, pose=x,y,h,lookx,looky,lookh, fov (horizontal), w, h,
-// dpr, benchmark=1, shot=1. It sets window.doloresViewer, window.liveInfo,
+// phone=1, sun=evening|winter|summer (evening by default),
+// pose=x,y,h,lookx,looky,lookh, fov (horizontal), w, h,
+// dpr, scrollFriendly=1, benchmark=1, shot=1. It sets window.doloresViewer, window.liveInfo,
 // window.png (shot=1), window.error and window.done for render.mjs and
 // verify-live.mjs.
 import { createDoloresViewer } from '../../lib/dolores-park-viewer.js';
@@ -11,10 +12,9 @@ const num = (k) => (q.has(k) ? Number(q.get(k)) : undefined);
 const hint = document.querySelector('#hint');
 const options = {
   phone: q.get('phone') === '1',
+  scrollFriendly: q.get('scrollFriendly') === '1',
   sun:
-    q.get('sun') === 'summer' || q.get('preset') === 'victorians'
-      ? 'summer'
-      : 'winter',
+    q.get('sun') || (q.get('preset') === 'victorians' ? 'summer' : 'evening'),
   // The standalone server serves the repository root, not public/.
   load: async (path) => {
     const response = await fetch('/public' + path);

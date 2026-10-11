@@ -1,7 +1,8 @@
-// Builds both web LODs and both single-sun backdrops. No external requests from
+// Builds both web LODs and all single-sun backdrops. No external requests from
 // Chromium; all source assets are restored by fetch.py and listed in assets.json.
 import { mkdir, writeFile, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 import assert from 'node:assert/strict';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
@@ -23,7 +24,7 @@ import { root, startServer, launchBrowser, localPage } from './server.mjs';
 const license =
   'Original procedural geometry: CC0-1.0. Poly Haven textures: CC0-1.0. DataSF building footprints and street-tree inventory: PDDL-1.0. USGS 3DEP and USDA NAIP: U.S. public domain. OSM-derived road and footprint geometry: ODbL-1.0, © OpenStreetMap contributors, https://www.openstreetmap.org/copyright. Mapzen/Terrarium ridge: public-domain elevation sources. Car is separate and excluded.';
 const source =
-  'https://polyhaven.com/; https://data.sfgov.org/; https://www.usgs.gov/3d-elevation-program; https://naip-usdaonline.hub.arcgis.com/; https://www.openstreetmap.org/copyright; see scripts/dolores-park/assets.json and README.md for provenance.';
+  'https://polyhaven.com/; https://data.sf.gov/; https://www.usgs.gov/3d-elevation-program; https://naip-usdaonline.hub.arcgis.com/; https://www.openstreetmap.org/copyright; see scripts/dolores-park/assets.json and README.md for provenance.';
 const args = new Set(process.argv.slice(2));
 const { server, origin } = await startServer(),
   browser = await launchBrowser();
@@ -81,6 +82,21 @@ try {
       Buffer.from(encoded, 'base64').copy(bytes, offset);
     }
     const document = await io.readBinary(new Uint8Array(bytes));
+    // Three names texture definitions; glTF Transform names image resources.
+    // Copy that identity across before name-based texture budgets are applied.
+    const rawJSON = JSON.parse(
+      bytes.toString('utf8', 20, 20 + bytes.readUInt32LE(12)),
+    );
+    for (const texture of rawJSON.textures || []) {
+      if (texture.name && texture.source !== undefined)
+        document.getRoot().listTextures()[texture.source].setName(texture.name);
+    }
+    document
+      .getRoot()
+      .listTextures()
+      .forEach((texture, i) => {
+        if (!texture.getName()) texture.setName(`Dolores texture ${i}`);
+      });
     document.getRoot().getAsset().copyright = license;
     document.getRoot().setExtras({
       license,
@@ -108,7 +124,10 @@ try {
         encoder: sharp,
         targetFormat: 'webp',
         resize: [512, 512],
-        pattern: /^(?!.*(?:asphalt_02_diff|bark_platanus_diff)).*$/,
+        // The matcher tests both name and URI; do not match an empty URI or
+        // it would bypass the exclusions on named embedded textures.
+        pattern:
+          /^(?!.*(?:asphalt_02_diff|bark_platanus_diff|palm-frond-alpha)).+$/,
         quality: phone ? 68 : 78,
         effort: 80,
       }),
@@ -120,6 +139,26 @@ try {
         quality: phone ? 68 : 78,
         effort: 80,
       }),
+      textureCompress({
+        encoder: sharp,
+        targetFormat: 'webp',
+        resize: phone ? [640, 640] : [1024, 1024],
+        pattern: /palm-frond-alpha/,
+        quality: 88,
+        effort: 80,
+      }),
+      ...(phone
+        ? [
+            textureCompress({
+              encoder: sharp,
+              targetFormat: 'webp',
+              resize: [256, 256],
+              pattern: /bark_platanus_nor|asphalt_02_nor/,
+              quality: 68,
+              effort: 80,
+            }),
+          ]
+        : []),
       draco({
         method: 'edgebreaker',
         quantizePosition: 16,
@@ -128,6 +167,20 @@ try {
       }),
     );
     const out = path.join(root, `public/models/dolores-park${suffix}.glb`);
+    // The 0.25 m collision tile repeats whole road rows. Losslessly pack its
+    // existing 0.1 mm samples instead of spending >130 KB on JSON numbers.
+    for (const node of document.getRoot().listNodes()) {
+      const extras = node.getExtras(),
+        ground = extras.dolores?.ground;
+      if (!ground) continue;
+      const packed = Buffer.alloc(ground.heights.length * 4);
+      ground.heights.forEach((h, i) =>
+        packed.writeInt32LE(Math.round(h * 10000), i * 4),
+      );
+      ground.heightsGzip = gzipSync(packed, { level: 9 }).toString('base64');
+      delete ground.heights;
+      node.setExtras(extras);
+    }
     await io.write(out, document);
     const glb = await readFile(out),
       json = JSON.parse(glb.toString('utf8', 20, 20 + glb.readUInt32LE(12)));
@@ -142,41 +195,42 @@ try {
       roundTrip,
     };
     if (!args.has('--no-backdrops')) {
-      for (const summer of [false, true]) {
-        if (summer) {
-          for (const [key, value] of Object.entries(
-            lightingParams(suns.summer),
-          ))
-            params.set(key, String(value));
-          await page.goto(
-            `${origin}/scripts/dolores-park/scene.html?${params}`,
-          );
-          await page.waitForFunction(() => window.done, null, {
-            timeout: 300000,
-          });
-          const err = await page.evaluate(() => window.error);
-          if (err) throw Error(err);
-        }
+      for (const sunName of Object.keys(suns)) {
+        for (const [key, value] of Object.entries(
+          lightingParams(suns[sunName]),
+        ))
+          params.set(key, String(value));
+        await page.goto(`${origin}/scripts/dolores-park/scene.html?${params}`);
+        await page.waitForFunction(() => window.done, null, {
+          timeout: 300000,
+        });
+        const err = await page.evaluate(() => window.error);
+        if (err) throw Error(err);
         const faces = await page.evaluate(
           (size) => window.captureBackdrop(size),
-          phone ? 768 : 1536,
+          phone
+            ? { px: 512, nx: 1536, py: 512, ny: 512, pz: 512, nz: 1536 }
+            : 1792,
         );
         let total = 0;
         for (const [face, png] of Object.entries(faces)) {
           const file = path.join(
             root,
-            `public/scenery/dolores-sky${summer ? '-summer' : ''}${suffix}-${face}.webp`,
+            `public/scenery/dolores-sky${sunName === 'winter' ? '' : `-${sunName}`}${suffix}-${face}.webp`,
           );
           // Captured image-cubemap faces need a vertical flip for WebGL cube lookup.
           await sharp(Buffer.from(png.split(',')[1], 'base64'))
             .flip()
             .flop()
-            .webp({ quality: phone ? 74 : 84, effort: 6 })
+            .webp({
+              quality: phone ? (face === 'nz' || face === 'nx' ? 85 : 63) : 86,
+              effort: 6,
+            })
             .toFile(file);
           total += (await stat(file)).size;
         }
         report.variants[phone ? 'phone' : 'desktop'][
-          summer ? 'summerBackdropBytes' : 'backdropBytes'
+          sunName === 'winter' ? 'backdropBytes' : `${sunName}BackdropBytes`
         ] = total;
       }
     }

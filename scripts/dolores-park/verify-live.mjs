@@ -11,6 +11,8 @@ const report = { date: new Date().toISOString(), variants: {} };
 try {
   for (const phone of [false, true]) {
     const name = phone ? 'phone' : 'desktop';
+    const width = phone ? 390 : 950,
+      height = phone ? 292.5 : 593.75;
     const bytes = await readFile(
       path.join(root, `public/models/dolores-park${phone ? '-phone' : ''}.glb`),
     );
@@ -28,7 +30,7 @@ try {
     page.on('pageerror', (e) => failures.push(e.message));
     page.on('request', (r) => requests.push(r.url()));
     await page.goto(
-      `${origin}/scripts/dolores-park/live.html?phone=${+phone}&w=1600&h=1000&dpr=2`,
+      `${origin}/scripts/dolores-park/live.html?phone=${+phone}&sun=evening&w=${width}&h=${height}&dpr=2&scrollFriendly=1`,
     );
     await page.waitForFunction(() => window.done, null, { timeout: 120000 });
     assert.equal(await page.evaluate(() => window.error), undefined);
@@ -148,9 +150,9 @@ try {
     );
     assert.deepEqual(failures, []);
     // Exercise real input, then explicit disposal. No RAF may survive it.
-    await page.mouse.move(800, 500);
+    await page.mouse.move(width * 0.45, height * 0.5);
     await page.mouse.down();
-    await page.mouse.move(1050, 510, { steps: 12 });
+    await page.mouse.move(width * 0.7, height * 0.52, { steps: 12 });
     await page.mouse.up();
     await page.waitForTimeout(800);
     assert.ok(

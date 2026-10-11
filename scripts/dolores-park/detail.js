@@ -345,6 +345,7 @@ export function heroTree({ scene, load, V, edgeHeight, num, rng, toSun }) {
 }
 
 export function groundGrowth({ scene, V, roadY, edgeHeight, rng, num }) {
+  const live = new URLSearchParams(location.search).get('profile') === 'live';
   // Real blade geometry along the verge, kept off the path and the road.
   const blade = new T.BufferGeometry();
   blade.setAttribute(
@@ -365,22 +366,31 @@ export function groundGrowth({ scene, V, roadY, edgeHeight, rng, num }) {
     o = new T.Object3D(),
     c = new T.Color();
   for (let i = 0; i < count; i++) {
-    const x = -35 + rng() * 112,
+    const x = live && i % 5 !== 0 ? 1 + rng() * 27 : -35 + rng() * 112,
       off = 5.74 + rng() * 2.72,
       y = roadY(x) + off;
     const patchiness =
       Math.sin(x * 1.4 + off * 0.8) + Math.cos(x * 0.65 - off * 3);
     o.position.copy(V(x, y, edgeHeight(x) + 0.008));
     o.rotation.set((rng() - 0.5) * 0.9, rng() * 6.28, 0);
-    const sc = patchiness > 0 ? 0.1 + rng() * 0.25 : 0.02;
+    const sc = live
+      ? patchiness > -0.7
+        ? 0.22 + rng() * 0.23
+        : 0.1
+      : patchiness > 0
+        ? 0.1 + rng() * 0.25
+        : 0.02;
     o.scale.set(
-      0.6 + rng() * 0.4,
+      (live ? 0.22 : 0.6) + rng() * (live ? 0.18 : 0.4),
       sc * num('grassHeight', 1),
       0.7 + rng() * 0.4,
     );
     o.updateMatrix();
     mesh.setMatrixAt(i, o.matrix);
     c.setHSL(0.17 + rng() * 0.1, 0.36 + rng() * 0.25, 0.15 + rng() * 0.14);
+    if (live)
+      c.setHSL(0.23 + rng() * 0.07, 0.3 + rng() * 0.15, 0.12 + rng() * 0.09);
+    if (live) c.multiplyScalar(0.5);
     mesh.setColorAt(i, c);
   }
   mesh.receiveShadow = true;

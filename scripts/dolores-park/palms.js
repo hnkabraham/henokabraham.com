@@ -46,15 +46,18 @@ export function buildPalms({
       }
     }
   });
+  if (live) texture.name = 'palm-frond-alpha';
   const mat = new T.MeshStandardMaterial({
     map: texture,
     alphaTest: 0.25,
     alphaToCoverage: true,
     side: T.DoubleSide,
-    roughness: 0.64,
+    roughness: live ? 0.88 : 0.64,
     vertexColors: true,
   });
-  applyDoloresMaterial(mat, 'palm-fronds', { toSun });
+  applyDoloresMaterial(mat, live ? 'palm-fronds-live' : 'palm-fronds', {
+    toSun,
+  });
   const trunkMap = load(
     '/archive/scenery/dolores/assets/palm_tree_bark_diff_1k.jpg',
   );
@@ -74,29 +77,36 @@ export function buildPalms({
   });
   applyDoloresMaterial(deadMat, 'palm-dead');
   function frond(i, N, dead = false) {
-    const az = i * 2.39996,
+    const az = i * 2.39996 + (live ? (hash(i, 17) - 0.5) * 0.35 : 0),
       t = i / N,
       len = dead ? 3.5 + hash(i, 5) * 1.6 : 5.0 + hash(i, 10) * 1.8;
-    const el = ((dead ? -25 - hash(i, 2) * 35 : 66 - t * 97) * Math.PI) / 180;
+    const el =
+      ((dead ? -25 - hash(i, 2) * 35 : live ? 78 - t * 132 : 66 - t * 97) *
+        Math.PI) /
+      180;
     const p = [],
       uv = [],
       idx = [],
       col = [],
       c = new T.Color();
     c.setHSL(0.19 + hash(i, 12) * 0.06, 0.35, 0.7 + hash(i, 3) * 0.23);
+    if (live)
+      c.setHSL(0.235 + hash(i, 12) * 0.045, 0.28, 0.16 + hash(i, 3) * 0.09);
     for (let j = 0; j <= steps; j++) {
       const f = j / steps,
         a = Math.cos(el),
         out = len * (a * f + 0.1 * Math.sin(f * Math.PI)),
-        up = len * (Math.sin(el) * f - (dead ? 0.9 : 0.56) * f * f);
+        up =
+          len * (Math.sin(el) * f - (dead ? 0.9 : live ? 0.7 : 0.56) * f * f);
       const wide =
-        (dead ? 0.4 : 0.67) *
+        (dead ? 0.4 : live ? 0.6 : 0.67) *
         Math.pow(Math.sin(Math.PI * Math.min(1, f + 0.012)), 0.67);
       const center = new T.Vector3(Math.cos(az) * out, up, Math.sin(az) * out),
         right = new T.Vector3(-Math.sin(az), 0, Math.cos(az));
       for (const k of [-1, 0, 1]) {
         const v = center.clone().addScaledVector(right, k * wide);
-        v.y -= Math.abs(k) * wide * 0.22;
+        v.y -= Math.abs(k) * wide * (live ? 0.42 : 0.22);
+        if (live) v.y += k * wide * Math.sin(f * 3.5 + i) * 0.25;
         p.push(...v);
         uv.push((k + 1) / 2, f);
         col.push(c.r, c.g, c.b);
@@ -207,18 +217,44 @@ export function buildPalms({
       p = [],
       idx = [];
     const length = 1.02 + hash(i, 7) * 0.22;
-    for (let j = 0; j <= 40; j++) {
-      const a = -1.36 + (j / 40) * 2.72,
-        rr = j % 2 ? length * 0.68 : length;
-      const v = center
-        .clone()
-        .addScaledVector(dir, Math.cos(a) * rr)
-        .addScaledVector(right, Math.sin(a) * rr)
-        .addScaledVector(normal, j % 2 ? 0.11 : 0);
-      p.push(...v);
-      if (j) idx.push(41, j - 1, j);
+    if (live) {
+      // Costapalmate fan: folded fingers with split, drooping tips. Twenty
+      // separate lobes prevent the old flat, solid-disc silhouette.
+      for (let j = 0; j < 20; j++) {
+        const a = -1.34 + (j / 19) * 2.68;
+        const l = length * (0.86 + hash(i * 23 + j, 9) * 0.22);
+        const at = (angle, radius, fold) => {
+          const v = center
+            .clone()
+            .addScaledVector(dir, Math.cos(angle) * radius)
+            .addScaledVector(right, Math.sin(angle) * radius)
+            .addScaledVector(normal, fold);
+          v.y -= 0.48 * Math.pow(radius / length, 2);
+          return v;
+        };
+        const k = p.length / 3;
+        p.push(
+          ...center,
+          ...at(a - 0.056, l * 0.58, 0.04),
+          ...at(a, l, -0.07),
+          ...at(a + 0.056, l * 0.58, 0.04),
+        );
+        idx.push(k, k + 1, k + 2, k, k + 2, k + 3);
+      }
+    } else {
+      for (let j = 0; j <= 40; j++) {
+        const a = -1.36 + (j / 40) * 2.72,
+          rr = j % 2 ? length * 0.68 : length;
+        const v = center
+          .clone()
+          .addScaledVector(dir, Math.cos(a) * rr)
+          .addScaledVector(right, Math.sin(a) * rr)
+          .addScaledVector(normal, j % 2 ? 0.11 : 0);
+        p.push(...v);
+        if (j) idx.push(41, j - 1, j);
+      }
+      p.push(...center);
     }
-    p.push(...center);
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.Float32BufferAttribute(p, 3));
     g.setIndex(idx);
@@ -228,7 +264,7 @@ export function buildPalms({
   const fanCrown = mergeGeometries(fanParts),
     fans = treeData.filter((t) => t.k === 'palm2');
   const fanMat = new T.MeshStandardMaterial({
-    color: 0x63833b,
+    color: live ? 0x344f22 : 0x63833b,
     side: T.DoubleSide,
     roughness: 0.8,
   });
