@@ -645,3 +645,11 @@ Source `73150ee`. Production version `a221509f-c9d9-4475-82c1-51ab08cd4d10`; the
 - The Garage car's roof now samples the same paint swatch as the hood and trunk (its UVs rewritten from world X, `scripts/prepare-garage-car.py`), so its stripes are as wide as theirs, with the same gray gap and dark pinstripe; before, a flat-color split drew them out to ±110 mm instead of ±180 mm, with no pinstripe. The poster is re-rendered from the new model.
 
 On the live site, `/models/garage-gt350r.glb` (the viewer's URL), its `/scene/bd009ca06831b506/` copy and both poster files return 200 with the same SHA-256 as the committed files.
+
+## GT350 stock wheels deployed
+
+Source `e1856b3` (with `79c8a57` and the formatting-only `25d1348`). Production version `07f8959b-625d-4480-b694-a18d0b29b317`; the bindings and the 15-minute schedule are unchanged.
+
+- The Garage car wears the base 2015–2018 GT350's ten-spoke wheel (FR3Z-1007-P) instead of the GT350R's carbon wheel, built from measurements by `scripts/garage_wheel.py`: flat spoke faces parallel to the rotor that curve down into a recessed hub, five lug nuts and a Ford-oval cap, in gloss black. The R's wheel face is dropped; its lip and barrel are repainted, and the wheel atlas is no longer brightened, so the tires and rotors read darker, as in photos. The model is 920,948 bytes (143,134 triangles), and the poster and credits page are updated.
+
+On the live site, `/models/garage-gt350r.glb`, its `/scene/7921e4fee6c4f4b6/` copy, both poster files and `/credits/garage` (after its redirect from `/credits/garage.html`) return 200 with the same SHA-256 as the committed files.
