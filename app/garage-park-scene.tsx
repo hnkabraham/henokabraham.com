@@ -62,7 +62,8 @@ export default function GarageParkScene({ reducedMotion, onStatus }: Props) {
         // The same test the tour uses for its phone aircraft: width alone
         // would send a phone held sideways the desktop model.
         phone: innerWidth < 800 || innerHeight < 500,
-        sun: 'evening',
+        // The real sun and Moon over the park, kept current while it's open.
+        sun: 'live',
         load: (path) => fetchAsset(path, controller.signal),
         dracoPath: sceneAsset('/draco/'),
         scrollFriendly: true,

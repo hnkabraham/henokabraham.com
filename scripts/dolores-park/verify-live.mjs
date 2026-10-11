@@ -9,8 +9,13 @@ const { server, origin } = await startServer(),
   browser = await launchBrowser();
 const report = { date: new Date().toISOString(), variants: {} };
 try {
-  for (const phone of [false, true]) {
-    const name = phone ? 'phone' : 'desktop';
+  // A fixed day and a fixed night, so the budgets hold with the night's
+  // lamps and glow as well as by day, and reruns compare like with like.
+  for (const [phone, when, time] of [false, true].flatMap((phone) => [
+    [phone, 'day', '2026-10-11T20:00:00Z'],
+    [phone, 'night', '2026-10-12T04:30:00Z'],
+  ])) {
+    const name = `${phone ? 'phone' : 'desktop'}-${when}`;
     const width = phone ? 390 : 950,
       height = phone ? 292.5 : 593.75;
     const bytes = await readFile(
@@ -30,7 +35,7 @@ try {
     page.on('pageerror', (e) => failures.push(e.message));
     page.on('request', (r) => requests.push(r.url()));
     await page.goto(
-      `${origin}/scripts/dolores-park/live.html?phone=${+phone}&sun=evening&w=${width}&h=${height}&dpr=2&scrollFriendly=1`,
+      `${origin}/scripts/dolores-park/live.html?phone=${+phone}&time=${time}&w=${width}&h=${height}&dpr=2&scrollFriendly=1`,
     );
     await page.waitForFunction(() => window.done, null, { timeout: 120000 });
     assert.equal(await page.evaluate(() => window.error), undefined);

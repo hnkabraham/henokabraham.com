@@ -1,6 +1,6 @@
 # Dolores Park scene
 
-A three.js scene of 20th Street at the top of Mission Dolores Park, San Francisco, with the Garage's GT350 (`public/models/garage-gt350r.glb`) parked at the park-side curb. It renders offline stills in headless Chromium and exports the live Garage viewer. The site's Garage section runs the live viewer (`lib/dolores-park-viewer.js`) with the `evening` sun; the hero view above, formerly the site's still, remains the look reference. **Pass 6 below documents the current live delivery; Pass 5 is retained as historical implementation notes.**
+A three.js scene of 20th Street at the top of Mission Dolores Park, San Francisco, with the Garage's GT350 (`public/models/garage-gt350r.glb`) parked at the park-side curb. It renders offline stills in headless Chromium and exports the live Garage viewer. The site's Garage section runs the live viewer (`lib/dolores-park-viewer.js`) under a live sky: the real sun and Moon over the park, from the visitor's clock. The hero view above, formerly the site's still, remains the look reference. **Pass 6 and the live-sky section after it document the current live delivery; where they disagree, the live-sky section wins. Pass 5 is retained as historical implementation notes.**
 
 It's a reconstruction: real terrain, footprints, tree positions and city massing, plus modelled foliage, facades and street detail. It reads as CG, not as a photograph. The framing was matched by eye to a Google Street View frame at 3851 20th St. That frame isn't in this repository, and the scene never loads, samples or traces any Street View or other proprietary imagery.
 
@@ -33,7 +33,7 @@ Write renders to a directory outside the repository; `out/` above is a placehold
 
 This needs Playwright installed globally. A frame takes about 4 s on an M-series Mac with Metal.
 
-The Garage posters (`public/images/garage-park*.{avif,jpg}`) are live-viewer renders of the default pose with the `evening` sun: `page=live w=1920 h=1200 dpr=1` for desktop, and `page=live phone=1 w=1440 h=1080 dpr=1`, downscaled to 1080 × 810, for frames 800 px wide and under. They are encoded with Pillow as AVIF at quality 58 and JPEG at quality 84; the desktop poster also ships 960 px wide.
+The Garage posters are live-viewer renders of the default pose, one set per time of day, and the section picks the set for the sun's height at the park (above 3°, down to −6°, below): `garage-park*` with the fixed `sun=evening`, `garage-park-dusk*` at `time=2026-10-11T18:45:00-07:00` and `garage-park-night*` at `time=2026-10-11T21:30:00-07:00`. Each is `page=live w=1920 h=1200 dpr=1` for desktop, and `page=live phone=1 w=1440 h=1080 dpr=1`, kept at 1440 for tablets, for frames 800 px wide and under. They are encoded with Pillow as AVIF at quality 58 and JPEG at quality 84; the desktop poster also ships 960 px wide.
 
 Renders aren't bit-identical from run to run, even with `grain=0`. Two renders of the same view differ by about 0.2–0.3 of 255 on average, with a few edge pixels further apart.
 
@@ -245,6 +245,40 @@ The car now holds direct sunlight at the default pose, but its lower door and gl
 ### Orbit range (added after pass 6)
 
 The orbit no longer goes all the way round. Swept at the default pose's 8 m with zoom off (the site's `scrollFriendly`), the park side was cluttered. From about 172° to 255° round from the default view, first a bench filled the foreground, then the keep-outs pulled the camera in to 5.4 m so the car's nose left a 4:3 frame, then the leaning trunk filled one side. OrbitControls' `minAzimuthAngle` and `maxAzimuthAngle` now stop the orbit either side of that arc. The bearings are taken from `DEFAULT_POSE` and reported in radians as `info.orbit.azimuth`. From 255° to about 270° the keep-outs still pull the camera in to about 6 m, with the whole car in frame. `constrainCamera()` and its keep-outs are unchanged and still verified by `verify-live.mjs`. A custom `pose=` inside the arc still renders, but the controls move it to a wall on the first drag.
+
+## Live sky (added after pass 6)
+
+The viewer's default sun is now `live`: the true position of the sun and Moon over the park's origin for the visitor's moment, so a visit at 8 am, at sunset or at midnight looks like that hour on 20th Street. The fixed `winter`, `summer` and `evening` suns still work; `evening` is the old look and renders the day poster.
+
+- **Astronomy.** `lib/sun-position.js` has no three.js, so the Garage section can pick its poster without loading it. The sun uses NOAA's solar position equations, with refraction; the Moon uses the largest terms of Meeus ch. 47, topocentric parallax and the lit fraction of its disc. Checked against published San Francisco times: sunset on 2026-10-11 at 6:38 pm, solar noon at 12:56 pm at 45°, and noon at 28.8° and 75.7° on the solstices.
+- **Lighting.** `doloresSky()` in `lib/dolores-park-lighting.js` interpolates key frames by sun elevation, all in display sRGB: sky zenith and horizon, the glow towards the sun and the pink belt opposite it, sun colour and strength, exposure, environment and hemisphere fill, and how far the lamps and windows are on. The 25° frame is the tuned `evening` daylight. Below about −1° the shadow-casting light becomes the Moon when it is up, scaled by its phase; otherwise it is off. Exposure opens up after dark the way eyes adjust.
+- **Sky and far field.** The viewer draws the sky itself (gradient, sun disc and aureole, the Moon lit from the true sun direction, which gives its phase and bright-limb tilt, and a few stars), then composites the far field over it from six baked faces. `export.mjs` bakes four far fields: `morning` (115° at 30°), `midday` (180° at 50°), `afternoon` (245° at 30°) and `night` (lit windows, no sun). A visit fetches one: the day bake nearest in bearing, or `night` once the sun is 4° below the horizon. Each face is captured over a transparent sky twice, with black and with white fog. Their difference is the fog amount, which goes into alpha, and the colour is stored premultiplied. Distant hills therefore fade into whatever sky the viewer draws, not into the bake's haze. The faces are decoded with `premultiplyAlpha: 'none'`, or the browser premultiplies them a second time. The East Bay ridge, unlit and unfogged in `scene.js`, is captured as 65% of a blue-grey silhouette (dark in the night bake). Through dusk the day bake is tinted down; the night bake is used as is.
+- **After dark.** The row's two lanterns get point lights and one additive glow draw, added the first time they're needed so daytime shaders carry no extra lights. Victorian windows light by a hash over their panes, which are found as connected pieces of the glass mesh at load. The leaves' and fronds' back-light patches scale with the sun.
+- **Reflections follow the sky.** The lighting-only environment cube and the car's reflection probe are both rendered from the live sky, rather than from canvas-filtered faces.
+- **Following the clock.** Without a fixed `time`, a live viewer re-evaluates once a minute while the page is visible and nobody is dragging. When the sun (above −18°) or the Moon (above the horizon) has moved half a degree, about every two minutes, it relights and redraws the shadow map and probe (about 20 ms on desktop). The far-field bake stays the one loaded. The first relight that turns the lamps on also compiles the lit shaders, once, in about half a second.
+
+Reproduce:
+
+```sh
+node scripts/dolores-park/export.mjs --backdrops-only            # all four backdrops; --backdrop=night for one
+node scripts/dolores-park/render.mjs out/dusk.png page=live time=2026-10-11T18:45:00-07:00 w=1920 h=1200 dpr=1
+node scripts/dolores-park/verify-live.mjs                         # a fixed day and night on both profiles
+```
+
+`live.html` takes `time=` (ISO, or milliseconds) for a fixed moment. `viewer.setTime(date)` relights an open viewer, and `info.sun` records the time, sun, Moon and backdrop a frame was lit for.
+
+Measured at the site's frame sizes on the M2 Max (`verify-live.mjs`, 2026-10-11, three runs):
+
+| | Download | Triangles | Calls | Texture memory | Median frame |
+|---|---|---|---|---|---|
+| Desktop, day | 4,786,096 | 801,282 | 60 | 156.6 MB | 2.6–3.6 ms |
+| Desktop, night | 4,584,498 | 801,986 | 61 | 156.6 MB | 3.3–4.1 ms |
+| Phone, day | 2,977,004 | 392,653 | 57 | 60.5 MB | 1.5–2.6 ms |
+| Phone, night | 2,923,286 | 393,357 | 58 | 60.5 MB | 2.3–2.8 ms |
+
+The largest phone download, with the `morning` bake, is 2,980,396 bytes against the 3,000,000 budget; the phone faces use lossy alpha at quality 80 to fit. Daytime frame times overlap pass 6's 2.2–2.9 ms; nights, with the lamps, run up to about a millisecond longer.
+
+Known limits: the far field is baked for four suns, so a low sun lights distant facades from the bake's bearing, not its own. There is no weather; San Francisco's fog and overcast aren't modelled. The car sits in the row's shadow whenever the sun is low in the south or west, which is most of a winter day. That is what the street is like, but it's darker than the old fixed evening.
 
 ## Pass 5: orbitable web profile (historical)
 

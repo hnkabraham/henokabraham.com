@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-11T08:39:22.555Z",
+  "generated": "2026-10-11T19:08:42.204Z",
   "splitDistance": 180,
   "variants": {
     "desktop": {
@@ -60,9 +60,12 @@
           ]
         }
       },
-      "eveningBackdropBytes": 621058,
-      "backdropBytes": 624492,
-      "summerBackdropBytes": 627400
+      "backdropBytes": {
+        "morning": 672002,
+        "midday": 663500,
+        "afternoon": 678818,
+        "night": 461902
+      }
     },
     "phone": {
       "glbBytes": 2779264,
@@ -92,9 +95,12 @@
           ]
         }
       },
-      "eveningBackdropBytes": 206480,
-      "backdropBytes": 206486,
-      "summerBackdropBytes": 208068
+      "backdropBytes": {
+        "morning": 201132,
+        "midday": 197740,
+        "afternoon": 197980,
+        "night": 144022
+      }
     }
   }
 }

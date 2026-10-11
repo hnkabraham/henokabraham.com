@@ -1,5 +1,6 @@
 'use client';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useSyncExternalStore } from 'react';
+import { solarPosition } from '@/lib/sun-position';
 import SceneBoundary from './scene-boundary';
 import './garage.css';
 
@@ -14,12 +15,32 @@ type Status = 'loading' | 'ready' | 'unavailable';
 const PHONE = '(max-width: 800px)';
 const WIDE_SIZES = '950px';
 
+// The live view is lit for the hour at the park, so the poster it fades
+// into is too: daylight, dusk (from 3° above the horizon until the sun is
+// 6° below) or night. The server renders daylight; the client swaps before
+// the lazy image is near the viewport.
+const POSTERS = {
+  day: { file: 'garage-park', when: '' },
+  dusk: { file: 'garage-park-dusk', when: ' at dusk' },
+  night: { file: 'garage-park-night', when: ' at night' },
+};
+type Poster = keyof typeof POSTERS;
+const posterNow = (): Poster => {
+  const { elevation } = solarPosition(Date.now());
+  return elevation > 3 ? 'day' : elevation > -6 ? 'dusk' : 'night';
+};
+const noSubscription = () => () => {};
+
 export default function GarageSection({
   reducedMotion,
 }: {
   reducedMotion: boolean;
 }) {
   const [status, setStatus] = useState<Status>('loading');
+  const poster =
+    POSTERS[
+      useSyncExternalStore(noSubscription, posterNow, () => 'day' as const)
+    ];
   const showScene = !reducedMotion && status !== 'unavailable';
   return (
     <section
@@ -47,28 +68,28 @@ export default function GarageSection({
           <picture className="garage-poster">
             <source
               media={PHONE}
-              srcSet="/images/garage-park-phone.avif"
+              srcSet={`/images/${poster.file}-phone.avif`}
               type="image/avif"
             />
             <source
               media={PHONE}
-              srcSet="/images/garage-park-phone.jpg"
+              srcSet={`/images/${poster.file}-phone.jpg`}
               type="image/jpeg"
             />
             <source
-              srcSet="/images/garage-park-960.avif 960w, /images/garage-park.avif 1920w"
+              srcSet={`/images/${poster.file}-960.avif 960w, /images/${poster.file}.avif 1920w`}
               sizes={WIDE_SIZES}
               type="image/avif"
             />
             <img
-              src="/images/garage-park.jpg"
-              srcSet="/images/garage-park-960.jpg 960w, /images/garage-park.jpg 1920w"
+              src={`/images/${poster.file}.jpg`}
+              srcSet={`/images/${poster.file}-960.jpg 960w, /images/${poster.file}.jpg 1920w`}
               sizes={WIDE_SIZES}
               width={1920}
               height={1200}
               loading="lazy"
               decoding="async"
-              alt="A 3D render of the gray GT350 with blue stripes parked on 20th Street at the top of Dolores Park, with palms and the downtown San Francisco skyline behind it"
+              alt={`A 3D render of the gray GT350 with blue stripes parked on 20th Street at the top of Dolores Park${poster.when}, with palms and the downtown San Francisco skyline behind it`}
             />
           </picture>
           {showScene && (

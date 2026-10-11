@@ -113,6 +113,8 @@ async function main() {
     antialias: true,
     preserveDrawingBuffer: true,
     logarithmicDepthBuffer: false,
+    // The live backdrop is captured over a transparent sky (live-build.js).
+    alpha: live,
   });
   r.setPixelRatio(1);
   r.setSize(W, H, false);
@@ -793,6 +795,7 @@ async function main() {
     g.fillRect(gx, gy + gh * 0.48, gw, 4);
     g.fillRect(gx + gw / 2 - 2, gy, 4, gh);
   });
+  facade.name = 'facade'; // the night backdrop lights its windows
   const office = canvasTexture(128, 128, (g, w, h) => {
     const grad = g.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, '#8a98a8');
@@ -808,6 +811,7 @@ async function main() {
     g.fillStyle = '#c9c4b8';
     for (let x = 0; x < w; x += 32) g.fillRect(x, 0, 3, h);
   });
+  office.name = 'office';
   function extrude(list, opts) {
     const walls = { pos: [], uv: [], col: [], idx: [] },
       roofs = { pos: [], uv: [], col: [], idx: [] };

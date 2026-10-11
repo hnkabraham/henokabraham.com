@@ -233,6 +233,55 @@ export function splitScene(scene, carHolder, car, radius = 180) {
   return { near, far };
 }
 
+// Night windows for the far field's extruded walls, whose UVs count window
+// bays across and floors up (scene.js extrude()). Each bay and floor is lit
+// or dark by a hash, warmer in houses and whiter in the office towers.
+function lightWindows(far) {
+  const patched = new Set();
+  far.traverse((o) => {
+    const m = o.material;
+    const kind = o.isMesh && !Array.isArray(m) ? m.map?.name : undefined;
+    if ((kind !== 'facade' && kind !== 'office') || patched.has(m)) return;
+    patched.add(m);
+    const office = kind === 'office';
+    m.onBeforeCompile = (s) => {
+      s.vertexShader = s.vertexShader
+        .replace(
+          '#include <common>',
+          '#include <common>\nvarying vec3 nightWorld;',
+        )
+        .replace(
+          '#include <worldpos_vertex>',
+          '#include <worldpos_vertex>\nnightWorld=(modelMatrix*vec4(transformed,1.)).xyz;',
+        );
+      s.fragmentShader = s.fragmentShader
+        .replace(
+          '#include <common>',
+          '#include <common>\nvarying vec3 nightWorld;',
+        )
+        .replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          vec2 cell=floor(vMapUv),f=fract(vMapUv);
+          float block=floor(nightWorld.x/13.)+floor(nightWorld.z/13.)*57.;
+          float r=fract(sin(dot(vec3(cell,block),vec3(12.9898,78.233,37.719)))*43758.5453);
+          ${
+            office
+              ? `float pane=step(f.y,.92)*step(.06,fract(f.x*8.));
+          float on=step(.74,r);
+          vec3 lamp=mix(vec3(.9,.92,1.),vec3(1.,.74,.46),fract(r*7.));`
+              : `float pane=step(.25,f.x)*step(f.x,.75)*step(.3,f.y)*step(f.y,.81);
+          float on=step(.76,r)*step(0.,cell.y);
+          vec3 lamp=mix(vec3(1.,.52,.22),vec3(1.,.7,.4),fract(r*7.));`
+          }
+          totalEmissiveRadiance+=lamp*pane*on*(.35+.65*fract(r*13.))*${office ? '0.6' : '1.3'};`,
+        );
+    };
+    m.customProgramCacheKey = () => 'dolores-night-' + kind;
+    m.needsUpdate = true;
+  });
+}
+
 function census(root) {
   let triangles = 0,
     meshes = 0,
@@ -350,6 +399,81 @@ export async function prepareLiveScene({
     window.parkBytes = new Uint8Array(result);
     return result.byteLength;
   };
+  if (q.get('night') === '1') lightWindows(far);
+  // The live viewer draws its own sky, for any time of day, so the far
+  // field is captured over a transparent sky. Each face is rendered with
+  // black and then white fog: their difference is the fog amount, which
+  // export.mjs turns into alpha, so distant hills melt into whatever sky
+  // the viewer draws rather than into this bake's haze colour.
+  window.captureBand = async (size = 1024) => {
+    const saved = {
+      background: scene.background,
+      fog: scene.fog.color.clone(),
+      clear: r.getClearColor(new T.Color()),
+      alpha: r.getClearAlpha(),
+    };
+    // The split carries scene.js's sky dome (its one ShaderMaterial) over
+    // into the far field; it is the sky the viewer now replaces.
+    const domes = [];
+    far.traverse((o) => {
+      if (o.isMesh && o.material.isShaderMaterial && o.visible) {
+        domes.push(o);
+        o.visible = false;
+      }
+    });
+    // The ridge is an unlit silhouette, its own atmospheric blend of haze
+    // into blue-grey rather than fogged. Capture it as that blend: 65% of a
+    // surface colour over whatever sky the viewer draws (dark at night).
+    const night = q.get('night') === '1',
+      ridges = [];
+    far.traverse((o) => {
+      const m = o.material;
+      if (o.isMesh && m.isMeshBasicMaterial && m.vertexColors && !m.fog) {
+        ridges.push([o, m]);
+        o.material = new T.ShaderMaterial({
+          uniforms: {
+            surface: {
+              value: new T.Color().setHex(
+                night ? 0x1d2230 : 0xa0adbb,
+                T.LinearSRGBColorSpace,
+              ),
+            },
+            fogColor: { value: scene.fog.color },
+          },
+          side: T.DoubleSide,
+          vertexShader:
+            'void main(){gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+          // Display values straight to the canvas: no tone mapping or encoding.
+          fragmentShader:
+            'uniform vec3 surface,fogColor;void main(){gl_FragColor=vec4(surface*.65+fogColor*.35,1.);}',
+        });
+      }
+    });
+    scene.background = null;
+    r.setClearColor(0x000000, 0);
+    const faces = {};
+    for (const [name, png] of Object.entries(
+      await captureFaces(size, () => scene.fog.color.set(0x000000)),
+    ))
+      faces[name] = { black: png };
+    for (const [name, png] of Object.entries(
+      await captureFaces(size, () => scene.fog.color.set(0xffffff)),
+    ))
+      faces[name].white = png;
+    domes.forEach((o) => (o.visible = true));
+    for (const [o, m] of ridges) {
+      o.material.dispose();
+      o.material = m;
+    }
+    scene.background = saved.background;
+    scene.fog.color.copy(saved.fog);
+    r.setClearColor(saved.clear, saved.alpha);
+    return faces;
+  };
+  async function captureFaces(size, prepare) {
+    prepare();
+    return window.captureBackdrop(size);
+  }
   window.captureBackdrop = async (size = 1024) => {
     near.visible = carHolder.visible = false;
     const faces = {};

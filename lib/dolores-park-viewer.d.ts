@@ -9,7 +9,12 @@ export const DEFAULT_POSE: DoloresPose;
 
 export interface DoloresViewerOptions {
   phone?: boolean;
-  sun?: 'winter' | 'summer' | 'evening';
+  /** 'live' (the default) is the real sky over the park; the others are
+   * fixed suns from dolores-park-lighting.js. */
+  sun?: 'live' | 'winter' | 'summer' | 'evening';
+  /** For a live sky: the moment to light, instead of now and following the
+   * clock. */
+  time?: Date | number;
   /** Fetches a public-root path such as '/models/dolores-park.glb'. */
   load?: (path: string) => Promise<ArrayBuffer>;
   dracoPath?: string;
@@ -37,6 +42,8 @@ export interface DoloresViewer {
   invalidate(): void;
   benchmark(): Promise<Record<string, unknown>>;
   dispose(): void;
+  /** Relights a live viewer for another moment. */
+  setTime(time: Date | number): void;
   groundAt(x: number, y: number): number;
   constrainCamera(): void;
   snapshot(): string;

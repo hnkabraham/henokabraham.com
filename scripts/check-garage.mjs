@@ -9,7 +9,7 @@
 // the disposal/visibility code.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { GARAGE_SUN, SCENE_FILES } from './scene-assets.mjs';
+import { GARAGE_BACKDROPS, GARAGE_SUN, SCENE_FILES } from './scene-assets.mjs';
 
 const glbPath = new URL('../public/models/garage-gt350r.glb', import.meta.url);
 const bytes = await fs.readFile(glbPath);
@@ -98,22 +98,26 @@ for (const [profile, budget] of [
       json.extensionsUsed?.includes(extension),
       `${path} uses ${extension}`,
     );
-  const sky = SCENE_FILES.filter(
-    (file) =>
+  // One backdrop per visit, chosen by the sun at load: the largest set
+  // is the one the download budget has to hold.
+  let total = 0;
+  for (const name of GARAGE_BACKDROPS) {
+    const sky = SCENE_FILES.filter((file) =>
       new RegExp(
-        `^scenery/dolores-sky(-[a-z]+)?${profile}-[pn][xyz]\\.webp$`,
-      ).test(file) &&
-      (profile || !file.includes('-phone-')),
-  );
-  assert.equal(
-    sky.length,
-    6,
-    `six versioned backdrop faces for '${profile || 'desktop'}'`,
-  );
-  let total = data.length;
-  for (const face of sky)
-    total += (await fs.stat(new URL(`../public/${face}`, import.meta.url)))
-      .size;
+        `^scenery/dolores-band-${name}${profile}-[pn][xyz]\\.webp$`,
+      ).test(file),
+    );
+    assert.equal(
+      sky.length,
+      6,
+      `six versioned '${name}' backdrop faces for '${profile || 'desktop'}'`,
+    );
+    let bytes = data.length;
+    for (const face of sky)
+      bytes += (await fs.stat(new URL(`../public/${face}`, import.meta.url)))
+        .size;
+    total = Math.max(total, bytes);
+  }
   assert.ok(
     total <= budget,
     `${path} plus its backdrop (${total.toLocaleString()} bytes) stays within ${budget.toLocaleString()}`,
@@ -185,5 +189,5 @@ for (const pattern of [
   );
 
 console.log(
-  `Passed: garage GLB (${bytes.length.toLocaleString()} bytes, ${metadata.materials.length} materials, Draco-compressed), the park scene (${park.desktop.toLocaleString()} bytes desktop, ${park.phone.toLocaleString()} phone, with the '${GARAGE_SUN}' backdrop), licence notices in the GLBs, the credits page and the section, and the viewer's lifecycle-safety patterns are all present.`,
+  `Passed: garage GLB (${bytes.length.toLocaleString()} bytes, ${metadata.materials.length} materials, Draco-compressed), the park scene (${park.desktop.toLocaleString()} bytes desktop, ${park.phone.toLocaleString()} phone, with the largest of its ${GARAGE_BACKDROPS.length} backdrops), licence notices in the GLBs, the credits page and the section, and the viewer's lifecycle-safety patterns are all present.`,
 );

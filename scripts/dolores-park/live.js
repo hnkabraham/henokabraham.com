@@ -1,7 +1,8 @@
 // The standalone reference page for the live viewer (lib/dolores-park-viewer.js,
 // the same module the site's Garage section runs). URL parameters:
-// phone=1, sun=evening|winter|summer (evening by default),
-// pose=x,y,h,lookx,looky,lookh, fov (horizontal), w, h,
+// phone=1, sun=live|evening|winter|summer (live by default: the real sky
+// over the park), time=<ISO date or ms> for a live sky at that moment
+// rather than now, pose=x,y,h,lookx,looky,lookh, fov (horizontal), w, h,
 // dpr, scrollFriendly=1, benchmark=1, shot=1. It sets window.doloresViewer, window.liveInfo,
 // window.png (shot=1), window.error and window.done for render.mjs and
 // verify-live.mjs.
@@ -13,8 +14,7 @@ const hint = document.querySelector('#hint');
 const options = {
   phone: q.get('phone') === '1',
   scrollFriendly: q.get('scrollFriendly') === '1',
-  sun:
-    q.get('sun') || (q.get('preset') === 'victorians' ? 'summer' : 'evening'),
+  sun: q.get('sun') || (q.get('preset') === 'victorians' ? 'summer' : 'live'),
   // The standalone server serves the repository root, not public/.
   load: async (path) => {
     const response = await fetch('/public' + path);
@@ -31,6 +31,10 @@ const options = {
     void start();
   },
 };
+if (q.has('time'))
+  options.time = /^\d+$/.test(q.get('time'))
+    ? Number(q.get('time'))
+    : Date.parse(q.get('time'));
 if (q.has('dpr')) options.pixelRatio = num('dpr');
 if (q.has('fov')) options.fov = num('fov');
 if (q.has('pose')) options.pose = q.get('pose').split(',').map(Number);

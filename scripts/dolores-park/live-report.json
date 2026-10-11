@@ -1,25 +1,34 @@
 {
-  "date": "2026-10-11T08:55:31.802Z",
+  "date": "2026-10-11T19:22:42.316Z",
   "variants": {
-    "desktop": {
+    "desktop-day": {
       "startupFrame": {
         "triangles": 2060428,
         "drawCalls": 111
       },
       "phone": false,
       "sun": {
-        "azimuth": 272,
-        "elevation": 34,
-        "color": "#fff0dc",
-        "intensity": 5.5,
+        "mode": "live",
+        "time": "2026-10-11T20:00:00.000Z",
+        "azimuth": 181.28,
+        "elevation": 44.99,
+        "moon": {
+          "azimuth": 167.64,
+          "elevation": 33.96,
+          "illumination": 0.01
+        },
+        "backdrop": "midday",
+        "key": {
+          "color": "#fff0dc",
+          "intensity": 5.5
+        },
         "exposure": 1.15,
-        "environment": 0.65,
-        "hemisphere": 0.45
+        "lamps": 0
       },
       "triangles": 801282,
       "drawCalls": 60,
       "textures": {
-        "count": 44,
+        "count": 49,
         "bytes": 156636507,
         "details": [
           {
@@ -275,10 +284,40 @@
             "bytes": 87382
           },
           {
-            "name": "",
+            "name": "Dolores background px",
             "width": 1792,
             "height": 1792,
-            "bytes": 77070336
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background nx",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background py",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background ny",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background pz",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background nz",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
           },
           {
             "name": "PMREM.cubeUv",
@@ -290,12 +329,12 @@
         "includesShadow": true
       },
       "glbBytes": 4122596,
-      "backdropBytes": 621058,
-      "downloadBytes": 4743654,
-      "loadTimeMs": 896.7000000029802,
+      "backdropBytes": 663500,
+      "downloadBytes": 4786096,
+      "loadTimeMs": 784.6000000089407,
       "shadowMap": 2048,
       "patchedMaterials": 7,
-      "frameTimeMs": 2.2000000029802322,
+      "frameTimeMs": 2.5999999940395355,
       "pixelRatio": 2,
       "viewport": [
         950,
@@ -415,20 +454,482 @@
       "contextRecoveryPassed": true,
       "disposalPassed": true
     },
-    "phone": {
+    "desktop-night": {
+      "startupFrame": {
+        "triangles": 2061132,
+        "drawCalls": 112
+      },
+      "phone": false,
+      "sun": {
+        "mode": "live",
+        "time": "2026-10-12T04:30:00.000Z",
+        "azimuth": 289.54,
+        "elevation": -34.48,
+        "moon": {
+          "azimuth": 268.56,
+          "elevation": -29.81,
+          "illumination": 0.02
+        },
+        "backdrop": "night",
+        "key": {
+          "color": "#ff8a50",
+          "intensity": 0
+        },
+        "exposure": 2.9,
+        "lamps": 1
+      },
+      "triangles": 801986,
+      "drawCalls": 61,
+      "textures": {
+        "count": 49,
+        "bytes": 156636507,
+        "details": [
+          {
+            "name": "Dolores texture 0",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "palm-frond-alpha",
+            "width": 256,
+            "height": 1024,
+            "bytes": 1398102
+          },
+          {
+            "name": "palm_tree_bark_diff_1k.jpg",
+            "width": 256,
+            "height": 512,
+            "bytes": 699051
+          },
+          {
+            "name": "naip.jpg",
+            "width": 512,
+            "height": 406,
+            "bytes": 1108651
+          },
+          {
+            "name": "grass_ground_diff_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "asphalt_02_diff_1k.jpg",
+            "width": 1024,
+            "height": 1024,
+            "bytes": 5592406
+          },
+          {
+            "name": "asphalt_02_nor_gl_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "asphalt_02_rough_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "concrete_floor_worn_001_diff_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "concrete_floor_worn_001_nor_gl_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "concrete_floor_worn_001_rough_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "Dolores texture 14",
+            "width": 512,
+            "height": 64,
+            "bytes": 174763
+          },
+          {
+            "name": "Dolores texture 17",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "Dolores texture 18",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "Dolores texture 21",
+            "width": 512,
+            "height": 16,
+            "bytes": 43691
+          },
+          {
+            "name": "bark_platanus_diff_2k.jpg",
+            "width": 1024,
+            "height": 1024,
+            "bytes": 5592406
+          },
+          {
+            "name": "bark_platanus_nor_gl_2k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "Dolores texture 19",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "PMREM.cubeUv",
+            "width": 768,
+            "height": 1024,
+            "bytes": 6291456
+          },
+          {
+            "name": "Dolores texture 20",
+            "width": 64,
+            "height": 128,
+            "bytes": 43691
+          },
+          {
+            "name": "0/shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1_baseColor_scale0.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016CalliperBadgeA_Material1_baseColor.png",
+            "width": 128,
+            "height": 32,
+            "bytes": 21846
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016CalliperGloss_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016LightA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016ManufacturerPlateA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 256,
+            "bytes": 699051
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016PaintA_Material1_baseColor.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Coloured_Material1_baseColor.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Carbon2M_Material1_baseColor.jpg",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Carbon2M_Material1_normal.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016BadgeA_Material1_baseColor.png",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016BadgeA_Material1_normal.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016EngineA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016EngineA_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille1A_Material1_baseColor.png",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille1A_Material1_normal.jpg",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille2A_Material1_baseColor.jpg",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille3A_Material1_baseColor.jpg",
+            "width": 1,
+            "height": 1,
+            "bytes": 6
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille3A_Material1_normal.jpg",
+            "width": 64,
+            "height": 64,
+            "bytes": 21846
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016InteriorA_Material1_baseColor.png",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016InteriorA_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "Dolores background px",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background nx",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background py",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background ny",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background pz",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "Dolores background nz",
+            "width": 1792,
+            "height": 1792,
+            "bytes": 12845056
+          },
+          {
+            "name": "PMREM.cubeUv",
+            "width": 384,
+            "height": 512,
+            "bytes": 1572864
+          }
+        ],
+        "includesShadow": true
+      },
+      "glbBytes": 4122596,
+      "backdropBytes": 461902,
+      "downloadBytes": 4584498,
+      "loadTimeMs": 792.1000000089407,
+      "shadowMap": 2048,
+      "patchedMaterials": 7,
+      "frameTimeMs": 3.300000011920929,
+      "pixelRatio": 2,
+      "viewport": [
+        950,
+        593.75
+      ],
+      "orbit": {
+        "min": 4,
+        "max": 9,
+        "groundClearance": 0.45,
+        "azimuth": [
+          -2.4882913408355822,
+          2.346270687188711
+        ],
+        "obstacles": [
+          {
+            "name": "hero trunk",
+            "x": 10.6,
+            "y": -148.5,
+            "r": 0.95,
+            "top": 15
+          },
+          {
+            "name": "leaning trunk",
+            "x": 7.8,
+            "y": -149.4,
+            "r": 1.2,
+            "top": 15
+          },
+          {
+            "name": "bench 1",
+            "x": 15.8,
+            "y": -148.99930325149302,
+            "r": 1.4,
+            "top": 1.55
+          },
+          {
+            "name": "bench 2",
+            "x": 19,
+            "y": -148.75564034505638,
+            "r": 1.4,
+            "top": 1.55
+          },
+          {
+            "name": "lamp",
+            "x": -17,
+            "y": -167.81684804246848,
+            "r": 0.5,
+            "top": 5.1
+          },
+          {
+            "name": "lamp",
+            "x": 43,
+            "y": -163.2479552715655,
+            "r": 0.5,
+            "top": 5.1
+          },
+          {
+            "name": "street tree",
+            "x": 18,
+            "y": -165.15178500331785,
+            "r": 0.5,
+            "top": 5.5
+          },
+          {
+            "name": "street tree",
+            "x": 37,
+            "y": -163.70503649635037,
+            "r": 0.5,
+            "top": 5.5
+          },
+          {
+            "name": "street tree",
+            "x": 61,
+            "y": -161.87495207667732,
+            "r": 0.5,
+            "top": 5.5
+          }
+        ]
+      },
+      "car": {
+        "x": 13.3,
+        "y": -154.63,
+        "position": [
+          13.3,
+          41.07780720146712,
+          154.63
+        ],
+        "rotation": [
+          -0.05484813908366083,
+          -1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "camera": [
+        8.000000000000004,
+        42.5656,
+        161
+      ],
+      "gpuFrameTimeMs": null,
+      "benchmarkFrames": 120,
+      "orbitMaxDrawCalls": 63,
+      "orbitMaxTriangles": 793632,
+      "benchmarkMethod": "CPU submit + synchronous 1-pixel readback (completed GPU), 24 warmup frames, 120 orbit frames",
+      "gpu": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, Unspecified Version)",
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+      },
+      "collisions": {
+        "samples": 900,
+        "minClearance": 0.45000000000000284,
+        "maxDistance": 9.000000000000014,
+        "minObstacle": 0.03583058850471765,
+        "failures": []
+      },
+      "idleRenderingPassed": true,
+      "contextRecoveryPassed": true,
+      "disposalPassed": true
+    },
+    "phone-day": {
       "startupFrame": {
         "triangles": 1229576,
         "drawCalls": 105
       },
       "phone": true,
       "sun": {
-        "azimuth": 272,
-        "elevation": 34,
-        "color": "#fff0dc",
-        "intensity": 5.5,
+        "mode": "live",
+        "time": "2026-10-11T20:00:00.000Z",
+        "azimuth": 181.28,
+        "elevation": 44.99,
+        "moon": {
+          "azimuth": 167.64,
+          "elevation": 33.96,
+          "illumination": 0.01
+        },
+        "backdrop": "midday",
+        "key": {
+          "color": "#fff0dc",
+          "intensity": 5.5
+        },
         "exposure": 1.15,
-        "environment": 0.65,
-        "hemisphere": 0.45
+        "lamps": 0
       },
       "triangles": 392653,
       "drawCalls": 57,
@@ -734,12 +1235,12 @@
         "includesShadow": true
       },
       "glbBytes": 2779264,
-      "backdropBytes": 206480,
-      "downloadBytes": 2985744,
-      "loadTimeMs": 736.2999999970198,
+      "backdropBytes": 197740,
+      "downloadBytes": 2977004,
+      "loadTimeMs": 767.7000000029802,
       "shadowMap": 1024,
       "patchedMaterials": 7,
-      "frameTimeMs": 2,
+      "frameTimeMs": 1.7000000029802322,
       "pixelRatio": 2,
       "viewport": [
         390,
@@ -843,6 +1344,459 @@
       "benchmarkFrames": 120,
       "orbitMaxDrawCalls": 59,
       "orbitMaxTriangles": 490355,
+      "benchmarkMethod": "CPU submit + synchronous 1-pixel readback (completed GPU), 24 warmup frames, 120 orbit frames",
+      "gpu": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, Unspecified Version)",
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+      },
+      "collisions": {
+        "samples": 900,
+        "minClearance": 0.45000000000000284,
+        "maxDistance": 9.000000000000014,
+        "minObstacle": 0.03583058850471765,
+        "failures": []
+      },
+      "idleRenderingPassed": true,
+      "contextRecoveryPassed": true,
+      "disposalPassed": true
+    },
+    "phone-night": {
+      "startupFrame": {
+        "triangles": 1230280,
+        "drawCalls": 106
+      },
+      "phone": true,
+      "sun": {
+        "mode": "live",
+        "time": "2026-10-12T04:30:00.000Z",
+        "azimuth": 289.54,
+        "elevation": -34.48,
+        "moon": {
+          "azimuth": 268.56,
+          "elevation": -29.81,
+          "illumination": 0.02
+        },
+        "backdrop": "night",
+        "key": {
+          "color": "#ff8a50",
+          "intensity": 0
+        },
+        "exposure": 2.9,
+        "lamps": 1
+      },
+      "triangles": 393357,
+      "drawCalls": 58,
+      "textures": {
+        "count": 49,
+        "bytes": 60527963,
+        "details": [
+          {
+            "name": "Dolores texture 0",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "palm-frond-alpha",
+            "width": 160,
+            "height": 640,
+            "bytes": 546134
+          },
+          {
+            "name": "palm_tree_bark_diff_1k.jpg",
+            "width": 256,
+            "height": 512,
+            "bytes": 699051
+          },
+          {
+            "name": "naip.jpg",
+            "width": 512,
+            "height": 406,
+            "bytes": 1108651
+          },
+          {
+            "name": "grass_ground_diff_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "asphalt_02_diff_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "asphalt_02_nor_gl_1k.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "asphalt_02_rough_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "concrete_floor_worn_001_diff_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "concrete_floor_worn_001_nor_gl_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "concrete_floor_worn_001_rough_1k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "Dolores texture 14",
+            "width": 512,
+            "height": 64,
+            "bytes": 174763
+          },
+          {
+            "name": "Dolores texture 17",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "Dolores texture 18",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "Dolores texture 21",
+            "width": 512,
+            "height": 16,
+            "bytes": 43691
+          },
+          {
+            "name": "bark_platanus_diff_2k.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "bark_platanus_nor_gl_2k.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "Dolores texture 19",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "PMREM.cubeUv",
+            "width": 384,
+            "height": 512,
+            "bytes": 1572864
+          },
+          {
+            "name": "Dolores texture 20",
+            "width": 64,
+            "height": 128,
+            "bytes": 43691
+          },
+          {
+            "name": "0/shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1_baseColor_scale0.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350RElite_2016_Wheel1A_3D_3DWheel1B_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016CalliperBadgeA_Material1_baseColor.png",
+            "width": 128,
+            "height": 32,
+            "bytes": 21846
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016CalliperGloss_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016LightA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016ManufacturerPlateA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 256,
+            "bytes": 699051
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016PaintA_Material1_baseColor.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Coloured_Material1_baseColor.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Carbon2M_Material1_baseColor.jpg",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Carbon2M_Material1_normal.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016BadgeA_Material1_baseColor.png",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016BadgeA_Material1_normal.jpg",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016EngineA_Material1_baseColor.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016EngineA_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille1A_Material1_baseColor.png",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille1A_Material1_normal.jpg",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille2A_Material1_baseColor.jpg",
+            "width": 64,
+            "height": 32,
+            "bytes": 10923
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille3A_Material1_baseColor.jpg",
+            "width": 1,
+            "height": 1,
+            "bytes": 6
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016Grille3A_Material1_normal.jpg",
+            "width": 64,
+            "height": 64,
+            "bytes": 21846
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016InteriorA_Material1_baseColor.png",
+            "width": 256,
+            "height": 256,
+            "bytes": 349526
+          },
+          {
+            "name": "0/shFord_ShelbyGT350R_2016InteriorA_Material1_normal.jpg",
+            "width": 512,
+            "height": 512,
+            "bytes": 1398102
+          },
+          {
+            "name": "",
+            "width": 128,
+            "height": 128,
+            "bytes": 87382
+          },
+          {
+            "name": "Dolores background px",
+            "width": 512,
+            "height": 512,
+            "bytes": 1048576
+          },
+          {
+            "name": "Dolores background nx",
+            "width": 1536,
+            "height": 1536,
+            "bytes": 9437184
+          },
+          {
+            "name": "Dolores background py",
+            "width": 512,
+            "height": 512,
+            "bytes": 1048576
+          },
+          {
+            "name": "Dolores background ny",
+            "width": 512,
+            "height": 512,
+            "bytes": 1048576
+          },
+          {
+            "name": "Dolores background pz",
+            "width": 512,
+            "height": 512,
+            "bytes": 1048576
+          },
+          {
+            "name": "Dolores background nz",
+            "width": 1536,
+            "height": 1536,
+            "bytes": 9437184
+          },
+          {
+            "name": "PMREM.cubeUv",
+            "width": 336,
+            "height": 256,
+            "bytes": 688128
+          }
+        ],
+        "includesShadow": true
+      },
+      "glbBytes": 2779264,
+      "backdropBytes": 144022,
+      "downloadBytes": 2923286,
+      "loadTimeMs": 730,
+      "shadowMap": 1024,
+      "patchedMaterials": 7,
+      "frameTimeMs": 2.2999999970197678,
+      "pixelRatio": 2,
+      "viewport": [
+        390,
+        292.5
+      ],
+      "orbit": {
+        "min": 4,
+        "max": 9,
+        "groundClearance": 0.45,
+        "azimuth": [
+          -2.4882913408355822,
+          2.346270687188711
+        ],
+        "obstacles": [
+          {
+            "name": "hero trunk",
+            "x": 10.6,
+            "y": -148.5,
+            "r": 0.95,
+            "top": 15
+          },
+          {
+            "name": "leaning trunk",
+            "x": 7.8,
+            "y": -149.4,
+            "r": 1.2,
+            "top": 15
+          },
+          {
+            "name": "bench 1",
+            "x": 15.8,
+            "y": -148.99930325149302,
+            "r": 1.4,
+            "top": 1.55
+          },
+          {
+            "name": "bench 2",
+            "x": 19,
+            "y": -148.75564034505638,
+            "r": 1.4,
+            "top": 1.55
+          },
+          {
+            "name": "lamp",
+            "x": -17,
+            "y": -167.81684804246848,
+            "r": 0.5,
+            "top": 5.1
+          },
+          {
+            "name": "lamp",
+            "x": 43,
+            "y": -163.2479552715655,
+            "r": 0.5,
+            "top": 5.1
+          },
+          {
+            "name": "street tree",
+            "x": 18,
+            "y": -165.15178500331785,
+            "r": 0.5,
+            "top": 5.5
+          },
+          {
+            "name": "street tree",
+            "x": 37,
+            "y": -163.70503649635037,
+            "r": 0.5,
+            "top": 5.5
+          },
+          {
+            "name": "street tree",
+            "x": 61,
+            "y": -161.87495207667732,
+            "r": 0.5,
+            "top": 5.5
+          }
+        ]
+      },
+      "car": {
+        "x": 13.3,
+        "y": -154.63,
+        "position": [
+          13.3,
+          41.07780720146712,
+          154.63
+        ],
+        "rotation": [
+          -0.05484813908366083,
+          -1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "camera": [
+        8.000000000000004,
+        42.5656,
+        161
+      ],
+      "gpuFrameTimeMs": null,
+      "benchmarkFrames": 120,
+      "orbitMaxDrawCalls": 60,
+      "orbitMaxTriangles": 491059,
       "benchmarkMethod": "CPU submit + synchronous 1-pixel readback (completed GPU), 24 warmup frames, 120 orbit frames",
       "gpu": {
         "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, Unspecified Version)",
