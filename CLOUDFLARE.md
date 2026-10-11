@@ -698,3 +698,11 @@ Source `406a472` (with `b7d67a5`). Production version `a399ae28-e860-4fe4-863d-2
 - A desktop visit fetches the Garage's files (about 5.7 MB) at low priority 3 s after the page loads. The viewer waits on any still in flight and finds the rest in the HTTP cache. Phones don't prefetch, and Save-Data visitors get the simple view as before. The viewer now starts when the frame is 1,200 px below the viewport rather than 300 px.
 
 On the live site, all 42 files under `/_next/static/` and two scene files return the same SHA-256 as the build. A desktop visit fetches the park about 4.3 s after landing, and the viewer then reads it from cache (0 bytes transferred). Jumping to the Garage is ready about 1.1 s after the click, before the 1.5 s smooth scroll arrives. With a steady scroll at 30 Mbps the frame is ready 0.8 s before it starts to show; the previous build was ready 2.0 s after. On a phone and with reduced motion nothing is fetched early. The drag orbits, the wheel scrolls the page, and the page logs no console errors.
+
+## Tour's first scroll no longer stalls
+
+Source `edbc535`. Production version `e481b428-5560-44e6-8442-0b75953d6298`; the bindings and the 15-minute schedule are unchanged. The scene files are unchanged (`/scene/0887b3dfde1d29a3/`).
+
+- The 787's three 4096² maps (2048² on phones) go up to the GPU before the first scroll, in 512-row strips during idle moments (`lib/upload-ahead.ts`), instead of in the first frame that drew the aircraft. That frame had stalled the start of every first scroll by about a third of a second. If the visitor scrolls before the strips finish, the rest are uploaded before the aircraft is drawn. The strips' texels match a single upload byte for byte at every mip level in Chromium, WebKit and Firefox.
+
+On the live site, all 40 files under `/_next/static/` return the same SHA-256 as the build. All the strips go up in the first two seconds after load, none longer than 23 ms, and no texture upload over 10 ms happens during the first scroll or a jump to the Garage. The longest frame gap on a first scroll is 33 ms in Chromium, against 240 ms before, and 71 ms in WebKit, against 370–630 ms before. The tour renders as before. The Garage is still ready before the jump's smooth scroll arrives, phones still don't prefetch, and the page logs no console errors.
