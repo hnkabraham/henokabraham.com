@@ -61,6 +61,46 @@ type Props = {
   onLost?: () => void;
 };
 
+// The sky file is a photograph over open sea, so its lower half is dark
+// water and a sun glint; the tour flies over a sunlit cloud deck. Below the
+// horizon, fade the water to the white cloud band at the horizon, so the
+// wing's underside and the belly catch cloud light as they would up there.
+function fillCloudDeck(
+  { data, width, height }: { data?: unknown; width?: number; height?: number },
+  utils: typeof import('three').DataUtils,
+) {
+  if (!(data instanceof Uint16Array || data instanceof Float32Array)) return;
+  if (!width || !height) return;
+  const half = data instanceof Uint16Array;
+  const read = (i: number) => (half ? utils.fromHalfFloat(data[i]) : data[i]);
+  const write = (i: number, v: number) => {
+    data[i] = half ? utils.toHalfFloat(v) : v;
+  };
+  // Rows run top-down, from +90° at row 0 to −90° at the last.
+  const elevation = (y: number) => (0.5 - (y + 0.5) / height) * Math.PI;
+  const band = [0, 0, 0];
+  let n = 0;
+  for (let y = 0; y < height; y++) {
+    const e = elevation(y);
+    if (e < 0 || e > 0.09) continue;
+    for (let x = 0; x < width; x++)
+      for (let c = 0; c < 3; c++) band[c] += read((y * width + x) * 4 + c);
+    n += width;
+  }
+  if (!n) return;
+  for (let y = 0; y < height; y++) {
+    const e = elevation(y);
+    if (e >= 0) continue;
+    const t = Math.min(1, -e / 0.17),
+      w = t * t * (3 - 2 * t);
+    for (let x = 0; x < width; x++)
+      for (let c = 0; c < 3; c++) {
+        const i = (y * width + x) * 4 + c;
+        write(i, read(i) * (1 - w) + (band[c] / n) * w);
+      }
+  }
+}
+
 export default function DreamlinerScene({
   progress,
   reducedMotion,
@@ -241,6 +281,7 @@ export default function DreamlinerScene({
         .then((bytes) => {
           if (disposed) return;
           const data = new HDRLoader().parse(bytes);
+          fillCloudDeck(data, T.DataUtils);
           const texture = new T.DataTexture(
             data.data,
             data.width,
@@ -249,6 +290,9 @@ export default function DreamlinerScene({
             data.type,
           );
           texture.mapping = T.EquirectangularReflectionMapping;
+          // The loader returns rows top-down and asks for a flip on upload;
+          // a raw DataTexture defaults to none, which put the sea overhead.
+          texture.flipY = true;
           texture.needsUpdate = true;
           const pmrem = new T.PMREMGenerator(r);
           const environment = pmrem.fromEquirectangular(texture);

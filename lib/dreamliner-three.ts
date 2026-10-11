@@ -9,6 +9,7 @@ export {
   CanvasTexture,
   Color,
   DataTexture,
+  DataUtils,
   DirectionalLight,
   DoubleSide,
   EquirectangularReflectionMapping,
