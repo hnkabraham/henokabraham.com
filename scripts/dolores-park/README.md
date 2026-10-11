@@ -280,6 +280,25 @@ The largest phone download, with the `morning` bake, is 2,980,396 bytes against 
 
 Known limits: the far field is baked for four suns, so a low sun lights distant facades from the bake's bearing, not its own. There is no weather; San Francisco's fog and overcast aren't modelled. The car sits in the row's shadow whenever the sun is low in the south or west, which is most of a winter day. That is what the street is like, but it's darker than the old fixed evening.
 
+## Shader compile at load (added after the live sky)
+
+The first frame needs 56 shader programs (58 at night, with the lamps). The park's surfaces need them twice: once for the reflection probe, a render target, so linear and without tone mapping, and again for the screen. The car needs its own as well. three.js links a program synchronously the first time it draws, so the probe capture and the first frame held the main thread in one task of about 580 ms.
+
+The viewer now issues all of them with `renderer.compile()` once the sky's lighting cube exists. The car and the windows wear a blank PMREM the probe's size, so their programs match the real probe's. Then the viewer polls `KHR_parallel_shader_compile` until every program is linked, reading back finished programs' uniforms about 10 ms at a time. An abort or a lost context during that wait releases everything built so far. Afterwards `renderer.info.programs` is the same length as before the change. Frames match the old viewer's within its own run-to-run noise: the mean difference is 0, and at most 16 of 2.26 million pixels differ.
+
+Measured on the M2 Max against the local server with a warm cache:
+
+| | Before | After |
+|---|---:|---:|
+| Chromium desktop, load through first frame | ~705 ms | ~440 ms |
+| Chromium desktop, longest main-thread task | ~580 ms | ~130 ms |
+| Chromium phone profile, load through first frame | 719 ms | 401 ms |
+| WebKit desktop, build after download (median of 6) | ~940 ms | ~840 ms |
+
+WebKit's wait for the shaders is longer and varies from run to run, at 300–460 ms. Its gain is mostly that the page stays responsive: about half of that build is now waiting rather than blocking.
+
+The longest remaining task is the synchronous build before the wait: house batching, the sky capture with the far-field upload, and generating the shader sources. On the live site, the download (4.8 MB desktop, 3.0 MB phone, plus the 0.9 MB car) starts when the frame comes within 300 px of the viewport. On a slow connection, that download is most of the wait.
+
 ## Pass 5: orbitable web profile (historical)
 
 The following records Pass 5's original output and measurements. Pass 6 above supersedes its default sun, backdrop sizes, material settings, budgets and poster instructions.
