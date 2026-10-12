@@ -1,9 +1,9 @@
 {
-  "generated": "2026-10-11T19:08:42.204Z",
+  "generated": "2026-10-12T06:53:15.744Z",
   "splitDistance": 180,
   "variants": {
     "desktop": {
-      "glbBytes": 4122596,
+      "glbBytes": 4518504,
       "roundTrip": {
         "before": {
           "triangles": 950275,
@@ -60,15 +60,24 @@
           ]
         }
       },
-      "backdropBytes": {
-        "morning": 672002,
-        "midday": 663500,
-        "afternoon": 678818,
-        "night": 461902
+      "aoStats": {
+        "vertices": 874089,
+        "meshes": 9,
+        "samples": 437567,
+        "largeFaces": 61398,
+        "directions": 128,
+        "tiles": 429,
+        "ms": 5947.5999999940395,
+        "visibility": {
+          "min": 0,
+          "mean": 0.26190903498172324,
+          "p5": 0,
+          "p50": 0.03695012629032135
+        }
       }
     },
     "phone": {
-      "glbBytes": 2779264,
+      "glbBytes": 2779252,
       "roundTrip": {
         "before": {
           "triangles": 565537,
@@ -94,12 +103,6 @@
             }
           ]
         }
-      },
-      "backdropBytes": {
-        "morning": 201132,
-        "midday": 197740,
-        "afternoon": 197980,
-        "night": 144022
       }
     }
   }

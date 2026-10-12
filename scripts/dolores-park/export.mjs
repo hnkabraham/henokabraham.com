@@ -107,6 +107,15 @@ try {
       w: '1600',
       h: '1000',
     });
+    // Forward e.g. --aoDirections=64 --aoStrength=0.6 --aoDebug=1 to the
+    // desktop URL so tuning a full export never requires a source edit.
+    if (!phone)
+      for (const arg of args) {
+        const match = arg.match(
+          /^--(aoDirections|aoStrength|aoFloor|aoOffset|aoBias|aoDebug)=(.*)$/,
+        );
+        if (match) params.set(match[1], match[2]);
+      }
     await page.goto(`${origin}/scripts/dolores-park/scene.html?${params}`);
     await page.waitForFunction(() => window.done, null, { timeout: 300000 });
     const error = await page.evaluate(() => window.error);
@@ -115,6 +124,10 @@ try {
     if (!args.has('--backdrops-only')) {
       console.log('Exporting', phone ? 'phone' : 'desktop');
       const length = await page.evaluate(() => window.exportPark());
+      const aoStats = phone
+        ? undefined
+        : await page.evaluate(() => window.aoStats);
+      if (!phone) console.log('Desktop house sky visibility', aoStats);
       console.log('Raw bytes', length);
       const bytes = Buffer.alloc(length);
       for (let offset = 0; offset < length; offset += 8 * 1024 * 1024) {
@@ -165,7 +178,10 @@ try {
         for (const prim of mesh.listPrimitives()) {
           compactPrimitive(prim);
           const name = prim.getMaterial()?.getName() || '';
-          if (!/canopy|leaves|fronds|palm-dead/i.test(name))
+          // Position-only simplification erases the baked colour detail.
+          // Keep the phone's existing simplification path exactly as before.
+          const bakedHouse = !phone && name.startsWith('Painted wood');
+          if (!bakedHouse && !/canopy|leaves|fronds|palm-dead/i.test(name))
             simplifyPrimitive(prim, {
               simplifier: MeshoptSimplifier,
               ratio: phone ? 0.4 : 0.8,
@@ -248,6 +264,7 @@ try {
       report.variants[phone ? 'phone' : 'desktop'] = {
         glbBytes: glb.length,
         roundTrip,
+        ...(!phone ? { aoStats } : {}),
       };
       console.log(out, glb.length, 'bytes');
     }

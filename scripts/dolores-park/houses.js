@@ -261,6 +261,13 @@ export function buildHouses({
           return ny < -0.5 ? 0.66 : Math.abs(ny) < 0.5 ? 0.94 : 1;
         },
       );
+      // Keep the exact existing colour arithmetic for phone/offline output.
+      // The desktop live export uses this helper to recover the base paint
+      // after merging, then removes it before GLTFExporter sees the geometry.
+      g.setAttribute(
+        'cavity',
+        new T.Float32BufferAttribute(g.userData.cavity, 1),
+      );
     }
     g.applyMatrix4(frame.clone().multiply(local));
     const c = shade?.isColor ? shade : new T.Color(shade || '#ffffff');

@@ -9,7 +9,7 @@ type Props = {
   onStatus: (value: 'loading' | 'ready' | 'unavailable') => void;
 };
 
-// The park model is the largest file on the page (about 4.1 MB, 2.8 MB on a
+// The park model is the largest file on the page (about 4.5 MB, 2.8 MB on a
 // phone), so a slow connection gets longer than the car alone needed. A
 // stalled request still ends in the poster rather than a spinner.
 const fetchAsset = async (
@@ -111,7 +111,7 @@ export default function GarageParkScene({ reducedMotion, onStatus }: Props) {
     );
     observer.observe(element);
     // The download is most of the wait on an ordinary connection, so a
-    // desktop visit fetches the files ahead (about 5.7 MB), a few seconds
+    // desktop visit fetches the files ahead (about 6.1 MB), a few seconds
     // after the page and the tour have loaded, at low priority. Phones
     // (3.9 MB) wait for the section instead, as does a visitor saving data
     // who has chosen the full view (by default they get the simple one).

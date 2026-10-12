@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-11T21:37:56.291Z",
+  "date": "2026-10-12T06:53:56.597Z",
   "variants": {
     "desktop-day": {
       "startupFrame": {
-        "triangles": 2060428,
+        "triangles": 2083604,
         "drawCalls": 111
       },
       "phone": false,
@@ -25,7 +25,7 @@
         "exposure": 1.15,
         "lamps": 0
       },
-      "triangles": 801282,
+      "triangles": 803572,
       "drawCalls": 60,
       "textures": {
         "count": 49,
@@ -104,7 +104,7 @@
             "bytes": 174763
           },
           {
-            "name": "Dolores texture 17",
+            "name": "facade",
             "width": 128,
             "height": 128,
             "bytes": 87382
@@ -328,13 +328,13 @@
         ],
         "includesShadow": true
       },
-      "glbBytes": 4122596,
+      "glbBytes": 4518504,
       "backdropBytes": 663500,
-      "downloadBytes": 4786096,
-      "loadTimeMs": 436.40000000596046,
+      "downloadBytes": 5182004,
+      "loadTimeMs": 484,
       "shadowMap": 2048,
       "patchedMaterials": 7,
-      "frameTimeMs": 2.600000023841858,
+      "frameTimeMs": 2.800000011920929,
       "pixelRatio": 2,
       "viewport": [
         950,
@@ -437,7 +437,7 @@
       "gpuFrameTimeMs": null,
       "benchmarkFrames": 120,
       "orbitMaxDrawCalls": 62,
-      "orbitMaxTriangles": 792928,
+      "orbitMaxTriangles": 799972,
       "benchmarkMethod": "CPU submit + synchronous 1-pixel readback (completed GPU), 24 warmup frames, 120 orbit frames",
       "gpu": {
         "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, Unspecified Version)",
@@ -456,7 +456,7 @@
     },
     "desktop-night": {
       "startupFrame": {
-        "triangles": 2061132,
+        "triangles": 2084308,
         "drawCalls": 112
       },
       "phone": false,
@@ -478,7 +478,7 @@
         "exposure": 2.9,
         "lamps": 1
       },
-      "triangles": 801986,
+      "triangles": 804276,
       "drawCalls": 61,
       "textures": {
         "count": 49,
@@ -557,7 +557,7 @@
             "bytes": 174763
           },
           {
-            "name": "Dolores texture 17",
+            "name": "facade",
             "width": 128,
             "height": 128,
             "bytes": 87382
@@ -781,13 +781,13 @@
         ],
         "includesShadow": true
       },
-      "glbBytes": 4122596,
+      "glbBytes": 4518504,
       "backdropBytes": 461902,
-      "downloadBytes": 4584498,
-      "loadTimeMs": 414,
+      "downloadBytes": 4980406,
+      "loadTimeMs": 469.5,
       "shadowMap": 2048,
       "patchedMaterials": 7,
-      "frameTimeMs": 3.4000000059604645,
+      "frameTimeMs": 3.199999988079071,
       "pixelRatio": 2,
       "viewport": [
         950,
@@ -890,7 +890,7 @@
       "gpuFrameTimeMs": null,
       "benchmarkFrames": 120,
       "orbitMaxDrawCalls": 63,
-      "orbitMaxTriangles": 793632,
+      "orbitMaxTriangles": 800676,
       "benchmarkMethod": "CPU submit + synchronous 1-pixel readback (completed GPU), 24 warmup frames, 120 orbit frames",
       "gpu": {
         "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, Unspecified Version)",
@@ -1010,7 +1010,7 @@
             "bytes": 174763
           },
           {
-            "name": "Dolores texture 17",
+            "name": "facade",
             "width": 128,
             "height": 128,
             "bytes": 87382
@@ -1234,13 +1234,13 @@
         ],
         "includesShadow": true
       },
-      "glbBytes": 2779264,
+      "glbBytes": 2779252,
       "backdropBytes": 197740,
-      "downloadBytes": 2977004,
-      "loadTimeMs": 357,
+      "downloadBytes": 2976992,
+      "loadTimeMs": 408.40000000596046,
       "shadowMap": 1024,
       "patchedMaterials": 7,
-      "frameTimeMs": 2.2000000178813934,
+      "frameTimeMs": 2.699999988079071,
       "pixelRatio": 2,
       "viewport": [
         390,
@@ -1463,7 +1463,7 @@
             "bytes": 174763
           },
           {
-            "name": "Dolores texture 17",
+            "name": "facade",
             "width": 128,
             "height": 128,
             "bytes": 87382
@@ -1687,10 +1687,10 @@
         ],
         "includesShadow": true
       },
-      "glbBytes": 2779264,
+      "glbBytes": 2779252,
       "backdropBytes": 144022,
-      "downloadBytes": 2923286,
-      "loadTimeMs": 372,
+      "downloadBytes": 2923274,
+      "loadTimeMs": 398.2999999821186,
       "shadowMap": 1024,
       "patchedMaterials": 7,
       "frameTimeMs": 2.0999999940395355,

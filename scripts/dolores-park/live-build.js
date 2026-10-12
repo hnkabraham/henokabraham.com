@@ -7,6 +7,483 @@ import {
   restoreDoloresMaterials,
 } from '../../lib/dolores-park-materials.js';
 
+// Export-time sky visibility, desktop only. Distances are metres in the
+// scene's world frame (x east, y up, z = -north), never the GIS x/y frame.
+const AO_BAKE = {
+  directions: 128, // aoDirections: deterministic equal-area Fibonacci samples.
+  normalOffset: 0.04, // aoOffset: move the receiver off its own surface.
+  bias: 0.02, // aoBias: depth tolerance, plus a texel/slope allowance below.
+  strength: 0.6, // aoStrength: 0 leaves the recovered base colour unchanged.
+  floor: 0.35, // aoFloor: lower bound before the underside blend.
+  texelSize: 0.025, // 2.5 cm, independent of row length and viewing direction.
+  maxTileSize: 2048, // One reusable RGBA8 target; includes a 1-pixel gutter.
+  padding: 2, // Pad the receiver box and the full occluder depth interval.
+  keepUnderside: 0.25, // Retain 25% of the heuristic when world normal.y < -0.5.
+  // Exactly downward faces have no upper samples: visibility stays 1 and
+  // their entire old heuristic is retained, rather than brightening soffits.
+  slopeBias: 0.5, // Half a texel * tan(theta), capped at 4 for grazing rays.
+  maxSlope: 4,
+  // A face (coplanar triangles joined by edges) longer than this takes one
+  // value, the mean of samples spread over it. Siding boards and walls have
+  // corners only at their ends, so a corner's shade would otherwise smear
+  // along the whole board as a dark band.
+  faceSize: 0.5,
+  faceSpacing: 0.25, // Metres between a large face's samples.
+};
+
+// The glass stays an occluder only: darkening recessed panes turned them
+// black, and a pane's look is its reflection, not its shading.
+const isAOTarget = (material) => material.name.startsWith('Painted wood');
+
+function aoOptions(q) {
+  const number = (name, fallback, min, max) => {
+    const raw = q.get(name),
+      value = raw === null || raw.trim() === '' ? NaN : Number(raw);
+    return Number.isFinite(value)
+      ? T.MathUtils.clamp(value, min, max)
+      : fallback;
+  };
+  return {
+    ...AO_BAKE,
+    directions: Math.round(number('aoDirections', AO_BAKE.directions, 1, 2048)),
+    normalOffset: number('aoOffset', AO_BAKE.normalOffset, 0, 1),
+    bias: number('aoBias', AO_BAKE.bias, 0, 1),
+    strength: number('aoStrength', AO_BAKE.strength, 0, 1),
+    floor: number('aoFloor', AO_BAKE.floor, 0, 1),
+    debug: q.get('aoDebug') === '1',
+  };
+}
+
+// Project an entire world AABB without allocating its eight corners.
+function aoBoxRange(box, axis) {
+  const center = box.getCenter(new T.Vector3()),
+    half = box.getSize(new T.Vector3()).multiplyScalar(0.5),
+    middle = center.dot(axis),
+    reach =
+      half.x * Math.abs(axis.x) +
+      half.y * Math.abs(axis.y) +
+      half.z * Math.abs(axis.z);
+  return [middle - reach, middle + reach];
+}
+
+function bakeSkyVisibility(near, r, q) {
+  const started = performance.now(),
+    options = aoOptions(q),
+    targets = [],
+    receiverBox = new T.Box3(),
+    depthScene = new T.Scene();
+  const depthMaterial = new T.MeshDepthMaterial({
+    depthPacking: T.RGBADepthPacking,
+    side: T.DoubleSide, // Solid sheets/ground also occlude from their back.
+    blending: T.NoBlending,
+    toneMapped: false,
+  });
+  let vertices = 0,
+    tiles = 0;
+  near.updateWorldMatrix(true, true);
+  near.traverse((o) => {
+    if (!o.isMesh) return;
+    const materials = Array.isArray(o.material) ? o.material : [o.material];
+    if (materials.some(isAOTarget)) {
+      // splitScene expands all house instances before material chunking.
+      if (o.isInstancedMesh || materials.length !== 1)
+        throw new Error(
+          'AO target must be an expanded single-material mesh: ' + o.name,
+        );
+      targets.push({ mesh: o, start: vertices });
+      vertices += o.geometry.attributes.position.count;
+      receiverBox.expandByObject(o);
+    }
+    if (
+      materials.some(
+        (m) =>
+          m.transparent ||
+          m.alphaTest !== 0 ||
+          /leaves|canopy|fronds|palm|grass|blade/i.test(m.name),
+      ) ||
+      /leaves|canopy|fronds|palm|grass|blade/i.test(o.name)
+    )
+      return;
+    // A separate scene shares the source geometry but never reparents or
+    // changes near's meshes/materials. Instancing and all world transforms
+    // survive. Do not use castShadow as a filter: sidewalks must occlude.
+    const copy = o.clone(false);
+    copy.material = depthMaterial;
+    copy.matrix.copy(o.matrixWorld);
+    copy.matrixAutoUpdate = false;
+    copy.visible = true;
+    copy.castShadow = copy.receiveShadow = false;
+    depthScene.add(copy);
+  });
+  if (!vertices) {
+    depthMaterial.dispose();
+    window.aoStats = {
+      vertices: 0,
+      meshes: 0,
+      directions: options.directions,
+      tiles: 0,
+      ms: performance.now() - started,
+      visibility: { min: 1, mean: 1, p5: 1, p50: 1 },
+    };
+    console.log('House sky visibility', window.aoStats);
+    return;
+  }
+  receiverBox.expandByScalar(options.padding + options.normalOffset);
+  // Lateral coverage comes from the receivers; depth comes from ALL solid
+  // near geometry. This is full-range sky visibility, not a local AO radius.
+  const occluderBox = new T.Box3().setFromObject(depthScene).union(receiverBox);
+  const p = new T.Vector3(),
+    n = new T.Vector3(),
+    normalMatrix = new T.Matrix3();
+  // Large faces and their samples, per target.
+  const sampleList = [];
+  for (const target of targets) {
+    const { mesh } = target,
+      { position } = mesh.geometry.attributes,
+      index = mesh.geometry.index,
+      triangles = (index ? index.count : position.count) / 3,
+      corner = (t, c) => (index ? index.getX(t * 3 + c) : t * 3 + c);
+    normalMatrix.getNormalMatrix(mesh.matrixWorld);
+    const world = (j) =>
+      new T.Vector3()
+        .fromBufferAttribute(position, j)
+        .applyMatrix4(mesh.matrixWorld);
+    // Join triangles across shared edges when their normals agree.
+    const parent = Int32Array.from({ length: triangles }, (_, t) => t),
+      find = (t) => {
+        while (parent[t] !== t) t = parent[t] = parent[parent[t]];
+        return t;
+      },
+      edges = new Map(),
+      faceNormal = [],
+      key = (v) =>
+        `${Math.round(v.x * 1000)},${Math.round(v.y * 1000)},${Math.round(v.z * 1000)}`;
+    for (let t = 0; t < triangles; t++) {
+      const a = world(corner(t, 0)),
+        b = world(corner(t, 1)),
+        c = world(corner(t, 2));
+      faceNormal.push(
+        new T.Vector3()
+          .subVectors(b, a)
+          .cross(new T.Vector3().subVectors(c, a))
+          .normalize(),
+      );
+      const ids = [a, b, c].map(key);
+      for (let e = 0; e < 3; e++) {
+        const edge = [ids[e], ids[(e + 1) % 3]].sort().join('|');
+        const other = edges.get(edge);
+        if (other === undefined) edges.set(edge, t);
+        else if (faceNormal[other].dot(faceNormal[t]) > 0.999)
+          parent[find(t)] = find(other);
+      }
+    }
+    const faces = new Map();
+    for (let t = 0; t < triangles; t++) {
+      const f = find(t);
+      if (!faces.has(f)) faces.set(f, { triangles: [], box: new T.Box3() });
+      const face = faces.get(f);
+      face.triangles.push(t);
+      for (let c = 0; c < 3; c++) face.box.expandByPoint(world(corner(t, c)));
+    }
+    // Vertices of large faces take their face's value: face ids per vertex.
+    target.vertexFace = new Int32Array(position.count).fill(-1);
+    target.faceSamples = [];
+    const size = new T.Vector3();
+    for (const face of faces.values()) {
+      if (face.box.getSize(size).length() <= options.faceSize) continue;
+      const id = target.faceSamples.length,
+        first = sampleList.length;
+      for (const t of face.triangles) {
+        for (let c = 0; c < 3; c++) target.vertexFace[corner(t, c)] = id;
+        const a = world(corner(t, 0)),
+          b = world(corner(t, 1)),
+          c = world(corner(t, 2)),
+          area =
+            new T.Vector3()
+              .subVectors(b, a)
+              .cross(new T.Vector3().subVectors(c, a))
+              .length() / 2,
+          count = Math.min(
+            256,
+            Math.max(1, Math.round(area / options.faceSpacing ** 2)),
+          );
+        n.copy(faceNormal[t]);
+        for (let k = 0; k < count; k++) {
+          // Deterministic, evenly spread barycentric points (R2 sequence).
+          let u = (0.5 + k * 0.7548776662) % 1,
+            v = (0.5 + k * 0.5698402909) % 1;
+          if (u + v > 1) [u, v] = [1 - u, 1 - v];
+          p.copy(a)
+            .addScaledVector(new T.Vector3().subVectors(b, a), u)
+            .addScaledVector(new T.Vector3().subVectors(c, a), v)
+            .addScaledVector(n, options.normalOffset);
+          sampleList.push(p.x, p.y, p.z, n.x, n.y, n.z);
+        }
+      }
+      target.faceSamples.push([first / 6, sampleList.length / 6]);
+    }
+  }
+  const samples = sampleList.length / 6,
+    receivers = vertices + samples;
+  const positions = new Float64Array(receivers * 3),
+    normals = new Float32Array(receivers * 3),
+    visibleWeight = new Float64Array(receivers),
+    totalWeight = new Float64Array(receivers),
+    weights = new Float32Array(receivers),
+    depths = new Float64Array(receivers),
+    pixels = new Int32Array(receivers),
+    next = new Int32Array(receivers);
+  for (let s = 0; s < samples; s++) {
+    const k = (vertices + s) * 3;
+    positions.set(sampleList.slice(s * 6, s * 6 + 3), k);
+    normals.set(sampleList.slice(s * 6 + 3, s * 6 + 6), k);
+  }
+  for (const { mesh, start } of targets) {
+    const { position, normal } = mesh.geometry.attributes;
+    normalMatrix.getNormalMatrix(mesh.matrixWorld);
+    for (let j = 0; j < position.count; j++) {
+      p.fromBufferAttribute(position, j).applyMatrix4(mesh.matrixWorld);
+      n.fromBufferAttribute(normal, j).applyNormalMatrix(normalMatrix);
+      p.addScaledVector(n, options.normalOffset);
+      const k = (start + j) * 3;
+      positions[k] = p.x;
+      positions[k + 1] = p.y;
+      positions[k + 2] = p.z;
+      normals[k] = n.x;
+      normals[k + 1] = n.y;
+      normals[k + 2] = n.z;
+    }
+  }
+  const size = Math.min(options.maxTileSize, r.capabilities.maxTextureSize),
+    innerSize = size - 2,
+    texel = options.texelSize,
+    target = new T.WebGLRenderTarget(size, size, {
+      format: T.RGBAFormat,
+      type: T.UnsignedByteType,
+      minFilter: T.NearestFilter,
+      magFilter: T.NearestFilter,
+      colorSpace: T.NoColorSpace,
+      generateMipmaps: false,
+      depthBuffer: true,
+      stencilBuffer: false,
+      samples: 0,
+    }),
+    rgba = new Uint8Array(size * size * 4),
+    camera = new T.OrthographicCamera(),
+    direction = new T.Vector3(),
+    right = new T.Vector3(),
+    up = new T.Vector3(),
+    basis = new T.Matrix4();
+  target.texture.flipY = false;
+  target.texture.premultiplyAlpha = false;
+  depthMaterial.premultipliedAlpha = false;
+  target.scissorTest = true;
+  const saved = {
+    target: r.getRenderTarget(),
+    face: r.getActiveCubeFace(),
+    mip: r.getActiveMipmapLevel(),
+    clear: r.getClearColor(new T.Color()),
+    alpha: r.getClearAlpha(),
+    autoClear: r.autoClear,
+    autoClearColor: r.autoClearColor,
+    autoClearDepth: r.autoClearDepth,
+    autoClearStencil: r.autoClearStencil,
+    shadows: r.shadowMap.enabled,
+    xr: r.xr.enabled,
+    clippingPlanes: r.clippingPlanes,
+    localClipping: r.localClippingEnabled,
+  };
+  try {
+    // render() resets the write masks before auto-clear. A manual clear can
+    // inherit depthWrite=false from the live scene's transparent last draw.
+    r.autoClear = r.autoClearColor = r.autoClearDepth = true;
+    r.autoClearStencil = false;
+    r.shadowMap.enabled = false;
+    r.xr.enabled = false;
+    r.clippingPlanes = [];
+    r.localClippingEnabled = false;
+    r.setClearColor(0xffffff, 1); // RGBA=(1,1,1,1) unpacks to far depth 1.
+    for (let sample = 0; sample < options.directions; sample++) {
+      const y = (sample + 0.5) / options.directions,
+        azimuth = sample * Math.PI * (3 - Math.sqrt(5)),
+        radius = Math.sqrt(1 - y * y);
+      direction.set(Math.cos(azimuth) * radius, y, Math.sin(azimuth) * radius);
+      // Camera +Z points to the sky; it looks along -direction. Align its
+      // horizontal axis with projected world X (the long house row) to
+      // avoid wasting most texels on a diagonally projected bounding box.
+      right.set(1, 0, 0).addScaledVector(direction, -direction.x).normalize();
+      up.crossVectors(direction, right).normalize();
+      camera.quaternion.setFromRotationMatrix(
+        basis.makeBasis(right, up, direction),
+      );
+      const [left, rightEdge] = aoBoxRange(receiverBox, right),
+        [bottom, top] = aoBoxRange(receiverBox, up),
+        [back, front] = aoBoxRange(occluderBox, direction),
+        width = Math.ceil((rightEdge - left) / texel),
+        height = Math.ceil((top - bottom) / texel),
+        columns = Math.ceil(width / innerSize),
+        rows = Math.ceil(height / innerSize),
+        heads = new Int32Array(columns * rows).fill(-1);
+      camera.near = 0.1;
+      const eye = front + options.padding + camera.near;
+      camera.far = eye - back + options.padding;
+      camera.position.copy(direction).multiplyScalar(eye);
+      camera.updateMatrixWorld(true);
+      const depthSpan = camera.far - camera.near;
+      // Bin receivers once per direction, not once per tile. Each linked
+      // list visits only vertices which can see that direction (n dot d > 0).
+      for (let i = 0; i < receivers; i++) {
+        const k = i * 3,
+          w = Math.min(
+            1,
+            normals[k] * direction.x +
+              normals[k + 1] * direction.y +
+              normals[k + 2] * direction.z,
+          );
+        if (w <= 0) continue;
+        const x = positions[k],
+          yy = positions[k + 1],
+          z = positions[k + 2],
+          px = Math.floor(
+            (x * right.x + yy * right.y + z * right.z - left) / texel,
+          ),
+          py = Math.floor((x * up.x + yy * up.y + z * up.z - bottom) / texel),
+          column = Math.floor(px / innerSize),
+          row = Math.floor(py / innerSize),
+          tile = row * columns + column,
+          tileWidth = Math.min(innerSize, width - column * innerSize) + 2;
+        // Pixel (0,0) is bottom-left, exactly as readPixels returns it; no
+        // image/canvas Y flip. One-pixel gutters cover each tile's seams.
+        pixels[i] =
+          ((py - row * innerSize + 1) * tileWidth +
+            px -
+            column * innerSize +
+            1) *
+          4;
+        depths[i] =
+          (eye -
+            (x * direction.x + yy * direction.y + z * direction.z) -
+            camera.near) /
+          depthSpan;
+        weights[i] = w;
+        totalWeight[i] += weights[i];
+        next[i] = heads[tile];
+        heads[tile] = i;
+      }
+      for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+          const tile = row * columns + column;
+          if (heads[tile] === -1) continue;
+          const tileWidth = Math.min(innerSize, width - column * innerSize) + 2,
+            tileHeight = Math.min(innerSize, height - row * innerSize) + 2;
+          camera.left = left + (column * innerSize - 1) * texel;
+          camera.right = camera.left + tileWidth * texel;
+          camera.bottom = bottom + (row * innerSize - 1) * texel;
+          camera.top = camera.bottom + tileHeight * texel;
+          camera.updateProjectionMatrix();
+          // Vary the viewport/readback rectangle, never resize/reallocate
+          // the target. The scissor also restricts clearing of edge tiles.
+          target.viewport.set(0, 0, tileWidth, tileHeight);
+          target.scissor.copy(target.viewport);
+          r.setRenderTarget(target);
+          r.render(depthScene, camera);
+          r.readRenderTargetPixels(target, 0, 0, tileWidth, tileHeight, rgba);
+          tiles++;
+          for (let i = heads[tile]; i !== -1; i = next[i]) {
+            const k = pixels[i],
+              w = weights[i],
+              // Three r185 packing.glsl.js: dot(rgba / 255,
+              // vec4((255/256) / vec3(1,256,65536), 1/16777216)).
+              stored =
+                rgba[k] / 256 +
+                rgba[k + 1] / 65536 +
+                rgba[k + 2] / 16777216 +
+                rgba[k + 3] / (255 * 16777216),
+              slope = Math.min(
+                options.maxSlope,
+                Math.sqrt(Math.max(0, 1 - w * w)) / w,
+              ),
+              bias =
+                (options.bias + texel * options.slopeBias * slope) / depthSpan;
+            if (depths[i] - stored <= bias) visibleWeight[i] += w;
+          }
+        }
+      }
+    }
+  } finally {
+    r.setRenderTarget(saved.target, saved.face, saved.mip);
+    r.setClearColor(saved.clear, saved.alpha);
+    r.autoClear = saved.autoClear;
+    r.autoClearColor = saved.autoClearColor;
+    r.autoClearDepth = saved.autoClearDepth;
+    r.autoClearStencil = saved.autoClearStencil;
+    r.shadowMap.enabled = saved.shadows;
+    r.xr.enabled = saved.xr;
+    r.clippingPlanes = saved.clippingPlanes;
+    r.localClippingEnabled = saved.localClipping;
+    target.dispose();
+    depthMaterial.dispose();
+    // InstancedMesh clones own instance buffers, but geometry is shared.
+    depthScene.traverse((o) => {
+      if (o.isInstancedMesh) o.dispose();
+    });
+    depthScene.clear();
+  }
+  const visibility = new Float32Array(vertices);
+  let sum = 0;
+  const seen = (i) =>
+    totalWeight[i] > 0 ? visibleWeight[i] / totalWeight[i] : 1;
+  for (const { mesh, start, vertexFace, faceSamples } of targets) {
+    const { color, cavity } = mesh.geometry.attributes,
+      faceValue = faceSamples.map(([from, to]) => {
+        let total = 0;
+        for (let s = from; s < to; s++) total += seen(vertices + s);
+        return total / (to - from);
+      });
+    for (let j = 0; j < color.count; j++) {
+      const i = start + j,
+        value = vertexFace[j] >= 0 ? faceValue[vertexFace[j]] : seen(i),
+        old = cavity?.getX(j) ?? 1,
+        keep =
+          normals[i * 3 + 1] < -0.5
+            ? totalWeight[i] === 0
+              ? 1
+              : options.keepUnderside
+            : 0,
+        ao = Math.max(options.floor, 1 - options.strength * (1 - value)),
+        multiplier = ao * (1 + (old - 1) * keep);
+      visibility[i] = value;
+      sum += value;
+      if (options.debug) color.setXYZ(j, multiplier, multiplier, multiplier);
+      else
+        color.setXYZ(
+          j,
+          (color.getX(j) / old) * multiplier,
+          (color.getY(j) / old) * multiplier,
+          (color.getZ(j) / old) * multiplier,
+        );
+    }
+    color.needsUpdate = true;
+  }
+  visibility.sort();
+  window.aoStats = {
+    vertices,
+    meshes: targets.length,
+    samples,
+    largeFaces: targets.reduce((sum, t) => sum + t.faceSamples.length, 0),
+    directions: options.directions,
+    tiles,
+    ms: performance.now() - started,
+    visibility: {
+      min: visibility[0],
+      mean: sum / vertices,
+      p5: visibility[Math.floor((vertices - 1) * 0.05)],
+      p50: visibility[Math.floor((vertices - 1) * 0.5)],
+    },
+  };
+  console.log('House sky visibility', window.aoStats);
+}
+
 // Split by actual world-space triangles/instances, never the origin of a merged
 // city mesh. Both sides use the identical partition, including crossing crowns.
 export function splitScene(scene, carHolder, car, radius = 180) {
@@ -71,8 +548,15 @@ export function splitScene(scene, carHolder, car, radius = 180) {
       colors.set(tint.toArray(), i * 3);
     }
     g.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
+    // All parts in a material bucket need matching attributes. Glass and
+    // expanded instanced trim never had the house add() heuristic applied.
+    if (!g.attributes.cavity)
+      g.setAttribute(
+        'cavity',
+        new T.Float32BufferAttribute(new Float32Array(count).fill(1), 1),
+      );
     for (const key of Object.keys(g.attributes))
-      if (!['position', 'normal', 'uv', 'color'].includes(key))
+      if (!['position', 'normal', 'uv', 'color', 'cavity'].includes(key))
         g.deleteAttribute(key);
     const mat = canonical(original),
       key = mat.uuid;
@@ -380,7 +864,16 @@ export async function prepareLiveScene({
     bottom: -30,
   });
   sun.shadow.camera.updateProjectionMatrix();
+  let aoBaked = false;
   window.exportPark = async () => {
+    if (q.get('phone') !== '1' && !aoBaked) {
+      bakeSkyVisibility(near, r, q);
+      aoBaked = true; // Repeated exports must not multiply the colours again.
+    }
+    // Helpers never enter either GLB; phone keeps its original colours.
+    near.traverse((o) => {
+      if (o.isMesh) o.geometry.deleteAttribute('cavity');
+    });
     const result = await new GLTFExporter().parseAsync(near, {
       binary: true,
       onlyVisible: false,

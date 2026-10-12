@@ -301,7 +301,7 @@ The longest remaining task is the synchronous build before the wait: house batch
 
 On an ordinary connection, though, the download was most of the wait (about 1.6 s for the park model at 30 Mbps), so the Garage component (`app/garage-park-scene.tsx`) now starts sooner:
 
-- **Desktop prefetch.** A desktop visit fetches the viewer's files at low priority, 3 s after the page's load event, by when the tour's own downloads have normally finished. `doloresViewerFiles()` returns the list: the park, the car and the six faces of the bake for the current sun, about 5.7 MB. If the viewer starts while a prefetch is still in flight, it waits on that request instead of making its own. Files that have already arrived come from the HTTP cache, since scene files are cached immutably.
+- **Desktop prefetch.** A desktop visit fetches the viewer's files at low priority, 3 s after the page's load event, by when the tour's own downloads have normally finished. `doloresViewerFiles()` returns the list: the park, the car and the six faces of the bake for the current sun, about 6.1 MB with the baked house shading (5.7 MB before it). If the viewer starts while a prefetch is still in flight, it waits on that request instead of making its own. Files that have already arrived come from the HTTP cache, since scene files are cached immutably.
 - **No prefetch on phones,** where the files are 3.9 MB. Visitors with Save-Data on get the site's simple view, with no scene at all.
 - **Earlier start.** The viewer now starts when the frame is 1,200 px below the viewport rather than 300 px.
 
@@ -326,7 +326,21 @@ Tried and left out:
 - **Neutral and AgX tone mapping.** Neutral is crisper by day. At dusk and night it turns the foliage green and the road blue-purple, and every key frame's exposure would need retuning. AgX washes the frame out.
 - **Street-tree crown normals and a lower leaf cutoff.** These made the crowns milky and grey-green.
 
-Still open, in the review's order: a desktop-only baked ambient-occlusion pass for the houses at export, to give the shaded north-facing fronts their depth; rebaking the night far field with windows lit in coherent groups, not scattered pixels; and procedural variation for the near lawn.
+Still open, in the review's order: rebaking the night far field with windows lit in coherent groups, not scattered pixels; and procedural variation for the near lawn.
+
+## Baked house shading (added after the look pass)
+
+The house fronts face north, so for most of the day they're lit only by the sky and read as flat fills. The desktop export now bakes each house vertex's sky visibility into its vertex colour. It does this in `bakeSkyVisibility()` in `live-build.js`, inside `window.exportPark()`, with the constants in `AO_BAKE`. Codex Astra wrote the bake to a fixed design; the face averaging and the tuning were settled by rendering.
+
+- **Method.** The bake uses 128 Fibonacci directions over the upper hemisphere. For each direction, the solid near field is rendered as packed depth into reused 2048² orthographic tiles at 2.5 cm per texel, and each receiver is tested against it on the CPU. Receivers are offset 4 cm along their normal, with a 2 cm bias plus a slope term, and weighted by `n · d`. Visibility is the weighted fraction of sky the receiver sees, so an unobstructed wall reads 1 at any orientation. Foliage, alpha-tested and transparent geometry doesn't occlude.
+- **Faces, not corners, on large pieces.** A siding board or wall has corners only at its ends, so one shaded corner smeared along the whole board as a dark band. Coplanar triangles joined by edges are grouped into faces. A face larger than 0.5 m takes the mean of samples spread over it every 25 cm; smaller pieces keep per-vertex values.
+- **Strength and scope.** The multiplier is `max(0.35, 1 − 0.6·(1 − visibility))`. Downward faces keep a quarter of the old 0.66 darkening. Only the `Painted wood` material is baked, which after material merging also covers stone, brick and roofs. Window glass stays an occluder: baking it turned the panes black.
+- **Simplification.** Position-only simplification would collapse the baked detail, so on desktop the `Painted wood` primitive skips it. That adds 11,588 triangles and 32 KB.
+- **Phone.** The phone is untouched: its GLB's binary chunk is byte-identical to before. Its download had 20 KB of headroom, and skipping simplification alone would cost 108 KB.
+- **Tuning without code edits.** `export.mjs` forwards `--aoDirections=`, `--aoStrength=`, `--aoFloor=`, `--aoOffset=`, `--aoBias=` and `--aoDebug=1` to the desktop page. Debug mode writes the multiplier alone as grey, and `export-report.json` records `aoStats`.
+
+The bake takes about 6 s of a 26 s export: 874,089 vertices plus 437,567 face samples over 61,398 large faces. The desktop GLB grows from 4,122,596 to 4,518,504 bytes, so the largest desktop download is 5,197,322 of its 6,000,000. `verify-live.mjs` reports 803,572 settled triangles, about 2,300 more than before, with the same draw calls and texture memory. Median frames are unchanged at 2.8 and 3.2 ms by day and by night. Program counts stay at 56 and 58, and load through first frame is unchanged at about 444 ms.
+
 
 ## Pass 5: orbitable web profile (historical)
 
