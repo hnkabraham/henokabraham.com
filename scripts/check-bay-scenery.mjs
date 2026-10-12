@@ -729,10 +729,9 @@ console.log(
     'liverySweep(',
     'liverySweepSlope(',
     'LIV_FIN_PORT',
-    'LIV_TITLES',
     'LIV_REGISTRATION',
-    'LIV_URL',
-    'LIV_NACELLE',
+    'float stripe0',
+    'float stripe2',
     'diffuseColor.rgb = col;',
   ])
     assert.ok(
@@ -740,10 +739,16 @@ console.log(
       `Livery fragment carries ${needle}`,
     );
   assert.ok(
-    material.customProgramCacheKey().includes('livery-v6'),
+    material.customProgramCacheKey().includes('livery-v7'),
     'Livery patch keyed',
   );
-  // The wave's edge is continuous with a matching slope where the fuselage
+  // Only the registration is lettered: no name, address or monogram.
+  for (const gone of ['LIV_TITLES', 'LIV_URL', 'LIV_NACELLE'])
+    assert.ok(
+      !shader.fragmentShader.includes(gone),
+      `Livery no longer carries ${gone}`,
+    );
+  // The stripes' sweep is continuous with a matching slope where the fuselage
   // curve hands over to the fin curve at x = 20.
   const fuselage = (x) => -6.6 + 6.6 * ((x - 2.5) / 17.5) ** 2;
   const fin = (x) => 0.754 * (x - 20) - 0.019 * (x - 20) ** 2;

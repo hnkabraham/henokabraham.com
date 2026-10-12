@@ -7,12 +7,14 @@ import {
 import { addShaderPatch } from './airframe-flex';
 
 /**
- * The site's own livery. The paint itself (a navy wave that starts under the
- * wing box, sweeps up the aft fuselage into the fin and curls over to the
- * trailing edge with an orange ribbon along its edge, navy engine cowls and
- * raked wingtips) is drawn analytically in the
- * fragment shader from model-space coordinates, so its edges stay crisp at
- * any distance. Only the lettering and the roundel come from this atlas.
+ * The site's own livery, sunset stripes. The paint itself (three stripes in
+ * orange, coral and plum that start under the wing box, sweep up the aft
+ * fuselage into the fin and curl over to the trailing edge, plum engine
+ * cowls behind an orange lip ring, and an orange stripe inboard of each
+ * raked wingtip) is drawn analytically in the fragment shader from
+ * model-space coordinates, so its edges stay crisp at any distance. Only
+ * the registration and the striped sun setting on the fin come from this
+ * atlas.
  *
  * Model axes: nose −X (−31.4 m), tail +X (31 m), up +Y, port +Z. The
  * fuselage axis runs at y = −3.55 with a 2.95 m radius; the window row sits
@@ -25,31 +27,32 @@ export const LIVERY_ATLAS = 2048;
 export const LIVERY_REGIONS = {
   finPort: [0, 0, 1024, 1024],
   finStarboard: [1024, 0, 2048, 1024],
-  titles: [0, 1024, 2048, 1280],
   registration: [0, 1280, 1024, 1536],
-  url: [1024, 1280, 2048, 1536],
-  nacelle: [0, 1536, 512, 2048],
 } as const;
 
 /** The fin panel covers this box of the side elevation, in metres. */
 const FIN_BOX = { x0: 21, x1: 31, y0: -0.5, y1: 8 };
 
 export const LIVERY_COLORS = {
-  navy: '#162d3d',
-  orange: '#d9522d',
-  cream: '#f7f4e9',
+  orange: '#e8572a',
+  coral: '#f2994a',
+  plum: '#7a3e6d',
+  /** The registration, on the white fuselage. */
+  ink: '#162d3d',
 };
 
-/** lucide's `plane` glyph, as the header's brand symbol uses it (24-unit box). */
-const PLANE_GLYPH =
-  'M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z';
+/** The stripes along the sweep, outward from it, in metres; they widen
+ * through the fin. */
+const STRIPES = [
+  { color: LIVERY_COLORS.orange, offset: 0, width: 0.24 },
+  { color: LIVERY_COLORS.coral, offset: 0.34, width: 0.18 },
+  { color: LIVERY_COLORS.plum, offset: 0.62, width: 0.14 },
+];
 
 // The site's own face, which every page loads (and the head preloads), so
-// the fuselage letters match the page's on every platform instead of
-// falling through to whatever sans the visitor's system has.
+// the registration matches the page's lettering on every platform instead
+// of falling through to whatever sans the visitor's system has.
 const SANS = '"Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif';
-// The page sets its mono labels in Google Sans too.
-const MONO = SANS;
 
 /** Draws `text` centred in a pixel box, fitted to its width with tracking. */
 function fitText(
@@ -102,8 +105,8 @@ function drawAtlas(context: CanvasRenderingContext2D) {
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.clearRect(0, 0, LIVERY_ATLAS, LIVERY_ATLAS);
 
-  // Fin panels: the roundel from the site header, pointing up and toward the
-  // nose on both sides. The panel is drawn in metres of side elevation so
+  // Fin panels: a striped retro sun setting on the fin's lower half, the
+  // same on both sides. The panel is drawn in metres of side elevation so
   // the disc stays round on the anisotropically mapped fin.
   const fin = (region: readonly number[], mirrored: boolean) => {
     const [x0, y0, x1, y1] = region;
@@ -112,10 +115,17 @@ function drawAtlas(context: CanvasRenderingContext2D) {
     const px = (mx: number) =>
       mirrored ? x1 - (mx - FIN_BOX.x0) * sx : x0 + (mx - FIN_BOX.x0) * sx;
     const py = (my: number) => y1 - (my - FIN_BOX.y0) * sy;
-    const centre = { x: 28.0, y: 2.7 };
-    const radius = 1.6;
+    const rect = (ax: number, ay: number, bx: number, by: number) =>
+      context.fillRect(
+        Math.min(px(ax), px(bx)),
+        Math.min(py(ay), py(by)),
+        Math.abs(bx - ax) * sx,
+        Math.abs(by - ay) * sy,
+      );
+    const centre = { x: 27.4, y: 0.2 };
+    const radius = 3.3;
     context.setTransform(1, 0, 0, 1, 0, 0);
-    context.fillStyle = LIVERY_COLORS.orange;
+    context.save();
     context.beginPath();
     context.ellipse(
       px(centre.x),
@@ -123,61 +133,46 @@ function drawAtlas(context: CanvasRenderingContext2D) {
       radius * sx,
       radius * sy,
       0,
+      Math.PI,
       0,
-      Math.PI * 2,
     );
-    context.fill();
-    // The header's plane glyph, 24 units across the disc's radius, climbing
-    // at 20° toward the nose on both sides; the port side is flipped and its
-    // rotation flips with it. The non-uniform scale keeps it round on the fin.
-    const k = radius / 24;
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.translate(px(centre.x), py(centre.y));
-    context.scale((mirrored ? 1 : -1) * k * sx, k * sy);
-    context.rotate((-20 * Math.PI) / 180);
-    context.translate(-12, -12);
-    context.fillStyle = LIVERY_COLORS.cream;
-    context.fill(new Path2D(PLANE_GLYPH));
-    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.closePath();
+    context.clip();
+    // Coral at the top of the disc, through orange, to plum at the horizon.
+    const glow = context.createLinearGradient(
+      0,
+      py(centre.y + radius),
+      0,
+      py(centre.y),
+    );
+    glow.addColorStop(0, LIVERY_COLORS.coral);
+    glow.addColorStop(0.55, LIVERY_COLORS.orange);
+    glow.addColorStop(1, LIVERY_COLORS.plum);
+    context.fillStyle = glow;
+    rect(centre.x - radius, centre.y, centre.x + radius, centre.y + radius);
+    // The gaps widen toward the horizon.
+    context.globalCompositeOperation = 'destination-out';
+    for (let k = 0; k < 5; k++) {
+      const y = centre.y + 0.25 + k * 0.42;
+      rect(centre.x - radius, y, centre.x + radius, y + 0.07 + k * 0.035);
+    }
+    context.restore();
   };
   fin(LIVERY_REGIONS.finPort, false);
   fin(LIVERY_REGIONS.finStarboard, true);
 
-  // Titles forward of the wing, the registration aft, the URL under the
-  // belly and the monogram on the engine cowls.
-  fitText(context, 'HENOK ABRAHAM', LIVERY_REGIONS.titles, {
-    font: SANS,
-    weight: 640,
-    tracking: 0.08,
-    color: LIVERY_COLORS.navy,
-    inset: 48,
-  });
+  // The registration, aft of the wing.
   fitText(context, 'N787HA', LIVERY_REGIONS.registration, {
     font: SANS,
     weight: 600,
     tracking: 0.04,
-    color: LIVERY_COLORS.navy,
+    color: LIVERY_COLORS.ink,
     inset: 48,
-  });
-  fitText(context, 'henokabraham.com', LIVERY_REGIONS.url, {
-    font: MONO,
-    weight: 500,
-    tracking: 0.02,
-    color: LIVERY_COLORS.cream,
-    inset: 48,
-    capHeight: 0.73,
-  });
-  fitText(context, 'HA', LIVERY_REGIONS.nacelle, {
-    font: SANS,
-    weight: 700,
-    tracking: 0.02,
-    color: LIVERY_COLORS.cream,
-    inset: 96,
   });
 }
 
 /**
- * Draws the lettering atlas at load. The page's font is normally ready by
+ * Draws the atlas at load. The page's font is normally ready by
  * the time the aircraft loads; if not, the atlas is redrawn once that face
  * is (not merely once whatever was pending has settled).
  */
@@ -195,7 +190,7 @@ export function createLiveryTexture() {
   texture.addEventListener('dispose', () => {
     disposed = true;
   });
-  const face = `640 100px ${SANS}`;
+  const face = `600 100px ${SANS}`;
   if (typeof document !== 'undefined' && !document.fonts?.check(face))
     void document.fonts
       ?.load(face)
@@ -231,7 +226,12 @@ export function addLivery(
   texture: Texture,
   offset: [number, number, number] = [0, 0, 0],
 ) {
-  addShaderPatch(material, `livery-v6-${offset.join('-')}`, (shader) => {
+  const stripes = STRIPES.map(
+    ({ color, offset: start, width }, i) => `
+        float stripe${i} = liveryEdge(d - ${start.toFixed(3)} * taper, aa) * (1.0 - liveryEdge(d - ${(start + width).toFixed(3)} * taper, aa)) * body * lower;
+        col = mix(col, ${linear(color)}, stripe${i} * painted);`,
+  ).join('');
+  addShaderPatch(material, `livery-v7-${offset.join('-')}`, (shader) => {
     shader.uniforms.liveryMap = { value: texture };
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -250,14 +250,11 @@ export function addLivery(
         `#include <common>
       uniform sampler2D liveryMap;
       varying vec3 vLiveryPoint;
-      const vec3 LIV_NAVY = ${linear(LIVERY_COLORS.navy)};
       const vec3 LIV_ORANGE = ${linear(LIVERY_COLORS.orange)};
+      const vec3 LIV_PLUM = ${linear(LIVERY_COLORS.plum)};
       const vec4 LIV_FIN_PORT = ${uvRect(LIVERY_REGIONS.finPort)};
       const vec4 LIV_FIN_STARBOARD = ${uvRect(LIVERY_REGIONS.finStarboard)};
-      const vec4 LIV_TITLES = ${uvRect(LIVERY_REGIONS.titles)};
       const vec4 LIV_REGISTRATION = ${uvRect(LIVERY_REGIONS.registration)};
-      const vec4 LIV_URL = ${uvRect(LIVERY_REGIONS.url)};
-      const vec4 LIV_NACELLE = ${uvRect(LIVERY_REGIONS.nacelle)};
       float liveryBox(vec2 p, vec2 lower, vec2 upper) {
         vec2 inside = step(lower, p) * step(p, upper);
         return inside.x * inside.y;
@@ -265,8 +262,9 @@ export function addLivery(
       vec4 liveryText(vec2 uv, vec4 region) {
         return texture2D(liveryMap, mix(region.xy, region.zw, uv));
       }
-      // The wave's edge in the side elevation: a parabola rising from under
-      // the wing box to the fin root, then bending over to the trailing edge.
+      // The stripes' sweep in the side elevation: a parabola rising from
+      // under the wing box to the fin root, then bending over to the
+      // trailing edge.
       float liverySweep(float x) {
         float t = max(0.0, (x - 2.5) / 17.5);
         float u = x - 20.0;
@@ -295,22 +293,20 @@ export function addLivery(
         float fin = step(19.0, p.x) * step(abs(p.z), 1.0) * step(-0.7, p.y);
         float stabiliser = step(26.0, p.x) * step(1.3, abs(p.z));
         float body = max(fuselage, fin) * (1.0 - stabiliser);
-        // The wave and its ribbon, measured perpendicular to the edge.
+        // The stripes, measured perpendicular to the sweep; they widen
+        // through the fin and fade out under the belly.
         float h = liverySweep(p.x);
         float slope = liverySweepSlope(p.x);
         float d = (p.y - h) * inversesqrt(1.0 + slope * slope);
         float aa = fwidth(d) + 1e-4;
-        float navy = (1.0 - liveryEdge(d, aa)) * body;
-        float width = 0.42 + 0.5 * smoothstep(18.0, 23.0, p.x) * (1.0 - smoothstep(25.0, 31.0, p.x));
-        float ribbon = liveryEdge(d, aa) * (1.0 - liveryEdge(d - width, aa)) * body
-          * smoothstep(-6.2, -5.3, p.y);
-        // Raked wingtips, cut at a slant with the same ribbon inboard.
+        float taper = 1.0 + 1.19 * smoothstep(18.0, 23.0, p.x) * (1.0 - smoothstep(25.0, 31.0, p.x));
+        float lower = smoothstep(-6.2, -5.3, p.y);
+        // An orange stripe inboard of each raked wingtip, cut at a slant.
         float tip = abs(p.z) - (26.9 + 0.25 * (p.x - 9.0));
         float tipAa = fwidth(tip) + 1e-4;
         float wing = step(3.0, p.x) * step(-3.0, p.y) * step(p.y, 0.5) * (1.0 - fuselage);
-        navy = max(navy, liveryEdge(tip, tipAa) * wing);
-        ribbon = max(ribbon, (1.0 - liveryEdge(tip, tipAa)) * liveryEdge(tip + 0.35, tipAa) * wing);
-        // Engine cowls: navy behind an orange lip ring, the bare inlet kept.
+        float trim = (1.0 - liveryEdge(tip, tipAa)) * liveryEdge(tip + 0.35, tipAa) * wing;
+        // Engine cowls: plum behind an orange lip ring, the bare inlet kept.
         float side = sign(p.z);
         vec2 hub = vec2(p.y + 5.9, abs(p.z) - 9.77);
         float rn = length(hub);
@@ -319,24 +315,17 @@ export function addLivery(
         float cowl = step(-9.9, p.x) * step(p.x, -3.9) * (1.0 - pylon)
           * step(p.x < -8.6 ? 1.55 : 1.05, rn) * (1.0 - smoothstep(2.05, 2.25, rn));
         float lipRing = cowl * step(p.x, -9.5);
-        navy = max(navy, cowl * (1.0 - lipRing));
-        ribbon = max(ribbon, lipRing);
-        vec3 col = mix(base, LIV_NAVY, navy * painted);
-        col = mix(col, LIV_ORANGE, ribbon * painted);
-        // Lettering and the roundel.
+        trim = max(trim, lipRing);
+        vec3 col = base;${stripes}
+        col = mix(col, LIV_PLUM, cowl * (1.0 - lipRing) * painted);
+        col = mix(col, LIV_ORANGE, trim * painted);
+        // The registration and the sun.
         vec4 art = vec4(0.0);
         float finArt = fin * liveryBox(p.xy, vec2(${FIN_BOX.x0.toFixed(1)}, ${FIN_BOX.y0.toFixed(1)}), vec2(${FIN_BOX.x1.toFixed(1)}, ${FIN_BOX.y1.toFixed(1)}));
         if (finArt > 0.0) art = liveryText(vec2((p.x - ${FIN_BOX.x0.toFixed(1)}) / ${(FIN_BOX.x1 - FIN_BOX.x0).toFixed(1)}, (p.y - ${FIN_BOX.y0.toFixed(1)}) / ${(FIN_BOX.y1 - FIN_BOX.y0).toFixed(1)}), port > 0.5 ? LIV_FIN_PORT : LIV_FIN_STARBOARD);
         float flank = step(1.9, abs(p.z)) * fuselage;
-        float titles = flank * liveryBox(p.xy, vec2(-23.5, -2.45), vec2(-9.3, -1.05));
-        if (titles > 0.0) art = liveryText(vec2(mix((-9.3 - p.x) / 14.2, (p.x + 23.5) / 14.2, port), (p.y + 2.45) / 1.4), LIV_TITLES);
         float registration = flank * liveryBox(p.xy, vec2(11.0, -2.35), vec2(15.5, -1.35));
         if (registration > 0.0) art = liveryText(vec2(mix((15.5 - p.x) / 4.5, (p.x - 11.0) / 4.5, port), (p.y + 2.35) / 1.0), LIV_REGISTRATION);
-        float url = fuselage * step(p.y, -5.6) * liveryBox(vec2(p.x, p.z), vec2(8.5, -0.55), vec2(17.0, 0.55));
-        if (url > 0.0) art = liveryText(vec2((p.x - 8.5) / 8.5, 0.5 + p.z / 1.1), LIV_URL);
-        float facing = step(0.0, dz);
-        float mark = cowl * step(1.1, abs(dz)) * liveryBox(vec2(p.x, hub.x), vec2(-8.55, -0.95), vec2(-6.65, 0.95));
-        if (mark > 0.0) art = liveryText(vec2(mix((-6.65 - p.x) / 1.9, (p.x + 8.55) / 1.9, facing), (hub.x + 0.95) / 1.9), LIV_NACELLE);
         col = mix(col, art.rgb, art.a * painted);
         diffuseColor.rgb = col;
       }`,
