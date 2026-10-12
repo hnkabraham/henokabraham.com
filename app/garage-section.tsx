@@ -11,9 +11,12 @@ type Status = 'loading' | 'ready' | 'unavailable';
 // The poster is the live viewer's own default view, rendered at the frame's
 // two shapes: 16:10, and 4:3 at 800 px and below, where the viewer keeps its
 // horizontal field of view and so shows more sky and road than a cropped
-// wide frame would. The crossfade lands on the same picture either way.
+// wide frame would. Above 800 px the frame runs the window's full width and
+// is often wider than 16:10; the viewer then shows the middle band of the
+// same view, which is what covering the frame with the poster shows, so the
+// crossfade lands on the same picture either way.
 const PHONE = '(max-width: 800px)';
-const WIDE_SIZES = '950px';
+const WIDE_SIZES = '100vw';
 
 // The live view is lit for the hour at the park, so the poster it fades
 // into is too: daylight, dusk (from 3° above the horizon until the sun is
@@ -44,7 +47,7 @@ export default function GarageSection({
   const showScene = !reducedMotion && status !== 'unavailable';
   return (
     <section
-      className="terminal-section"
+      className="terminal-section garage-section"
       id="garage"
       aria-labelledby="garage-title"
     >
@@ -77,13 +80,13 @@ export default function GarageSection({
               type="image/jpeg"
             />
             <source
-              srcSet={`/images/${poster.file}-960.avif 960w, /images/${poster.file}.avif 1920w`}
+              srcSet={`/images/${poster.file}-960.avif 960w, /images/${poster.file}.avif 1920w, /images/${poster.file}-2880.avif 2880w`}
               sizes={WIDE_SIZES}
               type="image/avif"
             />
             <img
               src={`/images/${poster.file}.jpg`}
-              srcSet={`/images/${poster.file}-960.jpg 960w, /images/${poster.file}.jpg 1920w`}
+              srcSet={`/images/${poster.file}-960.jpg 960w, /images/${poster.file}.jpg 1920w, /images/${poster.file}-2880.jpg 2880w`}
               sizes={WIDE_SIZES}
               width={1920}
               height={1200}
@@ -104,29 +107,33 @@ export default function GarageSection({
           )}
         </div>
         <div className="garage-details">
-          <h3>2017 Shelby GT350</h3>
-          <p className="garage-caption">
-            Gray, with blue racing stripes, parked on 20th Street at the top of
-            Dolores Park, San Francisco.
-          </p>
-          <a
-            className="garage-credits"
-            href="/credits/garage.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Model and scene credits
-          </a>
-          <p className="garage-attribution">
-            Map data ©{' '}
+          <div>
+            <h3>2017 Shelby GT350</h3>
+            <p className="garage-caption">
+              Gray, with blue racing stripes, parked on 20th Street at the top
+              of Dolores Park, San Francisco.
+            </p>
+          </div>
+          <div className="garage-sources">
             <a
-              href="https://www.openstreetmap.org/copyright"
+              className="garage-credits"
+              href="/credits/garage.html"
               target="_blank"
               rel="noopener noreferrer"
             >
-              OpenStreetMap contributors
+              Model and scene credits
             </a>
-          </p>
+            <p className="garage-attribution">
+              Map data ©{' '}
+              <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                OpenStreetMap contributors
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </section>

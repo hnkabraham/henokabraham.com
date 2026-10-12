@@ -33,7 +33,7 @@ Write renders to a directory outside the repository; `out/` above is a placehold
 
 This needs Playwright installed globally. A frame takes about 4 s on an M-series Mac with Metal.
 
-The Garage posters are live-viewer renders of the default pose, one set per time of day, and the section picks the set for the sun's height at the park (above 3°, down to −6°, below): `garage-park*` with the fixed `sun=evening`, `garage-park-dusk*` at `time=2026-10-11T18:45:00-07:00` and `garage-park-night*` at `time=2026-10-11T21:30:00-07:00`. Each is `page=live w=1920 h=1200 dpr=1` for desktop, and `page=live phone=1 w=1440 h=1080 dpr=1`, kept at 1440 for tablets, for frames 800 px wide and under. They are encoded with Pillow as AVIF at quality 58 and JPEG at quality 84; the desktop poster also ships 960 px wide.
+The Garage posters are live-viewer renders of the default pose, one set per time of day, and the section picks the set for the sun's height at the park (above 3°, down to −6°, below): `garage-park*` with the fixed `sun=evening`, `garage-park-dusk*` at `time=2026-10-11T18:45:00-07:00` and `garage-park-night*` at `time=2026-10-11T21:30:00-07:00`. Each is `page=live w=1920 h=1200 dpr=1` for desktop, and `page=live phone=1 w=1440 h=1080 dpr=1`, kept at 1440 for tablets, for frames 800 px wide and under. They are encoded with Pillow as AVIF at quality 58 and JPEG at quality 84; the desktop poster also ships 960 px wide, and 2880 px wide (`w=2880 h=1800`) for the full-width frame on high-DPI screens. Above 800 px the Garage frame runs the window's full width, as tall as the window leaves under the heading when the nav link lands on it, but between 16:10 and 2.4:1. The viewer keeps its 52° horizontal field of view, so a frame wider than 16:10 shows the middle band of the 16:10 view, which is exactly what `object-fit: cover` shows of the poster, and the crossfade still lands on the same picture; at 2.4:1 the car still fits top to bottom. The viewer also caps its drawing buffer at 8 million pixels, what the old side-column frame drew on a 2560-wide Retina window, by lowering the pixel ratio beyond it.
 
 Renders aren't bit-identical from run to run, even with `grain=0`. Two renders of the same view differ by about 0.2–0.3 of 255 on average, with a few edge pixels further apart.
 
@@ -229,6 +229,7 @@ Set `OUT` to an external render directory. Poster commands use DPR 1 explicitly;
 
 ```sh
 node scripts/dolores-park/render.mjs "$OUT/poster-desktop.png" page=live sun=evening dpr=1 w=1920 h=1200
+node scripts/dolores-park/render.mjs "$OUT/poster-desktop-2880.png" page=live sun=evening dpr=1 w=2880 h=1800
 node scripts/dolores-park/render.mjs "$OUT/poster-phone.png" page=live sun=evening phone=1 dpr=1 w=1440 h=1080
 node scripts/dolores-park/render.mjs "$OUT/behind.png" page=live pose=20,-151,1.5,12.9,-154.63,1.05 dpr=1 w=1920 h=1200
 node scripts/dolores-park/render.mjs "$OUT/high.png" page=live pose=8.4,-159.1,5.2,12.9,-154.63,1.05 dpr=1 w=1920 h=1200

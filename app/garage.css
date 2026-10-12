@@ -1,18 +1,28 @@
+/* The scene runs edge to edge: the section drops its side padding, and its
+   heading and details take the same inset back. */
+.terminal-section.garage-section {
+  padding-inline: 0;
+}
+.garage-section > .terminal-section-top,
+.garage-details {
+  padding-inline: var(--section-inset-left) var(--section-inset-right);
+}
 .garage-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 310px;
-  gap: 25px;
-  align-items: start;
+  container-type: inline-size;
 }
 .garage-viewer-frame {
   position: relative;
-  aspect-ratio: 16 / 10;
-  border-radius: 8px;
+  /* As tall as the window leaves under the section's heading when the nav
+     link lands on it (the page's scroll padding, the section's own padding
+     and the heading: 158 px), between the poster's 16:10 and 2.4:1, where
+     the car still fits top to bottom. The first height is for a browser
+     without container units. */
+  height: 62.5vw;
+  height: clamp(100cqw / 2.4, 100svh - 158px, 100cqw / 1.6);
   overflow: hidden;
   /* The scene's sky and road, roughly, so the frame doesn't flash dark or
      white before the poster decodes; the canvas itself is opaque. */
   background: linear-gradient(#a9cdf0 0%, #d7e6ee 55%, #5b5f63 100%);
-  border: 1px solid #c9d6dc;
   cursor: grab;
 }
 .garage-viewer-frame:active {
@@ -46,7 +56,15 @@
   pointer-events: none;
 }
 .garage-details {
-  padding-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px 40px;
+  padding-top: 22px;
+}
+.garage-sources {
+  flex: none;
+  text-align: right;
 }
 .garage-details h3 {
   font-size: 1.15rem;
@@ -58,10 +76,10 @@
   font-size: 0.875rem;
   line-height: 1.6;
   color: #606c73;
-  margin: 0 0 16px;
+  margin: 0;
 }
 .garage-credits {
-  display: table;
+  display: inline-block;
   font-size: 0.8125rem;
   color: #4c6570;
   border-bottom: 1px solid #4c657055;
@@ -84,18 +102,17 @@
 .garage-attribution a:hover {
   color: #1b3747;
 }
-@media (max-width: 1100px) {
-  .garage-layout {
-    grid-template-columns: minmax(0, 1fr) 275px;
-    gap: 18px;
-  }
-}
 @media (max-width: 800px) {
-  .garage-layout {
-    grid-template-columns: 1fr;
-  }
   .garage-viewer-frame {
+    height: auto;
     aspect-ratio: 4 / 3;
-    border-radius: 5px;
+  }
+  .garage-details {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-top: 18px;
+  }
+  .garage-sources {
+    text-align: left;
   }
 }

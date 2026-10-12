@@ -494,8 +494,11 @@ main > section:not(#flight) :is(h2, h3),
   gap: 9px;
 }
 .terminal-section {
-  padding: 47px max(5.4%, env(safe-area-inset-right)) 58px
-    max(5.4%, env(safe-area-inset-left));
+  /* Properties, so a section whose content runs full bleed (the Garage)
+     can give the same inset to the parts that don't. */
+  --section-inset-left: max(5.4%, env(safe-area-inset-left));
+  --section-inset-right: max(5.4%, env(safe-area-inset-right));
+  padding: 47px var(--section-inset-right) 58px var(--section-inset-left);
   background: #eeefec;
 }
 .terminal-section-top {
@@ -973,7 +976,8 @@ main > section:not(#flight) :is(h2, h3),
     right: 1%;
   }
   .terminal-section {
-    padding-inline: 9%;
+    --section-inset-left: 9%;
+    --section-inset-right: 9%;
   }
 }
 @media (max-width: 1100px) {
@@ -1125,7 +1129,9 @@ main > section:not(#flight) :is(h2, h3),
     gap: 20px;
   }
   .terminal-section {
-    padding: 35px 5% 40px;
+    --section-inset-left: 5%;
+    --section-inset-right: 5%;
+    padding-block: 35px 40px;
   }
   .terminal-section-top {
     gap: 15px;
