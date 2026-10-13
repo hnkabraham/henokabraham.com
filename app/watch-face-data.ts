@@ -8,49 +8,33 @@ export const bezelFaces = {
   page: 'https://apps.garmin.com/developer/9547a1e5-162b-494c-8a14-024066f4f32f/apps',
 };
 
-// Six of them, drawn live by a port of their own Monkey C views. Each line is
-// the first sentence of the face's store listing; each link is its own public
-// listing.
+// Three faces, drawn live by a port of their own Monkey C views: Nightwatch
+// from Bezel Auth, with its optional 2FA row off as it ships, and Arcfield
+// and Meridian from the newer collection, which has none. Each line is the
+// first sentence of the face's store listing. A link is the face's public
+// listing; Arcfield's and Meridian's (6e925c91-50ff-4570-98f1-0f218be70063
+// and bf1a9c11-203e-4427-a34e-39e33794a870) were still in review on 12
+// October 2026, so they have none yet.
 export const watchFaces: {
   id: FaceId;
   name: string;
   line: string;
-  url: string;
+  url?: string;
 }[] = [
   {
-    id: 'summit',
-    name: 'Summit',
-    line: 'An orange-accented alpine dial with mountain artwork and an easy-to-read digital clock.',
-    url: 'https://apps.garmin.com/apps/be48c511-83eb-4419-bf1a-d1e60f2dba97',
+    id: 'nightwatch',
+    name: 'Nightwatch',
+    line: 'A periwinkle digital dial with decorative stars and a compact weather panel.',
+    url: 'https://apps.garmin.com/apps/86557f6a-02a4-48b8-96c1-da5c9d0015ac',
   },
   {
-    id: 'atelier',
-    name: 'Atelier',
-    line: 'A warm ivory analog dial with restrained, classic typography.',
-    url: 'https://apps.garmin.com/apps/2740542f-a5a7-4cfe-80bd-aa682a3067f6',
+    id: 'arcfield',
+    name: 'Arcfield',
+    line: 'Cream outlined hands, four progress arcs and layered minute tracks create a richly detailed field dial.',
   },
   {
-    id: 'tactical',
-    name: 'Tactical',
-    line: 'A dark amber digital dial with a bold clock and activity details.',
-    url: 'https://apps.garmin.com/apps/35390776-27da-4b79-a8e3-c1c27d0332cc',
-  },
-  {
-    id: 'chrono',
-    name: 'Chrono',
-    line: 'An instrument-inspired analog dial with three compact data subdials.',
-    url: 'https://apps.garmin.com/apps/72d55332-6542-403b-b9f8-3e2fb0f0db41',
-  },
-  {
-    id: 'orbit',
-    name: 'Orbit',
-    line: 'A digital clock surrounded by colorful activity arcs.',
-    url: 'https://apps.garmin.com/apps/02f944dd-44ef-43b2-a0ca-51f30b9dcb7e',
-  },
-  {
-    id: 'words',
-    name: 'Words',
-    line: 'A typographic word clock that tells the time in five-minute phrases.',
-    url: 'https://apps.garmin.com/apps/3e024916-30a3-4811-8b53-1c92b7d58b13',
+    id: 'meridian',
+    name: 'Meridian',
+    line: 'An olive-toned analog dial with digital time and clean, instrument-inspired details.',
   },
 ];

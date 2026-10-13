@@ -1,34 +1,35 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
-import { drawFace, type FaceArt, type FaceId } from '@/lib/watch-faces';
-import { LABEL_FONT, NUMERAL_FONT, type Frame } from '@/lib/watch-face-dc';
-import { sampleCode } from '@/lib/watch-face-totp';
+import { drawFace, type FaceId } from '@/lib/watch-faces';
+import {
+  LABEL_FONT,
+  LABEL_REGULAR_FONT,
+  NUMERAL_FONT,
+  type Frame,
+} from '@/lib/watch-face-dc';
 import { bezelFaces, watchFaces } from './watch-face-data';
 import './watch-showcase.css';
 
-// The faces' two fonts, made by scripts/prepare-watch-fonts.py.
+// The faces' three fonts, made by scripts/prepare-watch-fonts.py.
 const FONTS: [string, string][] = [
   [NUMERAL_FONT, '/fonts/watch-numerals-35784483a52b.woff2'],
   [LABEL_FONT, '/fonts/watch-labels-d55c1c94348a.woff2'],
+  [LABEL_REGULAR_FONT, '/fonts/watch-labels-regular-f8049ec0731f.woff2'],
 ];
 
-let assets: Promise<FaceArt> | null = null;
-// Fonts and Summit's ridge, fetched once, the first time the section nears.
-function loadAssets() {
-  assets ??= (async () => {
-    const ridge = new Image();
-    ridge.src = '/images/watch-faces/summit-ridge.webp';
-    await Promise.all([
-      ...FONTS.map(async ([family, url]) => {
+let fonts: Promise<void> | null = null;
+// Fetched once, the first time the section nears.
+function loadFonts() {
+  fonts ??= (async () => {
+    await Promise.all(
+      FONTS.map(async ([family, url]) => {
         const face = new FontFace(family, `url(${url}) format('woff2')`);
         document.fonts.add(await face.load());
       }),
-      ridge.decode(),
-    ]);
-    return { mountain: ridge };
+    );
   })();
-  return assets;
+  return fonts;
 }
 
 // A watch set to the visitor's clock: their time, date and 12- or 24-hour
@@ -39,7 +40,7 @@ const is24Hour = () =>
       .hourCycle ?? '',
   );
 
-function frameAt(time: number, codes: Map<number, string>): Frame {
+function frameAt(time: number): Frame {
   const date = new Date(time);
   const epoch = Math.floor(time / 1000);
   return {
@@ -51,7 +52,6 @@ function frameAt(time: number, codes: Map<number, string>): Frame {
     weekday: date.getDay(),
     month: date.getMonth(),
     is24Hour: is24Hour(),
-    code: codes.get(Math.floor(epoch / 30)) ?? null,
   };
 }
 
@@ -73,23 +73,13 @@ export default function WatchShowcase() {
       ...list.querySelectorAll<HTMLCanvasElement>('canvas[data-face]'),
     ];
     const visible = new Set<HTMLCanvasElement>();
-    const codes = new Map<number, string>();
-    let art: FaceArt | null = null;
+    let ready = false;
     let timer = 0;
     let frameRequest = 0;
     let stopped = false;
 
-    // The sample code for this half-minute and the next, so a frame never
-    // waits on the hash.
-    const prepareCodes = async (time: number) => {
-      const current = Math.floor(time / 30_000);
-      for (const step of [current, current + 1])
-        if (!codes.has(step)) codes.set(step, await sampleCode(step * 30));
-      for (const key of codes.keys()) if (key < current) codes.delete(key);
-    };
-
     const draw = (canvas: HTMLCanvasElement, time: number) => {
-      if (!art) return;
+      if (!ready) return;
       const size = canvas.clientWidth;
       if (!size) return;
       const pixels = Math.round(size * Math.min(window.devicePixelRatio, 3));
@@ -100,13 +90,7 @@ export default function WatchShowcase() {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.setTransform(pixels / 416, 0, 0, pixels / 416, 0, 0);
-      drawFace(
-        ctx,
-        canvas.dataset.face as FaceId,
-        frameAt(time, codes),
-        mode.current,
-        art,
-      );
+      drawFace(ctx, canvas.dataset.face as FaceId, frameAt(time), mode.current);
       canvas.dataset.drawn = 'true';
     };
 
@@ -115,14 +99,14 @@ export default function WatchShowcase() {
     // page is hidden.
     const schedule = () => {
       window.clearTimeout(timer);
-      if (stopped || document.hidden || !visible.size || !art) return;
+      if (stopped || document.hidden || !visible.size || !ready) return;
       const period = mode.current ? 60_000 : 1000;
       const delay = period - (Date.now() % period) + 4;
       timer = window.setTimeout(() => {
         frameRequest = requestAnimationFrame(() => {
           const now = Date.now();
           visible.forEach((canvas) => draw(canvas, now));
-          void prepareCodes(now).then(schedule);
+          schedule();
         });
       }, delay);
     };
@@ -141,12 +125,9 @@ export default function WatchShowcase() {
     redraw.current = drawAll;
 
     const start = async () => {
-      const [loaded] = await Promise.all([
-        loadAssets(),
-        prepareCodes(Date.now()),
-      ]);
+      await loadFonts();
       if (stopped) return;
-      art = loaded;
+      ready = true;
       // Every face gets a first frame now, so none shows the store's time
       // as it scrolls in; from then on only those on screen are redrawn.
       drawAll();
@@ -168,7 +149,7 @@ export default function WatchShowcase() {
         if (!entries.some((entry) => entry.isIntersecting)) return;
         approach.disconnect();
         void start().catch(() => {
-          // The store stills stay in place.
+          // The stills stay in place.
         });
       },
       { rootMargin: '600px 0px' },
@@ -199,11 +180,11 @@ export default function WatchShowcase() {
     >
       <div className="wrist-top" data-reveal>
         <div>
-          <p className="eyebrow">BEZEL AUTH / ON THE WRIST</p>
+          <p className="eyebrow">BEZEL / ON THE WRIST</p>
           <h2 id="wrist-title">On your time.</h2>
           <p className="wrist-caption">
-            Six of the {bezelFaces.inWords} free faces I made for the Garmin
-            epix (Gen 2), drawn here by a port of their own code.
+            Three of the free faces I made for the Garmin epix (Gen 2), drawn
+            here by a port of their own code.
           </p>
         </div>
         <fieldset className="wrist-mode mono" aria-label="Display">
@@ -224,17 +205,13 @@ export default function WatchShowcase() {
         </fieldset>
       </div>
       <ul className="wrist-grid" ref={grid} data-reveal>
-        {watchFaces.map((face) => (
-          <li key={face.id}>
-            <a
-              className="wrist-face"
-              href={face.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+        {watchFaces.map((face) => {
+          const card = (
+            <>
               <span className="wrist-dial">
-                {/* The store image holds the place, and stays for visitors
-                    without scripts, until the live face's first frame. */}
+                {/* A still of the face, drawn by the same port, holds the
+                    place until the live face's first frame, and stays for
+                    visitors without scripts. */}
                 <picture>
                   <source
                     srcSet={`/images/watch-faces/${face.id}.avif`}
@@ -253,20 +230,36 @@ export default function WatchShowcase() {
               </span>
               <span className="wrist-name">
                 {face.name}
-                <ArrowUpRight size={16} />
+                {face.url && <ArrowUpRight size={16} />}
               </span>
               <span className="wrist-line">{face.line}</span>
-            </a>
-          </li>
-        ))}
+            </>
+          );
+          return (
+            <li key={face.id}>
+              {face.url ? (
+                <a
+                  className="wrist-face"
+                  href={face.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {card}
+                </a>
+              ) : (
+                <div className="wrist-face">{card}</div>
+              )}
+            </li>
+          );
+        })}
       </ul>
       <div className="wrist-foot" data-reveal>
         <p className="mono">
-          The time and date are yours. Everything else is sample data; the code
-          comes from the TOTP standard’s published test key.
+          The time and date are yours. Everything else is each face’s sample
+          data.
         </p>
         <a href={bezelFaces.page} target="_blank" rel="noopener noreferrer">
-          See all {bezelFaces.inWords} on Connect IQ
+          See them all on Connect IQ
           <ArrowUpRight size={16} />
         </a>
       </div>

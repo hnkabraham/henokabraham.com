@@ -8,4 +8,4 @@ Run `python scripts/prepare-site-fonts.py /path/to/Google_Sans` from the reposit
 
 # Watch-face fonts
 
-The live Bezel Auth faces in the On your time section draw with two subsets made by `scripts/prepare-watch-fonts.py`: `watch-labels-*.woff2` is Roboto Condensed Bold, the label font the faces use on the watch (`Roboto-Condensed-OFL.txt`), and `watch-numerals-*.woff2` is Barlow Bold, an open stand-in for the watch's own numeral font, which is Garmin's and stays on the watch (`Barlow-OFL.txt`). Both are distributed under the SIL Open Font License 1.1 and load only when the section nears the screen.
+The live watch faces in the On your time section draw with three subsets made by `scripts/prepare-watch-fonts.py`: `watch-labels-*.woff2` and `watch-labels-regular-*.woff2` are Roboto Condensed Bold and Regular, the label fonts the faces use on the watch (`Roboto-Condensed-OFL.txt`), and `watch-numerals-*.woff2` is Barlow Bold, an open stand-in for the watch's own numeral font, Bionic Bold, which is Garmin's and stays on the watch (`Barlow-OFL.txt`). All three are distributed under the SIL Open Font License 1.1 and load only when the section nears the screen.

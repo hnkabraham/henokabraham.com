@@ -1,30 +1,22 @@
-// A small stand-in for Garmin's Graphics.Dc, so the Bezel Auth faces can be
+// A small stand-in for Garmin's Graphics.Dc, so the watch faces can be
 // ported line for line from their Monkey C views and drawn on a canvas in the
 // watch's own 416-pixel space. Only the calls those views make are here.
 //
-// Text follows the faces' 1.1.0 typography (AuthNumerals.mc): numerals in
-// fixed-width cells of the device's bold numeral font, everything else in
-// Roboto Condensed Bold. The numeral font is Garmin's and stays on the watch,
-// so Barlow Bold stands in, scaled to the same cap height and set in the same
-// cells, so every line keeps its width; the label font is the watch's own.
-// Per face and per font slot, `n` is the numerals' cap top (from the drawText
-// y), cap height, cell width and colon width, and `l` the labels' cap top and
-// cap height, as measured on the device fonts (each project's
-// provenance.json).
+// Text follows the faces' native typography: numerals in fixed-width cells of
+// the device's Bionic Bold, everything else in Roboto Condensed, Bold or
+// Regular. Bionic Bold is Garmin's and stays on the watch, so Barlow Bold
+// stands in, scaled to the same cap height and set in the same cells, so
+// every line keeps its width; Roboto Condensed is the watch's own. Per face
+// and per font slot, `n` is the numerals' cap top (from the drawText y), cap
+// height, cell width and colon width, and `l` the labels' cap top and cap
+// height, as measured on the device fonts. A `regular` slot sets its labels
+// in Roboto Condensed Regular.
 
 export type SlotMetrics = {
   n: [capTop: number, cap: number, cell: number, colon: number] | null;
   l: [capTop: number, cap: number];
+  regular?: boolean;
 };
-
-// Font slots, in the order DuoFaceView loads them.
-export const CLOCK = 0;
-export const CODE = 1;
-export const LABEL = 2;
-export const SMALL = 3;
-export const STAT = 4;
-export const AOD = 5;
-export const AOD_DATE = 6;
 
 export const TRANSPARENT = -1;
 export const BLACK = 0x000000;
@@ -34,6 +26,7 @@ export type Justify = 'left' | 'center' | 'right';
 
 export const NUMERAL_FONT = 'Bezel Numerals';
 export const LABEL_FONT = 'Bezel Labels';
+export const LABEL_REGULAR_FONT = 'Bezel Labels Regular';
 // Cap heights as a fraction of the em: Barlow's 700/1000, Roboto Condensed's
 // 1456/2048.
 const NUMERAL_CAP = 0.7;
@@ -200,7 +193,8 @@ export class Dc {
   }
 
   private labelFont(slot: number) {
-    return `${this.fonts[slot].l[1] / LABEL_CAP}px "${LABEL_FONT}"`;
+    const { l, regular } = this.fonts[slot];
+    return `${l[1] / LABEL_CAP}px "${regular ? LABEL_REGULAR_FONT : LABEL_FONT}"`;
   }
 
   private numeric(slot: number, value: string) {
@@ -274,172 +268,19 @@ export class Dc {
   }
 }
 
-// What the faces show besides the time: the store images' fixture, the same
-// numbers the faces' preview harness substitutes for the watch's sensors.
+// The visitor's clock, as the watch would read it.
 export type Frame = {
   hour: number;
   min: number;
   sec: number;
-  // Seconds since the epoch, for the always-on drift and the code's window.
+  // Seconds since the epoch, for the always-on drift.
   epoch: number;
   day: number;
   weekday: number;
   month: number;
   is24Hour: boolean;
-  code: string | null;
 };
-
-export const SAMPLE = {
-  steps: '8,420',
-  battery: '64%',
-  batteryLevel: 64,
-  calories: '847',
-  caloriesValue: 847,
-  floors: '12',
-  stepGoalPercent: '84%',
-  stepProgress: 0.84,
-  heartRate: '80',
-  heartRateValue: 80,
-};
-
-// Thirty minutes of wrist readings around 80 bpm, one a minute, rising and
-// falling as the simulator's sensor history does in the store images.
-export const HEART_HISTORY = Array.from({ length: 30 }, (_, index) =>
-  Math.round(80 + 8 * Math.sin((index * 2 * Math.PI) / 7)),
-);
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-const MONTHS = [
-  'JAN',
-  'FEB',
-  'MAR',
-  'APR',
-  'MAY',
-  'JUN',
-  'JUL',
-  'AUG',
-  'SEP',
-  'OCT',
-  'NOV',
-  'DEC',
-];
-
 export const weekday = (frame: Frame) => WEEKDAYS[frame.weekday];
-export const month = (frame: Frame) => MONTHS[frame.month];
 export const pad = (value: number) => String(value).padStart(2, '0');
-
-// DuoFaceView's shared helpers.
-export function text(
-  dc: Dc,
-  x: number,
-  y: number,
-  slot: number,
-  value: string,
-  color: number,
-  justify: Justify,
-) {
-  dc.setColor(color, TRANSPARENT);
-  dc.drawText(x, y, slot, value, justify);
-}
-
-export function center(
-  dc: Dc,
-  y: number,
-  slot: number,
-  value: string,
-  color: number,
-) {
-  text(dc, 208, y, slot, value, color, 'center');
-}
-
-export function clockText(frame: Frame) {
-  let hour = frame.hour;
-  if (!frame.is24Hour) {
-    hour %= 12;
-    if (hour === 0) hour = 12;
-  }
-  return `${pad(hour)}:${pad(frame.min)}`;
-}
-
-export function dateText(frame: Frame) {
-  return `${weekday(frame)} / ${month(frame)} ${pad(frame.day)}`;
-}
-
-export function otpText(frame: Frame) {
-  return frame.code ? `${frame.code.slice(0, 3)} ${frame.code.slice(3)}` : '';
-}
-
-export const remaining = (frame: Frame) => 30 - (frame.epoch % 30);
-
-export function fitStat(
-  dc: Dc,
-  x: number,
-  y: number,
-  value: string,
-  color: number,
-  width: number,
-  draw = text,
-) {
-  let slot = STAT;
-  if (dc.getTextWidth(slot, value) > width) slot = AOD_DATE;
-  if (dc.getTextWidth(slot, value) > width) slot = SMALL;
-  draw(dc, x, y, slot, value, color, 'center');
-}
-
-// The authenticator's key symbol, drawn by each face beside its code.
-export function drawKey(dc: Dc, x: number, y: number, color: number) {
-  dc.setColor(color, TRANSPARENT);
-  dc.setPenWidth(2);
-  dc.drawCircle(x + 5, y + 6, 4);
-  dc.drawLine(x + 9, y + 6, x + 25, y + 6);
-  dc.drawLine(x + 20, y + 6, x + 20, y + 10);
-  dc.drawLine(x + 25, y + 6, x + 25, y + 10);
-  dc.setPenWidth(1);
-}
-
-export function drawTicksAt(
-  dc: Dc,
-  cx: number,
-  cy: number,
-  inner: number,
-  majorInner: number,
-  outer: number,
-  minorColor: number,
-  majorColor: number,
-) {
-  for (let i = 0; i < 60; i++) {
-    const angle = (i * Math.PI) / 30;
-    const major = i % 5 === 0;
-    const radius = major ? majorInner : inner;
-    dc.setColor(major ? majorColor : minorColor, TRANSPARENT);
-    dc.setPenWidth(major ? 2 : 1);
-    dc.drawLine(
-      cx + Math.sin(angle) * radius,
-      cy - Math.cos(angle) * radius,
-      cx + Math.sin(angle) * outer,
-      cy - Math.cos(angle) * outer,
-    );
-  }
-  dc.setPenWidth(1);
-}
-
-export function drawTicks(
-  dc: Dc,
-  inner: number,
-  majorInner: number,
-  outer: number,
-  minorColor: number,
-  majorColor: number,
-) {
-  drawTicksAt(dc, 208, 208, inner, majorInner, outer, minorColor, majorColor);
-}
-
-// The always-on screen moves three pixels a minute through a 3 × 3 grid, so
-// no pixel stays lit in one place.
-export function drift(frame: Frame) {
-  const minute = Math.floor(frame.epoch / 60);
-  return {
-    dx: ((minute % 3) - 1) * 3,
-    dy: ((Math.floor(minute / 3) % 3) - 1) * 3,
-  };
-}

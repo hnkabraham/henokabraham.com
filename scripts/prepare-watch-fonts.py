@@ -1,11 +1,13 @@
-"""Prepare the watch showcase's two web fonts: python prepare-watch-fonts.py <download folder>.
+"""Prepare the watch showcase's web fonts: python prepare-watch-fonts.py <download folder> [name ...].
 
 The folder holds Google Fonts' Barlow-Bold.ttf and RobotoCondensed[wght].ttf
 with their OFL.txt files (saved as Barlow-OFL.txt and RobotoCondensed-OFL.txt).
 Requires fonttools[woff]. Roboto Condensed Bold is the watch's own label face;
 Barlow Bold stands in for the numerals, whose device font is Garmin's and stays
-on the watch. Both are cut down to what the faces draw: printable ASCII, the
-degree sign and the middle dot.
+on the watch. Roboto Condensed Regular is the lighter label face Arcfield and
+Meridian also use. All are cut down to what the faces draw: printable ASCII,
+the degree sign and the middle dot. Name fonts (watch-labels-regular, ...) to
+build only those.
 """
 from hashlib import sha256
 from pathlib import Path
@@ -16,13 +18,17 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib import instancer
 
 source = Path(sys.argv[1])
+only = set(sys.argv[2:])
 output = Path(__file__).resolve().parents[1] / 'public' / 'fonts'
 output.mkdir(parents=True, exist_ok=True)
 unicodes = subset.parse_unicodes('U+0020-007E,U+00B0,U+00B7')
 for name, file, axes in [
     ('watch-numerals', 'Barlow-Bold.ttf', None),
     ('watch-labels', 'RobotoCondensed[wght].ttf', {'wght': 700}),
+    ('watch-labels-regular', 'RobotoCondensed[wght].ttf', {'wght': 400}),
 ]:
+    if only and name not in only:
+        continue
     font = TTFont(source / file, recalcTimestamp=False)
     if axes:
         font = instancer.instantiateVariableFont(font, axes)

@@ -1,4 +1,4 @@
-/* Bezel Auth's faces on a night band, the colour of the departures board:
+/* The faces on a night band, the colour of the departures board:
    their black screens read as the watch's own AMOLED rather than as images
    on paper. */
 .wrist-section {
@@ -140,7 +140,7 @@
   text-wrap: pretty;
 }
 @media (hover: hover) {
-  .wrist-face:hover .wrist-dial {
+  a.wrist-face:hover .wrist-dial {
     translate: 0 -4px;
     box-shadow:
       0 0 0 1px #000,
@@ -148,8 +148,8 @@
       0 0 0 8px #4b6774,
       0 28px 44px -18px #000;
   }
-  .wrist-face:hover .wrist-name,
-  .wrist-face:hover .wrist-name svg {
+  a.wrist-face:hover .wrist-name,
+  a.wrist-face:hover .wrist-name svg {
     color: #f8ca86;
   }
 }
@@ -218,6 +218,12 @@
   .wrist-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 34px 18px;
+  }
+  /* Three faces: the third sits centred under the pair. */
+  .wrist-grid > li:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc(50% - 9px);
   }
   .wrist-dial {
     box-shadow:
