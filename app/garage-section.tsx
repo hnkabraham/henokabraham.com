@@ -117,7 +117,7 @@ export default function GarageSection({
           <div className="garage-sources">
             <a
               className="garage-credits"
-              href="/credits/garage.html"
+              href="/credits/garage"
               target="_blank"
               rel="noopener noreferrer"
             >

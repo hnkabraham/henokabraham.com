@@ -1,5 +1,13 @@
 /*
   X-Content-Type-Options: nosniff
+# The credits pages are documents served straight from the assets, so they
+# carry the transport and embedding policy worker.ts gives the page.
+/credits/*
+  Strict-Transport-Security: max-age=31536000
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
 # Every script and stylesheet here is named by its content hash (or sits in a
