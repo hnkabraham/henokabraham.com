@@ -739,3 +739,14 @@ Source `3add727`. Production version `63cfa0d8-338c-4253-9ea2-e05ded4659aa`; the
 - The On your time section now shows three of the newer Bezel faces, Nightwatch, Arcfield and Meridian, in place of the six earlier ones, and none of them shows an authenticator code. Nightwatch draws with its 2FA row off, as it ships; the other two have none. The sample code generator is gone. Only Nightwatch links to a store listing, because Arcfield's and Meridian's listings are still in review. The faces add a third font, Roboto Condensed Regular (OFL). The ports draw the placeholder stills themselves.
 
 On the live site, all 40 files under `/_next/static/`, the six new stills and the three watch fonts return the same SHA-256 as the build. `/fonts/README.md` was still propagating on the first check and matched on a recheck. The old stills now return 404. At 1440 and 390 px, all three faces draw awake and always-on, Nightwatch links to its listing, the other two cards don't link anywhere, nothing scrolls sideways, and the page logs no console errors.
+
+## Credits pages carry the page's headers
+
+Source `01e3b60`. Production version `1ada5284-f14c-4f18-80ab-479d8ba8d02e`; the bindings and the 15-minute schedule are unchanged. The upload was 9 files, with 289 already in place.
+
+- `public/_headers` gives `/credits/*` the transport and embedding policy `worker.ts` gives the page: HSTS, `X-Frame-Options: DENY`, the referrer and permissions policies, and the `frame-ancestors`, `base-uri` and `form-action` CSP. The credits pages are documents served straight from the assets, so the Worker's headers never reached them.
+- The Garage section links `/credits/garage` instead of `/credits/garage.html`, which answered with a 307 first. The PDDL links on both credits pages use `https://opendatacommons.org/licenses/pddl/1-0/`.
+
+On the live site, `/credits/garage`, `/credits/scene-credits` and the `/credits/garage.html` redirect all send the six headers, both credits pages return the same SHA-256 as the build, and the homepage links `/credits/garage`.
+
+Two fixes the same audit found sit in the zone, not the code: `http://henokabraham.com/` answers 200 instead of redirecting ("Always Use HTTPS" is off), and `www.henokabraham.com` has no DNS record.
