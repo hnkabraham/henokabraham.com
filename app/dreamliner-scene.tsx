@@ -515,9 +515,102 @@ export default function DreamlinerScene({
             .toArray(out, j * 3),
         );
       if (process.env.NODE_ENV !== 'production') {
-        const handle = globalThis as typeof globalThis & { __wake?: unknown };
+        const handle = globalThis as typeof globalThis & {
+          __wake?: unknown;
+          __tourAircraftAt?: (progress: number) => number[];
+        };
         handle.__wake = { contrails, vortices };
-        cleanups.push(() => delete handle.__wake);
+        // Where points spread evenly over the airframe's surface sit on
+        // screen at a flight position, as x, y pairs in CSS pixels (NaN
+        // behind the lens), with the lens and the aircraft where the tour
+        // places them before the render loop's sways and drifts: a
+        // recording paces itself by how fast the aircraft crosses the frame
+        // (scripts/record-share-video.mjs). Spread by area, so the wing
+        // counts for what it covers rather than for its few vertices beside
+        // the engines' many; the fans and turbines are left out, since they
+        // spin whether or not the aircraft moves. The points are taken, in
+        // the aircraft's own frame, on first use, so only a recording pays.
+        const spinning = new Set<unknown>([...fans, ...turbines]);
+        const sample = () => {
+          const triangles: [Mesh, number][] = [];
+          const covered: number[] = [];
+          let area = 0;
+          const [a, b, c] = [new T.Vector3(), new T.Vector3(), new T.Vector3()];
+          aircraft.updateMatrixWorld(true);
+          gltf.scene.traverse((node) => {
+            const mesh = node as Mesh;
+            if (!mesh.isMesh || spinning.has(mesh.parent)) return;
+            const position = mesh.geometry.getAttribute('position');
+            const index = mesh.geometry.index;
+            const corner = (k: number) => (index ? index.getX(k) : k);
+            const at = (v: import('three').Vector3, k: number) =>
+              v
+                .fromBufferAttribute(position, corner(k))
+                .applyMatrix4(mesh.matrixWorld);
+            for (let k = 0; k + 2 < (index ?? position).count; k += 3) {
+              at(a, k);
+              area +=
+                at(b, k + 1)
+                  .sub(a)
+                  .cross(at(c, k + 2).sub(a))
+                  .length() / 2;
+              triangles.push([mesh, corner(k)]);
+              covered.push(area);
+            }
+          });
+          return Array.from({ length: 1200 }, (_, n) => {
+            const goal = ((n + 0.5) / 1200) * area;
+            let low = 0,
+              high = covered.length - 1;
+            while (low < high) {
+              const middle = (low + high) >> 1;
+              if (covered[middle] < goal) low = middle + 1;
+              else high = middle;
+            }
+            const [mesh, i] = triangles[low];
+            return aircraft.worldToLocal(
+              new T.Vector3()
+                .fromBufferAttribute(mesh.geometry.getAttribute('position'), i)
+                .applyMatrix4(mesh.matrixWorld),
+            );
+          });
+        };
+        let sampled: import('three').Vector3[] | undefined;
+        const pose = new T.Group();
+        pose.rotation.order = 'YXZ';
+        const lens = new T.PerspectiveCamera(34, 1, 0.15, 1200);
+        const point = new T.Vector3();
+        handle.__tourAircraftAt = (progress) => {
+          sampled ??= sample();
+          const shot = sampleDreamlinerTour(progress, width / height);
+          lens.aspect = width / height;
+          lens.fov = shot.fov;
+          lens.position.set(...shot.camera);
+          lens.lookAt(...shot.target);
+          lens.setViewOffset(
+            width,
+            height,
+            width * shot.offsetX,
+            height * shot.offsetY,
+            width,
+            height,
+          );
+          lens.updateProjectionMatrix();
+          lens.updateMatrixWorld();
+          pose.position.set(...shot.aircraft);
+          pose.rotation.set(shot.bank, shot.heading, shot.pitch);
+          pose.updateMatrixWorld();
+          return sampled.flatMap((local) => {
+            point.copy(local).applyMatrix4(pose.matrixWorld).project(lens);
+            return Math.abs(point.z) > 1
+              ? [NaN, NaN]
+              : [((point.x + 1) / 2) * width, ((1 - point.y) / 2) * height];
+          });
+        };
+        cleanups.push(() => {
+          delete handle.__wake;
+          delete handle.__tourAircraftAt;
+        });
       }
       const toGlow = new T.Vector3();
       // Bank about the body axis after the heading, not the world's X.

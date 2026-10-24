@@ -181,6 +181,17 @@ const devPreset =
   process.env.NODE_ENV !== 'production'
     ? () => applyTourPreset(new URLSearchParams(location.search).get('tour'))
     : () => {};
+// In development a screenshot harness can also hold the tour at a scroll
+// position between whole pixels (`__tourHold`, in __tourScrollAt's units).
+// The browser rounds scrolling to whole pixels, which at a recording's slow,
+// even pace makes the aircraft judder.
+const devHold: (rect: DOMRect) => number | undefined =
+  process.env.NODE_ENV !== 'production'
+    ? (rect) => {
+        const y = (window as Window & { __tourHold?: number }).__tourHold;
+        return y === undefined ? undefined : y - scrollY - rect.top;
+      }
+    : () => undefined;
 
 function updateOpening(
   section: HTMLElement,
@@ -322,7 +333,10 @@ export default function ScrollDeparture({
       const rect = section.getBoundingClientRect();
       const layout = measureScroll(section, scrollLayout.current);
       scrollLayout.current = layout;
-      const offset = Math.max(0, Math.min(layout.travel, -rect.top));
+      const offset = Math.max(
+        0,
+        Math.min(layout.travel, devHold(rect) ?? -rect.top),
+      );
       const staticSky = reducedMotion || status === 'unavailable';
       progress.current = staticSky ? 0 : tourProgressAt(offset, layout);
       section.style.setProperty(

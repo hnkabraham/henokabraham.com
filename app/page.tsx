@@ -15,6 +15,19 @@ const sharedProject = async (searchParams: SearchParams) => {
   );
 };
 
+// Messages downloads a direct MP4 link and loops it, muted, in place of the
+// card: the opening's flyover at twice the card's size, recorded by
+// `scripts/record-share-video.mjs`. Apps that don't play video show the card.
+// The metadata API writes a video's address and size but not its type, so
+// the page writes all four tags itself, together: Open Graph reads a video's
+// details from the tags that follow it.
+const flyover = [
+  ['og:video', 'https://henokabraham.com/video/share-flyover.mp4'],
+  ['og:video:type', 'video/mp4'],
+  ['og:video:width', '2400'],
+  ['og:video:height', '1260'],
+];
+
 // A shared project link previews as that project, with its own capture where
 // it has one; the home page keeps the layout's card.
 export async function generateMetadata({
@@ -78,6 +91,9 @@ export default async function Home({
   searchParams: SearchParams;
 }) {
   const initialProject = await sharedProject(searchParams);
+  // As in generateMetadata: only a link to a known project has its own preview.
+  const id = (await searchParams).project;
+  const sharesProject = flights.some((flight) => flight.id === id);
   let live: LiveFeed | null = null;
   try {
     live = await readLiveFeed((env as EdgeEnv).LIVE_DATA);
@@ -86,6 +102,10 @@ export default async function Home({
   }
   return (
     <>
+      {!sharesProject &&
+        flyover.map(([property, content]) => (
+          <meta key={property} property={property} content={content} />
+        ))}
       <TerminalExperience live={live} initialProject={initialProject} />
       <script
         type="application/ld+json"
