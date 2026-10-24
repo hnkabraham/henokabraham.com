@@ -361,6 +361,8 @@ for (const [width, height] of [
   [844, 390],
 ]) {
   const aspect = width / height;
+  const aimOf = (shot) =>
+    new T.Vector3(...shot.target).sub(new T.Vector3(...shot.camera));
   let last = sampleDreamlinerTour(0, aspect);
   for (let i = 1; i <= 10000; i++) {
     const shot = sampleDreamlinerTour(i / 10000, aspect);
@@ -375,6 +377,13 @@ for (const [width, height] of [
       new T.Vector3(...shot.camera).distanceTo(new T.Vector3(...last.camera)) <
         0.65,
       'Camera is continuous',
+    );
+    // And so is where it looks: handing the aim between two that disagree
+    // turns the whole frame in one step (it once snapped two degrees as the
+    // aircraft moved off, where a step is otherwise a twentieth of one).
+    assert.ok(
+      aimOf(shot).angleTo(aimOf(last)) < (0.2 * Math.PI) / 180,
+      'Aim is continuous',
     );
     assert.ok(
       new T.Vector3(...shot.camera).distanceTo(new T.Vector3(...shot.target)) >
@@ -690,7 +699,7 @@ assert.ok(
   ).size > 5_000_000,
 );
 console.log(
-  `Passed: ${triangles.toLocaleString()} triangles, ${meshes} meshes; camera continuity, fly-by clearance, no pop-in and detail framing on five viewports; whole-aircraft wide shots; old chapter links; quality budgets; source credit archive.`,
+  `Passed: ${triangles.toLocaleString()} triangles, ${meshes} meshes; camera and aim continuity, fly-by clearance, no pop-in and detail framing on five viewports; whole-aircraft wide shots; old chapter links; quality budgets; source credit archive.`,
 );
 
 const worker = await fs.readFile(

@@ -306,10 +306,13 @@ export function sampleDreamlinerTour(progress: number, aspect: number) {
   const steady = tuning.camera === 'still' ? 1 : 0;
   // After the hold the aim rides with the aircraft, sliding from the port
   // exhaust to the fuselage (a touch to starboard of it, so the whole span
-  // sits left of the frame's edge) as the aircraft comes into frame.
+  // sits left of the frame's edge) as the aircraft comes into frame. It
+  // takes hold as the aircraft moves off, where the aircraft sits at the
+  // origin and the two aims agree; taken up later, at the slide's start, it
+  // snapped two degrees across in a single frame.
   const aim = ease((p - 0.24) / 0.14);
   const fov = mix(a.fov, b.fov, t);
-  if (p > 0.24)
+  if (departure > 0)
     target = aircraft.map(
       (v, i) => v + mix([-3, 1, 9.4][i], [0, 1.5, -4][i], aim),
     ) as TourPoint;
