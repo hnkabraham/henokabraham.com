@@ -750,3 +750,14 @@ Source `01e3b60`. Production version `1ada5284-f14c-4f18-80ab-479d8ba8d02e`; the
 On the live site, `/credits/garage`, `/credits/scene-credits` and the `/credits/garage.html` redirect all send the six headers, both credits pages return the same SHA-256 as the build, and the homepage links `/credits/garage`.
 
 Two fixes the same audit found sit in the zone, not the code: `http://henokabraham.com/` answers 200 instead of redirecting ("Always Use HTTPS" is off), and `www.henokabraham.com` has no DNS record.
+
+## The share preview plays the flyover
+
+Source `c763d69` (with `37c4c78` and `e6994d3`). Production version `9e855081-101e-4afa-882f-1037f0cd8f30`; the bindings and the 15-minute schedule are unchanged. The upload was 7 files, with 292 already in place. The first deploy of these commits, `3c557e13-1249-4a83-9934-b5dc5b594d0b`, also uploaded a Finder `.DS_Store` from `public/` that named only the `video` folder; `public/.assetsignore` now keeps it out, and this version replaced that one minutes later.
+
+- A shared link to the home page plays the opening's flyover: `og:video` points to `/video/share-flyover.mp4` (2400 × 1260 at 60 fps, a 10.4 s loop, 5,547,473 bytes), recorded by `scripts/record-share-video.mjs`. Messages downloads it and loops it muted; apps that don't play video keep the card. A `?project=` link keeps its own preview, without the video.
+- The tour's camera follows the 787 from the moment it moves off, at 0.22, instead of picking it up at 0.24, where the aim snapped about two degrees in one frame. `check-dreamliner-tour` now asserts that the aim is continuous.
+
+On the live site, the video returns the same SHA-256 as the repo's file, as `video/mp4`. The home page carries the four `og:video` tags, and three project links carry none. All 40 files under `/_next/static/` return the same SHA-256 as the build. At 1440 and 390 px the tour scrolls through the departure with no console errors. The page is 199 KB and its preview files 5.65 MB, inside the 1 MB and 10 MB Messages allows.
+
+Two behaviours the checks found predate this deploy. The assets answer a byte-range request with the whole file (200, not 206), for both videos; Messages doesn't need ranges, since it downloads the video before playing it. And vinext answers public files that aren't served (`/_headers`, `/.assetsignore`, and `/.DS_Store` until the next build) with an empty 200 instead of a 404.
