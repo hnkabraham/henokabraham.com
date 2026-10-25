@@ -1,0 +1,3 @@
+# Files in public/ that are never served. Finder drops a .DS_Store into any
+# folder it opens; one went live with the share video.
+.DS_Store
