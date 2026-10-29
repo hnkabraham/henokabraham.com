@@ -117,7 +117,9 @@ export default defineConfig(async ({ command }) => {
                     ]
                   : [],
                 triggers: { crons: ['*/15 * * * *'] },
-                observability: { enabled: true, head_sampling_rate: 0.1 },
+                // Every invocation is logged: the site sees a few thousand
+                // requests a day, and the free plan keeps 200,000 events.
+                observability: { enabled: true, head_sampling_rate: 1 },
                 vars: {
                   TURNSTILE_SITE_KEY: '0x4AAAAAAEulQFo5cYQJ5FfZ',
                   WEB_ANALYTICS_TOKEN: '17fd51eeb5b141c09edde8089ecda2ca',
