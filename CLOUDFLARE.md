@@ -769,3 +769,12 @@ Source `5c7cf76`. Production version `5a6ce2f7-05db-49e7-b5de-360ac116b312`; the
 - React, React DOM and `react-server-dom-webpack` move from 19.2.6 to 19.2.9, past the Server Functions denial of service (GHSA-wx67-qw84-cm4g, fixed in 19.2.8). The site defines no server functions, but the vinext server still decodes action requests, so the advisory applied. Cloudflare's managed rules had been blocking the `POST /` probes that looked for it. The other `npm audit` findings are in build tools and the shadcn CLI, which never reach the Worker.
 
 On the live site, all 40 files under `/_next/static/` return the same SHA-256 as the build, and the framework chunk reports React 19.2.9. The home page, `/api/live` and the share video answer 200. At 1440 and 390 px the tour scrolls through the departure with no console errors.
+
+## Full logs and a security.txt
+
+Source `1b885b2` (with `61c4ac5`). Production version `eade15c1-43e3-4962-bcb6-835d338ccaa3`; the bindings and the 15-minute schedule are unchanged. The upload was 8 files, with 292 already in place.
+
+- Workers Logs keep every invocation (`head_sampling_rate: 1`) instead of a tenth. The site sees a few thousand requests a day, against the free plan's 200,000 events.
+- `/.well-known/security.txt` (RFC 9116) points reporters at the repository's private vulnerability reporting, which is now enabled on GitHub, and at the contact form; it names no email address. `check-security-txt` fails a month before its `Expires` date.
+
+On the live site, all 40 files under `/_next/static/` return the same SHA-256 as the build, and `security.txt` matches the repository's copy. It is served as `text/plain` without the `charset=utf-8` the RFC asks for; the file is ASCII.
