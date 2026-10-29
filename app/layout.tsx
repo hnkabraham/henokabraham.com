@@ -37,6 +37,9 @@ export const metadata: Metadata = {
   // Messages and Safari take the 180 px touch icon for their small previews.
   icons: { icon: '/favicon.svg', apple: '/apple-touch-icon.png' },
   manifest: '/site.webmanifest',
+  // Search Console's ownership check for the https://henokabraham.com/
+  // property; it re-reads the tag, so removing it un-verifies the site.
+  verification: { google: 'iRxN8E7CrA9yBPNyb6w7msVmlwGeJQ9jQ4gt-M-6eb0' },
   appleWebApp: {
     capable: true,
     // The same short name the web manifest gives Android's home screen.
