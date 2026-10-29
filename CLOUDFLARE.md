@@ -783,7 +783,7 @@ On the live site, all 40 files under `/_next/static/` return the same SHA-256 as
 
 Source `2fddd75`. Production version `77b01da8-df8b-4f41-95e8-bd8663ce3232`; the bindings and the 15-minute schedule are unchanged. The upload was 8 files, with 293 already in place.
 
-- `/583a98222c1ab7e288b137d46606c180.txt` is the site's IndexNow key, public by design. `node scripts/ping-indexnow.mjs` checks that the live site serves it, then submits the sitemap's URLs; run it after a deploy that changes what a page says. The first ping, right after this deploy, was accepted (202). Bing had nothing indexed from the site (a `site:` search returned only unrelated pages).
+- `/583a98222c1ab7e288b137d46606c180.txt` is the site's IndexNow key, public by design. `node scripts/ping-indexnow.mjs` checks that the live site serves it, then submits the sitemap's URLs; run it after a deploy that changes what a page says. The first ping, right after this deploy, was accepted (202). (An earlier note here said Bing had nothing indexed. That came from a `site:` search fetched by an automated client, and the same search returned unrelated pages even for developers.cloudflare.com, so it says nothing about Bing's index.)
 - `public/_headers` serves `/.well-known/security.txt` as `text/plain; charset=utf-8`, as RFC 9116 asks.
 
 On the live site, all 40 files under `/_next/static/` return the same SHA-256 as the build, the key file answers 200, and `security.txt` carries the charset.
