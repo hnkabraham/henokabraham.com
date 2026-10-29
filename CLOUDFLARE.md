@@ -761,3 +761,11 @@ Source `c763d69` (with `37c4c78` and `e6994d3`). Production version `9e855081-10
 On the live site, the video returns the same SHA-256 as the repo's file, as `video/mp4`. The home page carries the four `og:video` tags, and three project links carry none. All 40 files under `/_next/static/` return the same SHA-256 as the build. At 1440 and 390 px the tour scrolls through the departure with no console errors. The page is 199 KB and its preview files 5.65 MB, inside the 1 MB and 10 MB Messages allows.
 
 Two behaviours the checks found predate this deploy. The assets answer a byte-range request with the whole file (200, not 206), for both videos; Messages doesn't need ranges, since it downloads the video before playing it. And vinext answers public files that aren't served (`/_headers`, `/.assetsignore`, and `/.DS_Store` until the next build) with an empty 200 instead of a 404.
+
+## React 19.2.9
+
+Source `5c7cf76`. Production version `5a6ce2f7-05db-49e7-b5de-360ac116b312`; the bindings and the 15-minute schedule are unchanged. The upload was 10 files, with 289 already in place.
+
+- React, React DOM and `react-server-dom-webpack` move from 19.2.6 to 19.2.9, past the Server Functions denial of service (GHSA-wx67-qw84-cm4g, fixed in 19.2.8). The site defines no server functions, but the vinext server still decodes action requests, so the advisory applied. Cloudflare's managed rules had been blocking the `POST /` probes that looked for it. The other `npm audit` findings are in build tools and the shadcn CLI, which never reach the Worker.
+
+On the live site, all 40 files under `/_next/static/` return the same SHA-256 as the build, and the framework chunk reports React 19.2.9. The home page, `/api/live` and the share video answer 200. At 1440 and 390 px the tour scrolls through the departure with no console errors.
