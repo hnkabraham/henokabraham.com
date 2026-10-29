@@ -1,0 +1,8 @@
+# Security reports for henokabraham.com and its source code at
+# https://github.com/hnkabraham/henokabraham.com. A private advisory on
+# GitHub is best; the contact form reaches the same person.
+Contact: https://github.com/hnkabraham/henokabraham.com/security/advisories/new
+Contact: https://henokabraham.com/#contact
+Expires: 2027-10-01T00:00:00Z
+Preferred-Languages: en
+Canonical: https://henokabraham.com/.well-known/security.txt
