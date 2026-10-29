@@ -787,3 +787,14 @@ Source `2fddd75`. Production version `77b01da8-df8b-4f41-95e8-bd8663ce3232`; the
 - `public/_headers` serves `/.well-known/security.txt` as `text/plain; charset=utf-8`, as RFC 9116 asks.
 
 On the live site, all 40 files under `/_next/static/` return the same SHA-256 as the build, the key file answers 200, and `security.txt` carries the charset.
+
+## Search Console verification
+
+Source `f9e21cb`. Production version `7d1a7fb7-967c-41f7-82dc-90c265f49709`; the bindings and the 15-minute schedule are unchanged. The upload was 7 files, with 294 already in place.
+
+- The layout's metadata carries `verification.google`, the `google-site-verification` tag for the URL-prefix property `https://henokabraham.com/` in Henok's Search Console. Google re-reads it, so removing it un-verifies the property. It is a tag rather than Google's HTML file because the assets answer `/<name>.html` with a redirect to the extensionless path.
+- After the deploy, Search Console verified ownership. The sitemap was submitted and accepted, and the home page was added to the priority crawl queue. URL inspection showed the home page already indexed, last crawled on 2026-10-24 by Googlebot smartphone, with the declared canonical `https://henokabraham.com/`.
+
+On the live site, all 40 files under `/_next/static/` return the same SHA-256 as the build, and the home page carries the tag.
+
+The same day, unitedflighttracker.com's trust bar became "By Henok Abraham, not an official United tool" (edited in place on RackNerd), and routeloads.com's home page gained a "Built by Henok Abraham" footer (routeloads `ea75c60`). Both link to `https://henokabraham.com/`. Backups are in `/root/deploy-20261029-045917/` on RackNerd.
