@@ -798,3 +798,13 @@ Source `f9e21cb`. Production version `7d1a7fb7-967c-41f7-82dc-90c265f49709`; the
 On the live site, all 40 files under `/_next/static/` return the same SHA-256 as the build, and the home page carries the tag.
 
 The same day, unitedflighttracker.com's trust bar became "By Henok Abraham, not an official United tool" (edited in place on RackNerd), and routeloads.com's home page gained a "Built by Henok Abraham" footer (routeloads `ea75c60`). Both link to `https://henokabraham.com/`. Backups are in `/root/deploy-20261029-045917/` on RackNerd.
+
+## HTTPS and www redirects
+
+Zone changes Henok ran on 2026-10-28 (the auto-mode classifier refuses DNS changes from a session even with his permission), which close the two items the 2026-10-15 audit left in the zone:
+
+- A Redirect Rule `www to apex` (phase `http_request_dynamic_redirect`, ruleset `abf83fffacaf4b8cb80686223391ae34`, rule `33d42e222ea243a5879a828363f80d39`): `http.host eq "www.henokabraham.com"` answers 301 with `concat("https://henokabraham.com", http.request.uri.path)`, keeping the query string.
+- A proxied `www` AAAA `100::` record (`c5ec35feff85deae82159f9791d0c9d1`), a placeholder that only carries the rule.
+- "Always Use HTTPS" on.
+
+Verified through Cloudflare's resolver: `http://henokabraham.com/` and `/?project=routeloads` answer 301 to their HTTPS addresses, and `https://www.…/credits/garage?x=1`, `http://www.…/` and `http://www.…/a?b=1` each reach the same path and query on `https://henokabraham.com` in one hop. The home page and `security.txt` answer 200, and `POST https://alerts.henokabraham.com/notify` still reaches the relay (401 without a token). To undo, delete the rule and the record and turn "Always Use HTTPS" off.
