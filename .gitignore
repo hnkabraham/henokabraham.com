@@ -81,3 +81,7 @@ archive/models/2016-ford-mustang-shelby-gt350r.usdz
 # 130 MB, most of it the tree's 95 MB buffer): restored, checked against
 # their SHA-256, by `python3 scripts/dolores-park/fetch.py assets`.
 archive/scenery/dolores/assets/
+
+# Claude Code's local settings and agent worktrees: per-machine, and each
+# worktree carries its own copy of the lint config.
+.claude/

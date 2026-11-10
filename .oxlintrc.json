@@ -23,6 +23,7 @@
     "typeCheck": true
   },
   "ignorePatterns": [
+    ".claude/**",
     ".next/**",
     ".vinext/**",
     "out/**",
