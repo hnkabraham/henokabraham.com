@@ -18,6 +18,11 @@ const EARLY_HINTS = [
 // script or connect directives: the page carries inline framework scripts
 // and Cloudflare's Turnstile frame, and this policy must not break either.
 const PAGE_HEADERS: [string, string][] = [
+  // The framework marks a rendered page no-store, which also keeps it out
+  // of the browser's back/forward cache: coming back from a project link
+  // reloaded the page and restarted the tour. The page holds nothing
+  // private, so it only needs to be checked again on a fresh visit.
+  ['Cache-Control', 'private, no-cache'],
   ['Strict-Transport-Security', 'max-age=31536000'],
   ['X-Content-Type-Options', 'nosniff'],
   ['X-Frame-Options', 'DENY'],
