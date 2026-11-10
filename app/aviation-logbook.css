@@ -10,7 +10,10 @@
   align-items: end;
   gap: 24px;
 }
-.logbook-heading .eyebrow {
+/* The section label's own eyebrow rule (globals.css) sets the ink for light
+   bands and comes later in the cascade; this band is dark, so the selector
+   outranks it rather than relying on order. */
+.aviation-logbook .logbook-heading .eyebrow {
   color: #a8c4d3;
   margin: 0 0 10px;
 }
