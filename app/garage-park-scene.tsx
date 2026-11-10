@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { DoloresViewer } from '@/lib/dolores-park-viewer';
 import { sceneAsset } from '@/lib/scene-assets';
 import { withTimeout } from '@/lib/abort';
+import { webglAvailable } from '@/lib/webgl-support';
 
 type Props = {
   reducedMotion: boolean;
@@ -75,6 +76,10 @@ export default function GarageParkScene({ reducedMotion, onStatus }: Props) {
     const start = async () => {
       if (started) return;
       started = true;
+      // The viewer fetches and parses every file before it asks for a
+      // context, so without WebGL that is megabytes spent on the way to the
+      // poster: ask first.
+      if (!webglAvailable()) return fail();
       const { createDoloresViewer } = await import('@/lib/dolores-park-viewer');
       if (disposed) return;
       const created = await createDoloresViewer(element, {
@@ -120,6 +125,7 @@ export default function GarageParkScene({ reducedMotion, onStatus }: Props) {
     ).connection;
     let prefetchTimer = 0;
     const prefetch = async () => {
+      if (!webglAvailable()) return;
       const { doloresViewerFiles } = await import('@/lib/dolores-park-viewer');
       if (started || disposed) return;
       for (const path of doloresViewerFiles(options)) {
