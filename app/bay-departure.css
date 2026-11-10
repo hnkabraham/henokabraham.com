@@ -1486,6 +1486,12 @@ html[data-simple-view='true'] .dreamliner-journey .bay-chapters,
   .bay-immersive span {
     display: none;
   }
+  /* The hidden word is still a child, so the icon-only rule above doesn't
+     match and the button was as wide as its 15px glyph. */
+  .bay-utilities .bay-immersive {
+    min-width: 30px;
+    justify-content: center;
+  }
 }
 /* The iPhone Immersive control opens a card instead of fullscreen. */
 .immersive-dialog {
