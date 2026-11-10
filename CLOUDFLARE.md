@@ -808,3 +808,16 @@ Zone changes Henok ran on 2026-10-28 (the auto-mode classifier refuses DNS chang
 - "Always Use HTTPS" on.
 
 Verified through Cloudflare's resolver: `http://henokabraham.com/` and `/?project=routeloads` answer 301 to their HTTPS addresses, and `https://www.…/credits/garage?x=1`, `http://www.…/` and `http://www.…/a?b=1` each reach the same path and query on `https://henokabraham.com` in one hop. The home page and `security.txt` answer 200, and `POST https://alerts.henokabraham.com/notify` still reaches the relay (401 without a token). To undo, delete the rule and the record and turn "Always Use HTTPS" off.
+
+## Review fixes of 2026-11-09 deployed
+
+Source `e96ec80`. Production version `016c5a57-bbb5-42ff-8208-00e51dfdd5e2`; the bindings and the 15-minute schedule are unchanged. The upload was 20 files, with 279 already in place.
+
+- The flight log's eyebrow reads at 7.9:1 on its dark band (it was 2.63:1: the section label's light-band ink came later in the cascade), and the Garage map attribution at 4.8:1.
+- The Garage asks whether WebGL is available (`lib/webgl-support.ts`) before its prefetch and before the viewer starts. Without it, no model or backdrop is requested and the poster stays; it used to download about 5 MB first.
+- On phones the station strip is its own row under the wordmark, so all four stops show from 320px up instead of two and a fade. The links are 28px tall and the Immersive control 30px wide. This replaces the scrolling strip; `59797f6` is the commit to revert for the old layout.
+- The document is served `Cache-Control: private, no-cache` instead of the framework's `no-store`, which had kept it out of the back/forward cache. In Chrome on production, going to `/credits/garage` and back restores the page (`pageshow.persisted` true) with the contact form's Turnstile script loaded. Playwright cannot exercise that cache, even on a static page, so this is checked in a real browser.
+- `shadcn` is no longer a dependency: its stylesheet is `app/shadcn-tailwind.css`, with its MIT notice. With vite 8.3.7, oxfmt 0.78.0 and the non-breaking fixes, `npm audit` went from 31 advisories to 11, none critical. Two upgrades were tried and dropped. vinext 1.4.4 sent same-tab navigation to `/credits/*` to the 404 page and failed `npm ci`. `@cloudflare/vite-plugin` 1.68 brings a beta Miniflare without the `fetchMock` that `scripts/check-scheduled.mjs` uses.
+- `.claude/` is ignored by Git and by oxlint, whose run a worktree's own config had stopped. `main` was fast-forwarded to this branch; it had stood at 2026-09-16.
+
+On the live site the same checks pass as on the local build: no Garage requests without WebGL, the scene ready with it (Chromium, and WebKit at phone size), no sideways scroll at 320 and 390px in either engine, all nine briefings opening and closing on desktop and phone, and the three credits pages opening from the home page.
