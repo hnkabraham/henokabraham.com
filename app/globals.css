@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
+@import './shadcn-tailwind.css';
 @import './aviation-logbook.css';
 /* Local variable fonts; the italic face loads only when it is used. */
 @font-face {
